@@ -6,9 +6,9 @@
 import { createClient } from '@supabase/supabase-js';
 
 // Load and validate config from environment variables
-// Directly access environment variables in Vite - these are replaced at build time
-const VITE_SUPABASE_URL = 'https://ppwaeyekzpyqqlddfmeb.supabase.co';
-const VITE_SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBwd2FleWVrenB5cXFsZGRmbWViIiwicm9sZSI6ImFub24iLCJpYXQiOjE3MTUzMzMxMDUsImV4cCI6MjAzMDkwOTEwNX0.7JeeCbT5oTFQM7tJlp1_uGGWjmEr18WaK4SdiqgaOrY';
+// Properly access environment variables through import.meta.env in Vite
+const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
+const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 // Simple helper to get environment variables from either Vite or Node.js
 const getEnvVariable = (key) => {
