@@ -1,0 +1,94 @@
+2025-09-05T13:54:32Z info: Deployment: c537ce36-3486-4200-b058-c543ca5f8183
+2025-09-05T13:54:32Z info: Build: 953796d4-65ef-4f02-a345-b5d2765f8b8b
+2025-09-05T13:54:32Z info: Connecting to builder
+2025-09-05T13:54:32Z info: Deployment: c537ce36-3486-4200-b058-c543ca5f8183
+2025-09-05T13:54:32Z info: Build: 953796d4-65ef-4f02-a345-b5d2765f8b8b
+2025-09-05T13:54:32Z info: Connecting to builder
+2025-09-05T13:54:35Z info: Builder connected
+2025-09-05T13:54:36Z info: Installing packages
+2025-09-05T13:54:37Z info: Starting Build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v5.4.19 building for production...
+
+transforming...
+
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+✓ 1755 modules transformed.
+
+rendering chunks...
+
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /home/runner/workspace/client/src/lib/llm-api.jsx is dynamically imported by /home/runner/workspace/client/src/pages/ChatPage.jsx, /home/runner/workspace/client/src/pages/ChatPage.jsx but also statically imported by /home/runner/workspace/client/src/components/ProtectedRoute.jsx, /home/runner/workspace/client/src/pages/ChatPage.jsx, dynamic import will not move module into another chunk.
+
+
+computing gzip size...
+
+../dist/public/index.html                         8.04 kB │ gzip:   2.42 kB
+
+../dist/public/assets/neural-logo-BmN8H8fe.png  249.32 kB
+
+../dist/public/assets/index-vcZ85QQ7.css        109.36 kB │ gzip:  17.46 kB
+
+../dist/public/assets/browser-D2mdz7mz.js         0.30 kB │ gzip:   0.25 kB
+
+../dist/public/assets/index-DN0B-hyC.js         453.89 kB │ gzip: 136.34 kB
+
+✓ built in 8.59s
+
+
+  dist/index.js  127.5kb
+
+⚡ Done in 195ms
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.6.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.0
+npm notice To update run: npm install -g npm@11.6.0
+npm notice
+
+2025-09-05T13:54:52Z info: Pushing pid1 binary layer...
+2025-09-05T13:54:56Z info: Created pid1 binary layer
+2025-09-05T13:54:58Z info: Pushing hosting layer...
+2025-09-05T13:54:58Z info: Pushing Repl layer...
+2025-09-05T13:54:58Z info: Retrieved cached nix layer
+2025-09-05T13:54:59Z info: Created hosting layer
+2025-09-05T13:55:27Z info: Created Repl layer
+2025-09-05T13:55:28Z info: Pushed image manifest
+2025-09-05T13:55:28Z info: Pushed soci index manifest
+2025-09-05T13:55:28Z info: Pushed referrer manifest
+2025-09-05T13:55:32Z info: Creating Autoscale service
+forwarding local port 5000 to external port 80 (mapped as 1104)
+starting up user application
+> rest-express@1.0.0 start
+> NODE_ENV=production node dist/index.js
+[ADMIN-WS] Admin WebSocket server initialized
+  hasAnonKey: true,
+[UPTIME-TRACKER] Server uptime tracking initialized
+✅ Chat routes prepared for mounting
+Configuration loaded successfully {
+  url: 'https://ppwaeyekzpyqqlddfmeb.supabase.co',
+✅ Feedback routes mounted at /api/feedback
+⚠️ Supabase not accessible - authentication will be limited
+}
+[SECURITY] Production CORS: Only allowing https://mvp.anamnesis.health, https://anamnesis.health, https://admin.anamnesis.health
+🩺 Starting Supabase health monitoring (60s intervals)
+  environment: 'production'
+✅ Admin routes mounted at /api/system, /api/admin
+✅ Chat routes mounted at /api/chat, /api/chat/stream
+🚀 Server successfully started on port 5000
+[ADMIN-WS] WebSocket server attached to HTTP server at /ws/admin
+✅ Supabase connection OK (via auth-health)
+🩺 Watchdog started (60s)
+Testing Supabase connection...
+  hasServiceKey: true,
+🔄 Supabase connection state changed: UP via auth-health
+✅ Supabase connection restored (via auth-health)
+2025-09-05T13:55:56Z info: Waiting for service to be ready
+2025-09-05T13:55:58Z info: Deployment successful

@@ -58,7 +58,8 @@ export async function setupVite(app) {
  * @param {import('express').Express} app - The Express application
  */
 export function serveStatic(app) {
-  const clientDist = path.resolve(__dirname, "../dist/public");
+  // Use process.cwd() to ensure we're always relative to the project root
+  const clientDist = path.resolve(process.cwd(), "dist/public");
   
   // Add error handling for missing files
   if (!fs.existsSync(clientDist)) {
