@@ -1,0 +1,98 @@
+2025-09-05T13:25:09Z info: Deployment: c537ce36-3486-4200-b058-c543ca5f8183
+2025-09-05T13:25:09Z info: Build: a29e01de-ec46-4065-bbdc-57a04c7afc06
+2025-09-05T13:25:09Z info: Connecting to builder
+2025-09-05T13:25:12Z info: Builder connected
+2025-09-05T13:25:12Z info: Installing packages
+2025-09-05T13:25:13Z info: Starting Build
+
+> rest-express@1.0.0 build
+> vite build && esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist
+
+
+vite v5.4.19 building for production...
+
+transforming...
+
+Browserslist: browsers data (caniuse-lite) is 11 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+✓ 1755 modules transformed.
+
+rendering chunks...
+
+[plugin:vite:reporter] [plugin vite:reporter] 
+(!) /home/runner/workspace/client/src/lib/llm-api.jsx is dynamically imported by /home/runner/workspace/client/src/pages/ChatPage.jsx, /home/runner/workspace/client/src/pages/ChatPage.jsx but also statically imported by /home/runner/workspace/client/src/components/ProtectedRoute.jsx, /home/runner/workspace/client/src/pages/ChatPage.jsx, dynamic import will not move module into another chunk.
+
+
+computing gzip size...
+
+../dist/public/index.html                         8.04 kB │ gzip:   2.42 kB
+
+../dist/public/assets/neural-logo-BmN8H8fe.png  249.32 kB
+
+../dist/public/assets/index-vcZ85QQ7.css        109.36 kB │ gzip:  17.46 kB
+
+../dist/public/assets/browser-D2mdz7mz.js         0.30 kB │ gzip:   0.25 kB
+
+../dist/public/assets/index-DN0B-hyC.js         453.89 kB │ gzip: 136.34 kB
+
+✓ built in 8.51s
+
+
+  dist/index.js  126.7kb
+
+⚡ Done in 222ms
+
+npm notice
+npm notice New major version of npm available! 10.8.2 -> 11.6.0
+npm notice Changelog: https://github.com/npm/cli/releases/tag/v11.6.0
+npm notice To update run: npm install -g npm@11.6.0
+npm notice
+
+2025-09-05T13:25:29Z info: Pushing pid1 binary layer...
+2025-09-05T13:25:31Z info: Created pid1 binary layer
+2025-09-05T13:25:32Z info: Pushing hosting layer...
+2025-09-05T13:25:32Z info: Pushing Repl layer...
+2025-09-05T13:25:32Z info: Nix layers for this Repl are uncached.
+2025-09-05T13:25:32Z info: Pushing nix-0 layer...
+2025-09-05T13:25:33Z info: Created hosting layer
+2025-09-05T13:26:00Z info: Created Repl layer
+2025-09-05T13:26:27Z info: Created nix-0 layer
+2025-09-05T13:26:27Z info: uploading image for cached layer
+2025-09-05T13:26:27Z info: pushed cache image manifest
+2025-09-05T13:26:28Z info: pushed cache soci index manifest
+2025-09-05T13:26:28Z info: uploading cached layer
+2025-09-05T13:26:28Z info: successfully uploaded cached layer
+2025-09-05T13:26:29Z info: Pushed image manifest
+2025-09-05T13:26:29Z info: Pushed soci index manifest
+2025-09-05T13:26:33Z info: Creating Autoscale service
+2025-09-05T13:27:07Z info: Waiting for service to be ready
+Configuration loaded successfully {
+> rest-express@1.0.0 start
+starting up user application
+Testing Supabase connection...
+✅ Supabase connection OK (via auth-health)
+[UPTIME-TRACKER] Server uptime tracking initialized
+[ADMIN-WS] WebSocket server attached to HTTP server at /ws/admin
+[ADMIN-WS] Admin WebSocket server initialized
+  hasAnonKey: true,
+✅ Chat routes prepared for mounting
+> NODE_ENV=production node dist/index.js
+}
+🚀 Server successfully started on port 5000
+  url: 'https://ppwaeyekzpyqqlddfmeb.supabase.co',
+Error: ENOENT: no such file or directory, stat '/home/runner/workspace/client/dist/index.html'
+  hasServiceKey: true,
+[SECURITY] Production CORS: Only allowing https://mvp.anamnesis.health, https://anamnesis.health, https://admin.anamnesis.health, https://dashboard.anamnesis.health
+  environment: 'production'
+✅ Feedback routes mounted at /api/feedback
+✅ Chat routes mounted at /api/chat, /api/chat/stream
+forwarding local port 5000 to external port 80 (mapped as 1104)
+🩺 Watchdog started (60s)
+✅ Admin routes mounted at /api/system, /api/admin
+⚠️ Supabase not accessible - authentication will be limited
+✅ Supabase connection restored (via auth-health)
+🔄 Supabase connection state changed: UP via auth-health
+🩺 Starting Supabase health monitoring (60s intervals)
+2025-09-05T13:27:09Z info: Deployment successful

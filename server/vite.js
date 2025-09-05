@@ -58,9 +58,9 @@ export async function setupVite(app) {
  * @param {import('express').Express} app - The Express application
  */
 export function serveStatic(app) {
-  const clientDist = path.resolve(__dirname, "../client/dist");
+  const clientDist = path.resolve(__dirname, "../dist/public");
   
-  // Serve static files from the client/dist directory
+  // Serve static files from the dist/public directory
   app.use(express.static(clientDist));
   
   // Serve index.html for all routes (SPA support)
