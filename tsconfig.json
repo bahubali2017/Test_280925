@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    // === Language & Module Settings ===
+    "target": "ESNext",
+    "lib": ["DOM", "DOM.Iterable", "ESNext"],
+    "module": "ESNext",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "jsx": "react-jsx",
+
+    // === JS/TS Interop ===
+    "allowJs": true,              // allow .js files
+    "checkJs": true,              // type-check JavaScript files
+    "esModuleInterop": true,
+    "isolatedModules": true,
+
+    // === Strict Mode ===
+    "strict": true,               // enables all strict checks
+    "noImplicitAny": true,        // disallow implicit `any`
+    "strictNullChecks": true,     // enforce null/undefined handling
+    "strictFunctionTypes": true,  // check function parameter bivariance
+    "strictBindCallApply": true,  // validate call/apply/bind signatures
+    "strictPropertyInitialization": true, // class properties must be initialized
+    "noImplicitThis": true,       // disallow `this` without a type
+    "useUnknownInCatchVariables": true, // catch variables are unknown
+
+    // === Code Quality ===
+    "noUnusedLocals": true,       // error on unused local variables
+    "noUnusedParameters": true,   // error on unused parameters
+    "noImplicitReturns": true,    // require return in all code paths
+    "noFallthroughCasesInSwitch": true, // prevent fallthrough in switch
+
+    // === Build Behavior ===
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,         // skip checking d.ts files
+    "noEmit": true                // don’t output .js files, just type-check
+  },
+  "include": [
+    "client/src",
+    "client/**/*.js",
+    "client/**/*.jsx"
+  ],
+  "exclude": [
+    "node_modules",
+    "dist",
+    "build"
+  ]
+}

@@ -1,0 +1,57 @@
+# 🔧 AGENT PROMPT — FIX DUPLICATE llm-api FILES & UNIFY EXPORTS
+
+## Objective
+Unify `client/src/lib/llm-api.jsx` and `client/src/lib/llm-api-enhanced.jsx` into a single **working file** with all required exports and consistent streaming/abort logic. Eliminate duplication that causes white screens, 18–22s idle delays, and missing export errors.
+
+---
+
+## Tasks
+1. **File Audit**
+   - Compare `llm-api.jsx` and `llm-api-enhanced.jsx`.
+   - Identify which has the latest Stop AI / streaming fixes (likely `llm-api-enhanced.jsx`).
+   - Ensure required exports are present in the final unified file:
+     - `sendMessage`
+     - `stopStreaming`
+     - `getSafeTimeoutFunctions`
+     - `retryApiRequest` (if used elsewhere)
+
+2. **File Merge**
+   - Merge both into **one unified `llm-api.jsx`**.
+   - Keep enhanced streaming + Stop AI fixes from `llm-api-enhanced.jsx`.
+   - Add back any missing exports that were only in `llm-api.jsx`.
+   - Guarantee no duplicate or conflicting functions remain.
+
+3. **Codebase Update**
+   - Search the entire project for:
+     ```js
+     import ... from "@/lib/llm-api-enhanced"
+     ```
+   - Replace with:
+     ```js
+     import ... from "@/lib/llm-api.jsx"
+     ```
+   - Ensure every component now imports only from the unified file.
+
+4. **Cleanup**
+   - Delete `client/src/lib/llm-api-enhanced.jsx` after merge.
+   - Confirm no references to it remain.
+
+5. **Validation**
+   - Run build/dev server.
+   - Confirm:
+     - App renders correctly (no white screen).
+     - AI responses stream properly.
+     - Stop AI works instantly without 18–22s idle delay.
+     - No missing export errors in console (`getSafeTimeoutFunctions` etc).
+   - Check DevTools Network tab:
+     - Normal requests → tokens stream
+     - Stop AI → request shows `(canceled)` instantly
+
+---
+
+## Output
+- Provide a **single, full corrected `llm-api.jsx` file** (merged + cleaned).
+- Report deleted file (`llm-api-enhanced.jsx`) and updated imports.
+- Confirm validation checklist passes.
+
+---

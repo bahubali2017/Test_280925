@@ -1,0 +1,82 @@
+# AGENT PROMPT — PHASE 9.3 WORKSPACE CLEANUP & STRUCTURAL OPTIMIZATION
+
+🎯 GOAL:
+Perform a complete final cleanup and organization of the Anamnesis Medical AI Assistant workspace without modifying application logic or architecture.
+
+📁 OBJECTIVES:
+1. 🧹 **Remove redundant files and obsolete assets**
+   - Identify and delete any:
+     - Backup files (`*.bak`, `.old`, `.copy`, `.backup`, etc.)
+     - Duplicate or unused `.js`, `.jsx`, `.ts`, `.tsx`, `.test.*` files
+     - Temporary files (e.g., `.DS_Store`, `.swp`, Replit temp logs)
+     - Deprecated test scaffolds or sample scripts
+   - Ensure no active file import breaks occur (validate with `eslint`, `tsc`, and app run).
+
+2. 📚 **Centralize documentation**
+   - Move all tracking and log files into a single folder:
+     - `docs/` directory will include:
+       - `LAYER_DEVELOPMENT_PLAN.md`
+       - `AI-Layer-Capability-Report.md`
+       - `README.md` (linking to all sub-docs)
+       - Any logs or reports related to Phase 6–9
+     - Create `docs/archive/` for legacy or old versions
+   - Update `README.md` inside `docs/` to provide an overview of all documentation phases.
+
+3. 🧾 **Scripts Cleanup**
+   - Move utility and testing scripts into a unified folder:
+     - All `.cjs`, `.mjs`, `.sh`, `.test.js`, etc. → move to `scripts/`
+     - Delete unused or commented-out scripts
+     - Rename generic files (e.g., `script.js` → `dev-utils.cjs`)
+   - Validate that CI/CD or deployment scripts (if any) remain operational
+
+4. 📁 **Standardize folder structure**
+   - Ensure root-level structure includes only:
+     - `/client` — frontend app
+     - `/server` — backend and API
+     - `/scripts` — helper scripts
+     - `/docs` — documentation
+     - `/tests` (optional) — isolated test cases if relevant
+     - `package.json`, `.gitignore`, `README.md`, `tsconfig.json`, `.replit`, `vite.config.js`
+   - Remove or flatten any folders like `/temp`, `/log`, `/old/`, `/playground`, `/debug`, etc.
+
+5. 📦 **Node & Vite Hygiene**
+   - Ensure no unused npm packages are installed
+     - Run `npm prune` and `npm audit fix` as part of cleanup
+   - Remove any `.env.local`, `.env.backup`, etc., leaving only:
+     - `.env` (active)
+     - `.env.example` (template)
+   - Clear `.vite` cache folders if present
+
+6. 🧪 **Validation**
+   - Run final check:
+     ```bash
+     npx eslint client/ --ext .js,.jsx,.ts,.tsx
+     npx tsc --noEmit
+     ```
+   - Ensure the app starts correctly:
+     ```bash
+     npm run dev
+     ```
+
+7. 📝 **Log Final Cleanup**
+   - Create `docs/PHASE9.3_WORKSPACE_CLEANUP_LOG.md` with:
+     - ✅ List of deleted files
+     - ✅ All directories cleaned
+     - ✅ Any renamed or relocated scripts
+     - ✅ Confirmation of zero ESLint, TypeScript, and runtime errors
+
+🛑 IMPORTANT:
+- Do **NOT** change imports, rename active files, or modify component names unless redundant or obsolete
+- Do **NOT** restructure `/client` or `/server` internal architecture
+- Do **NOT** delete test or script files still referenced in npm scripts
+
+🔚 FINAL GOAL:
+Achieve a clean, developer-friendly, production-grade workspace with:
+✅ Zero junk files  
+✅ Centralized documentation  
+✅ Organized script utilities  
+✅ Clean root directory  
+✅ No regressions introduced
+
+Execute this cleanup as **Phase 9.3: Workspace Optimization**, and mark its result in `LAYER_DEVELOPMENT_PLAN.md`.
+

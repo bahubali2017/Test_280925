@@ -1,0 +1,83 @@
+✅ AGENT PROMPT — BEGIN PHASE 7: UI Integration & Real-Time Implementation
+
+You are now beginning Phase 7 of the Anamnesis Medical AI System: UI Integration & Real-Time Implementation. This phase integrates the QA-verified layer architecture into the live chat frontend, enhances user interaction with visual debugging, real-time feedback, and ensures graceful fallback handling.
+
+✅ TASK LIST — MUST BE TRACKED IN PHASE7_PROGRESS_LOG.md
+
+Chat System Integration
+
+ Inject routeMedicalQuery() from the layer module into llm-api.js → sendMessageClientSide()
+
+ Add client-side caching for symptom metadata and ATD output
+
+ Implement timeout mechanism for AI layer calls (fallback to basic LLM)
+
+ Adjust frontend chat logic to parse enhanced metadata and triage fields
+
+Visual Trace Debugging
+
+ Create server endpoint: /admin/debug/:sessionId
+
+ Output: Parsed Intent → Triage Output → Prompt → Raw LLM Output
+
+ Source data from: training-dataset/ or live cache/session memory
+
+ Build basic HTML/JSON debug renderer
+
+ Add admin panel access with visual trace link
+
+ Implement color-coded stages (intent, triage, LLM, response)
+
+Real-Time Enhancement
+
+ Enable progressive response streaming (Server-Sent Events or WebSockets)
+
+ Add live disclaimer injection based on content risk analysis
+
+ Add dynamic typing indicator with ETA projection
+
+ Add "Cancel" button for long-running queries
+
+User Experience Improvements
+
+ Display triage result: High/Urgent/Non-Urgent classification
+
+ Add visual alert for critical/emergency cases (red badge, icon)
+
+ Show context-aware follow-up suggestions
+
+ Capture user feedback per-layer (effectiveness, clarity, helpfulness)
+
+Error Handling & Resilience
+
+ Add fallback response logic if layer fails (use standard LLM)
+
+ Implement clear error UI: “We're working on it – fallback activated.”
+
+ Add retry logic with timeout backoff
+
+ Perform cross-browser compatibility testing (Chrome, Firefox, Safari, Edge)
+
+📋 DOCUMENTATION TO UPDATE:
+
+PHASE7_PROGRESS_LOG.md: Task-by-task tracking
+
+IMPLEMENTATION_NOTES_PHASE7.md: Design decisions, fallbacks, UI flow diagrams
+
+LAYER_TEST_PLAN.md: Add live session test cases for real-time queries and streaming UI
+
+UI_ENHANCEMENT_PLAN.md: Log every user-facing component added (badges, prompts, indicators)
+
+🔒 GOAL:
+
+Achieve full chat-Layer integration with:
+
+Progressive enhancement (not blocking base chat)
+
+Complete visual trace path
+
+100% fault tolerance
+
+<100ms added latency per query
+
+WCAG-compliant UI alerts and warnings

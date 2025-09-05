@@ -1,0 +1,260 @@
+PROJECT GOAL:
+Create a clean, standalone MVP for **Anamnesis - MAIA** (Medical AI Assistant). The MVP should include:
+
+1. A secure, minimal login screen (email + password mock auth, local session).
+2. A working AI assistant page with a chat interface connected to a DeepSeek API via a JavaScript handler. 
+3. JSDoc annotations across all files.
+4. ESLint-compliant codebase with zero `eslint-disable` directives.
+5. Full reuse of the Tailwind + CSS theme system from the original Anamnesis app to match the look and feel.
+
+TECH REQUIREMENTS:
+- Use **Vite + React + Tailwind CSS** for frontend.
+- Use **JavaScript or TypeScript** with full JSDoc support.
+- Backend (if needed) can be minimal Express or skip completely with mock responses.
+- All components should be strictly ESLint clean and mobile-responsive.
+
+REQUIRED FILES AND STRUCTURE:
+
+📁 /client/
+  ├─ index.css                ← Use full provided index.css
+  ├─ App.jsx / main.jsx       ← Basic routing and app shell
+  ├─ pages/
+  │    ├─ LoginPage.jsx
+  │    └─ ChatPage.jsx
+  ├─ components/
+  │    ├─ Button.jsx
+  │    ├─ Input.jsx
+  │    └─ MessageBubble.jsx
+  ├─ hooks/
+  │    └─ useAuth.js
+  ├─ lib/
+  │    └─ llm-api.js          ← Handles LLM message sending
+📁 tailwind.config.ts         ← Use full provided design config
+📁 .eslintrc.cjs / eslint.config.js
+📁 prettier.config.js
+📁 README.md
+
+DESIGN SYSTEM INTEGRATION (IMPORTANT):
+Use the following **Tailwind and global CSS configuration**, copied from the original Anamnesis app. This defines the full theme, typography, spacing, and animation system.
+
+### 🌀 tailwind.config.ts
+```ts
+import type { Config } from "tailwindcss";
+
+export default {
+  darkMode: ["class"],
+  content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
+  theme: {
+    extend: {
+      borderRadius: {
+        lg: "var(--radius)",
+        md: "calc(var(--radius) - 2px)",
+        sm: "calc(var(--radius) - 4px)",
+      },
+      colors: {
+        background: "hsl(var(--background))",
+        foreground: "hsl(var(--foreground))",
+        card: {
+          DEFAULT: "hsl(var(--card))",
+          foreground: "hsl(var(--card-foreground))",
+        },
+        popover: {
+          DEFAULT: "hsl(var(--popover))",
+          foreground: "hsl(var(--popover-foreground))",
+        },
+        primary: {
+          DEFAULT: "hsl(var(--primary))",
+          foreground: "hsl(var(--primary-foreground))",
+        },
+        secondary: {
+          DEFAULT: "hsl(var(--secondary))",
+          foreground: "hsl(var(--secondary-foreground))",
+        },
+        muted: {
+          DEFAULT: "hsl(var(--muted))",
+          foreground: "hsl(var(--muted-foreground))",
+        },
+        accent: {
+          DEFAULT: "hsl(var(--accent))",
+          foreground: "hsl(var(--accent-foreground))",
+        },
+        destructive: {
+          DEFAULT: "hsl(var(--destructive))",
+          foreground: "hsl(var(--destructive-foreground))",
+        },
+        border: "hsl(var(--border))",
+        input: "hsl(var(--input))",
+        ring: "hsl(var(--ring))",
+        chart: {
+          "1": "hsl(var(--chart-1))",
+          "2": "hsl(var(--chart-2))",
+          "3": "hsl(var(--chart-3))",
+          "4": "hsl(var(--chart-4))",
+          "5": "hsl(var(--chart-5))",
+        },
+        sidebar: {
+          DEFAULT: "hsl(var(--sidebar-background))",
+          foreground: "hsl(var(--sidebar-foreground))",
+          primary: "hsl(var(--sidebar-primary))",
+          "primary-foreground": "hsl(var(--sidebar-primary-foreground))",
+          accent: "hsl(var(--sidebar-accent))",
+          "accent-foreground": "hsl(var(--sidebar-accent-foreground))",
+          border: "hsl(var(--sidebar-border))",
+          ring: "hsl(var(--sidebar-ring))",
+        },
+      },
+      keyframes: {
+        "accordion-down": {
+          from: {
+            height: "0",
+          },
+          to: {
+            height: "var(--radix-accordion-content-height)",
+          },
+        },
+        "accordion-up": {
+          from: {
+            height: "var(--radix-accordion-content-height)",
+          },
+          to: {
+            height: "0",
+          },
+        },
+      },
+      animation: {
+        "accordion-down": "accordion-down 0.2s ease-out",
+        "accordion-up": "accordion-up 0.2s ease-out",
+      },
+    },
+  },
+  plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],
+} satisfies Config;
+
+🎨 index.css
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --primary-rgb: 99, 102, 241;
+  }
+
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html {
+    @apply overflow-x-hidden;
+  }
+
+  :focus-visible {
+    @apply outline-2 outline-offset-2 outline-primary;
+  }
+}
+
+@layer components {
+  .container-sm {
+    @apply w-full px-4 mx-auto max-w-md;
+  }
+
+  .container-md {
+    @apply w-full px-4 mx-auto max-w-3xl md:px-6;
+  }
+
+  .container-lg {
+    @apply w-full px-4 mx-auto max-w-5xl md:px-6 lg:px-8;
+  }
+
+  .container-xl {
+    @apply w-full px-4 mx-auto max-w-7xl md:px-6 lg:px-8;
+  }
+
+  .form-input-lg {
+    @apply h-12 text-base px-4;
+  }
+
+  .btn-touch {
+    @apply min-h-[44px] px-4;
+  }
+
+  .touch-py {
+    @apply py-3 md:py-2;
+  }
+
+  .touch-px {
+    @apply px-3 md:px-4;
+  }
+
+  .h1 {
+    @apply text-2xl font-bold md:text-3xl lg:text-4xl;
+  }
+
+  .h2 {
+    @apply text-xl font-bold md:text-2xl lg:text-3xl;
+  }
+
+  .h3 {
+    @apply text-lg font-bold md:text-xl lg:text-2xl;
+  }
+
+  .text-body {
+    @apply text-sm md:text-base;
+  }
+
+  .text-small {
+    @apply text-xs md:text-sm;
+  }
+}
+
+@layer utilities {
+  .h-safe-bottom {
+    height: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pb-safe {
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .pt-safe {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .touch-target {
+    @apply min-h-[44px] min-w-[44px];
+  }
+
+  .tour-highlight {
+    @apply relative z-10;
+  }
+
+  .tour-highlight::after {
+    content: '';
+    @apply absolute inset-0 rounded-lg border-2 border-primary animate-pulse shadow-lg z-10 pointer-events-none;
+    box-shadow: 0 0 0 4px rgba(var(--primary), 0.2);
+  }
+
+  .pulse-animation {
+    animation: emergency-pulse 2s infinite;
+    transform-origin: center;
+  }
+
+  @keyframes emergency-pulse {
+    0% {
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.7);
+    }
+    70% {
+      box-shadow: 0 0 0 10px rgba(220, 38, 38, 0);
+    }
+    100% {
+      box-shadow: 0 0 0 0 rgba(220, 38, 38, 0);
+    }
+  }
+}
+
+

@@ -1,0 +1,53 @@
+You must resolve a critical bug in the AI chat system of the Anamnesis Medical AI Assistant.
+
+📛 Problem Summary:
+When the user sends a chat message, the response from the AI server is HTML (e.g. Vite's development index.html) instead of a proper JSON API result. This corrupts the chat UI with HTML and breaks message rendering.
+
+🎯 Objective:
+Fix the backend and frontend communication to ensure chat messages return valid structured JSON, not HTML.
+
+📍 Steps to Perform:
+
+1. 🧪 **Verify Endpoint and Method**:
+   - Confirm that the chat submission handler (`sendMessageClientSide`, `fetch(...)`, etc.) is POSTing to the correct route:
+     ```
+     POST /api/chat or /api/chat/stream
+     ```
+   - Validate that the backend Express route `/api/chat` or `/api/chat/stream` is correctly registered in `server/routes.js`.
+
+2. 🧾 **Inspect Server Response**:
+   - Confirm the Express route handler returns `res.json(...)` or `res.write(...)` (for streaming).
+   - Ensure that no route is returning `res.sendFile(...)` or default HTML (e.g. index.html fallback) for this path.
+
+3. 📦 **Fix Incorrect Fallback Handling**:
+   - Check `server/index.ts` or `vite.config.js` for any `app.use("*", ...)` or catch-all fallback that may respond with HTML for unknown routes — exclude `/api/*`.
+
+4. 🔐 **Check Proxy Setup**:
+   - If the frontend is proxying `/api/chat` via Vite or Express, ensure the proxy is configured properly in development.
+   - Ensure it's not forwarding to the wrong port or serving frontend HTML by mistake.
+
+5. 📄 **Update `llm-api.jsx`**:
+   - Add a `Content-Type` header to the request: `application/json`
+   - Validate the response: 
+     ```js
+     const response = await fetch("/api/chat", { ... });
+     if (!response.ok || response.headers.get("content-type") !== "application/json") {
+       throw new Error("Invalid response from AI server");
+     }
+     ```
+
+6. 📛 **Error Handling and Logging**:
+   - Improve the logging in `llm-api.jsx` and Express to log actual request data and server crashes if any.
+   - Ensure `try/catch` and fallback logic are in place for malformed JSON.
+
+7. ✅ **Validate Fix**:
+   - Send a chat message and verify:
+     - No HTML is returned
+     - The AI response appears correctly in the UI
+     - The console is clean and shows no fetch or runtime errors
+
+8. 📁 **Documentation**:
+   - Document this issue and fix under `PHASE4_PROGRESS.md` as: “Resolved chat response HTML injection bug”
+
+🚫 Do not use `eslint-disable` to silence issues
+🧼 All fixes must be lint-clean and maintain JSDoc integrity

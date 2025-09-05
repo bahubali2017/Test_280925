@@ -1,0 +1,273 @@
+classic DNS reachability failure to Supabase (ENOTFOUND ppwaeyekzpyqqlddfmeb.supabase.co), which then cascades into a frontend crash → white screen. Let’s fix this in two tracks:
+
+A. Connectivity & config checks (stop the ENOTFOUND)
+
+B. Graceful degradation (never show a blank screen again, even if Supabase is down)
+
+I’ll give you minimal, copy‑paste patches so runtime behavior is safer immediately.
+
+A) Connectivity & Config Checklist (fast)
+
+Verify env vars (no stray spaces/newlines):
+
+SUPABASE_URL=https://ppwaeyekzpyqqlddfmeb.supabase.co
+
+SUPABASE_ANON_KEY=...
+
+SUPABASE_SERVICE_KEY=... (server only)
+
+Common pitfalls:
+
+Trailing space or hidden newline after the URL/key.
+
+Missing https:// prefix on URL.
+
+Using an old project ref (ppwaeyekzpyqqlddfmeb) that was deleted/rotated.
+
+Quick reachability test (from the same host):
+
+nslookup ppwaeyekzpyqqlddfmeb.supabase.co
+curl -sSf https://ppwaeyekzpyqqlddfmeb.supabase.co/auth/v1/health
+
+
+If nslookup can’t resolve → it’s DNS or the hostname is wrong.
+
+If curl can’t reach but nslookup works → networking/firewall/egress policy.
+
+Browserslist warning is unrelated (you can update later):
+
+npx update-browserslist-db@latest
+
+B) Never White‑Screen Again (graceful fallbacks)
+1) Server: make the “connection test” non‑fatal and quick
+
+Your logs show a startup test that throws and logs a stack trace. Let’s bound it with a short timeout + mark a health flag.
+
+server/test-connection.js (wrap with timeout & soft‑fail)
+// server/test-connection.js
+import { createClient } from '@supabase/supabase-js';
+
+function withTimeout(promise, ms = 2500) {
+  return Promise.race([
+    promise,
+    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)),
+  ]);
+}
+
+export async function testSupabaseConnection() {
+  try {
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_SERVICE_KEY || process.env.SUPABASE_ANON_KEY;
+    if (!url || !key) return { ok: false, reason: 'missing-config' };
+
+    const supabase = createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+
+    // lightweight call with timeout
+    const admin = supabase.auth.admin;
+    await withTimeout(admin.listUsers({ page: 1, perPage: 1 }), 2500);
+
+    return { ok: true };
+  } catch (err) {
+    return { ok: false, reason: String(err?.message || err) };
+  }
+}
+
+server/index.js (record health; don’t crash)
+import express from 'express';
+import { testSupabaseConnection } from './test-connection.js';
+
+const app = express();
+let supabaseHealthy = false;
+
+(async () => {
+  const cfg = {
+    url: process.env.SUPABASE_URL,
+    hasAnonKey: !!process.env.SUPABASE_ANON_KEY,
+    hasServiceKey: !!process.env.SUPABASE_SERVICE_KEY,
+    environment: process.env.NODE_ENV || 'development',
+  };
+  console.log('Configuration loaded successfully', cfg);
+
+  console.log('Testing Supabase connection...');
+  const res = await testSupabaseConnection();
+  supabaseHealthy = !!res.ok;
+  if (!supabaseHealthy) {
+    console.warn('Supabase connection test failed:', res.reason);
+    console.warn('⚠️ Supabase not accessible - authentication will be limited');
+  }
+})();
+
+app.get('/api/health', (_req, res) => {
+  res.json({
+    ok: true,
+    supabase: supabaseHealthy ? 'up' : 'down',
+    time: new Date().toISOString(),
+  });
+});
+
+const port = process.env.PORT || 5000;
+app.listen(port, () => {
+  console.log(`🚀 Server successfully started on port ${port}`);
+});
+
+
+Result: backend starts regardless; the Admin/Frontend can detect supabase: "down" and adapt.
+
+2) Client: guard Supabase init + show a friendly banner
+A. Never hard‑fail on client init
+
+If you initialize Supabase on the client, guard it:
+
+// client/src/lib/supabaseClient.js
+import { createClient } from '@supabase/supabase-js';
+
+export function getSupabaseSafe() {
+  try {
+    const url = import.meta.env.VITE_SUPABASE_URL;
+    const key = import.meta.env.VITE_SUPABASE_ANON_KEY;
+    if (!url || !key) return { client: null, reason: 'missing-config' };
+    const client = createClient(url, key);
+    return { client };
+  } catch (e) {
+    return { client: null, reason: 'init-error' };
+  }
+}
+
+B. Context: feature‑flag auth when down
+// client/src/contexts/AuthAvailabilityContext.jsx
+import { createContext, useContext, useEffect, useState } from 'react';
+
+const AuthAvailabilityContext = createContext({ supabaseUp: true });
+
+export function AuthAvailabilityProvider({ children }) {
+  const [supabaseUp, setUp] = useState(true);
+
+  useEffect(() => {
+    let canceled = false;
+    (async () => {
+      try {
+        const r = await fetch('/api/health');
+        const j = await r.json();
+        if (!canceled) setUp(j?.supabase === 'up');
+      } catch {
+        if (!canceled) setUp(false);
+      }
+    })();
+    return () => { canceled = true; };
+  }, []);
+
+  return (
+    <AuthAvailabilityContext.Provider value={{ supabaseUp }}>
+      {children}
+    </AuthAvailabilityContext.Provider>
+  );
+}
+
+export const useAuthAvailability = () => useContext(AuthAvailabilityContext);
+
+
+Wrap your root:
+
+// client/src/main.jsx
+import { AuthAvailabilityProvider } from './contexts/AuthAvailabilityContext.jsx';
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <AuthAvailabilityProvider>
+    <App />
+  </AuthAvailabilityProvider>
+);
+
+C. UI Banner instead of white screen
+// client/src/components/SupabaseDownBanner.jsx
+export default function SupabaseDownBanner() {
+  return (
+    <div className="bg-yellow-100 text-yellow-900 px-4 py-3 text-sm">
+      Authentication is temporarily unavailable. You can still browse the demo, but sign‑in and data sync are disabled.
+    </div>
+  );
+}
+
+
+Use it in your layout:
+
+// client/src/App.jsx
+import { useAuthAvailability } from './contexts/AuthAvailabilityContext.jsx';
+import SupabaseDownBanner from './components/SupabaseDownBanner.jsx';
+
+export default function App() {
+  const { supabaseUp } = useAuthAvailability();
+  return (
+    <>
+      {!supabaseUp && <SupabaseDownBanner />}
+      {/* Your routes/components here */}
+    </>
+  );
+}
+
+D. Global Error Boundary (catches any render crash)
+// client/src/components/GlobalErrorBoundary.jsx
+import { Component } from 'react';
+
+export class GlobalErrorBoundary extends Component {
+  constructor(p) { super(p); this.state = { hasError: false }; }
+  static getDerivedStateFromError() { return { hasError: true }; }
+  componentDidCatch(err, info) { console.error('UI error boundary:', err, info); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="p-6 text-sm">
+          <h1 className="text-red-600 font-semibold">Something went wrong.</h1>
+          <p>Reload the page or try again later.</p>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+
+Wrap your app:
+
+// client/src/main.jsx
+import { GlobalErrorBoundary } from './components/GlobalErrorBoundary.jsx';
+ReactDOM.createRoot(document.getElementById('root')).render(
+  <AuthAvailabilityProvider>
+    <GlobalErrorBoundary>
+      <App />
+    </GlobalErrorBoundary>
+  </AuthAvailabilityProvider>
+);
+
+3) Optional: “Demo Mode” when Supabase is down
+
+If supabaseUp === false, you can:
+
+Disable Sign up / Login buttons.
+
+Use in‑memory message persistence only.
+
+Show a “Demo Mode” watermark.
+
+Example hook:
+
+const isDemoMode = !supabaseUp;
+// pass to Chat page; prevent writes that require DB
+
+4) Quick triage of the actual ENOTFOUND
+
+If after the guards you still want to fix the upstream:
+
+Double‑check you can log in to Supabase and that the project ref ppwaeyekzpyqqlddfmeb exists and is active.
+
+If you recently rotated region or deleted the project, update SUPABASE_URL with the current project ref.
+
+Some hosts restrict outbound DNS/HTTPS — verify your environment allows connections to *.supabase.co:443.
+
+What to do now
+
+Apply the server test‑connection + /api/health patch.
+
+Add the client availability context + banner + error boundary.
+
+Re-run the app. You should see a working UI with a yellow banner if Supabase is still unreachable, not a white screen.
+
+If you want, paste your current .env (with keys redacted) and the client Supabase init snippet, and I’ll sanity‑check them for any subtle issues (extra slashes, spaces, wrong VITE_ prefixes, etc.)

@@ -1,0 +1,71 @@
+📌 TASK: continue  with High Priority (User Experience & Authentication)
+
+🎯 OBJECTIVE:
+Fix all TypeScript and ESLint errors for the following critical files one-by-one, in this exact order:
+
+
+
+
+ client/src/components/MessageBubble.jsx (8 errors: 6 TypeScript, 2 ESLint)
+Error Types: Missing JSDoc, unused style variables
+Impact: Chat message display, user communication
+
+ client/src/components/ProtectedRoute.jsx (5 errors: 1 TypeScript, 4 ESLint)
+Error Types: Undefined globals (setTimeout, clearTimeout), missing JSDoc
+Impact: Authentication flow, protected pages
+
+ client/src/pages/LoginPage.jsx (15 errors: 15 TypeScript)
+Error Types: Type errors, validation issues
+Impact: User authentication, account creation
+
+ client/src/hooks/useAuth.jsx (4 errors: 1 TypeScript, 3 ESLint)
+Error Types: Unused variables, missing JSDoc returns
+Impact: Authentication state management
+
+ client/src/lib/supabase.js (10 errors: 2 TypeScript, 8 ESLint)
+Error Types: Undefined global (URL), missing JSDoc returns
+Impact: Database connectivity, authentication
+
+
+
+
+🧪 VALIDATION:
+
+Run npx eslint <file> --ext .js,.jsx after each file
+Run npx tsc --noEmit to validate no remaining TS errors
+✅ If both pass with no errors, mark the file as ✅ Complete
+📄 DOCUMENTATION:
+Update GENERAL_ERROR_LIST.md after each file is fixed:
+
+Move the file entry to a ✅ Completed section
+Decrease the total error count accordingly
+⚙️ FIXING RULES:
+
+Resolve ALL ESLint rules (no-unused-vars, no-undef, etc.)
+Fix ALL TypeScript syntax, type, or reference issues
+Replace or import missing globals (AbortController, setTimeout, etc.)
+Remove all unused variables
+Do NOT use suppression (no eslint-disable, @ts-ignore, etc.)
+Add JSDoc comments with @param, @returns where missing
+Maintain or improve code readability
+🚫 RESTRICTIONS:
+
+DO NOT fix unrelated files
+DO NOT modify imports for unused components
+DO NOT introduce new features or refactors
+DO NOT create placeholder fixes or suppressions
+📌 NEXT FILE TO FIX:
+Start now with: client/src/lib/llm-api.jsx
+
+Once this file is fully fixed and validated, proceed to the next in order.
+
+Error Types: Type errors, validation issues
+Impact: User authentication, account creation
+ client/src/hooks/useAuth.jsx (4 errors: 1 TypeScript, 3 ESLint)
+
+Error Types: Unused variables, missing JSDoc returns
+Impact: Authentication state management
+ client/src/lib/supabase.js (10 errors: 2 TypeScript, 8 ESLint)
+
+Error Types: Undefined global (URL), missing JSDoc returns
+Impact: Database connectivity, authentication

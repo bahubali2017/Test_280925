@@ -1,0 +1,133 @@
+✅ AGENT PROMPT — PHASE 9: MEDICAL SAFETY GUIDELINES
+
+GOAL: Implement a strict medical safety, triage, and ethics framework for the Anamnesis Medical AI system to meet clinical-grade deployment standards and HIPAA-compliant medical logic safeguards.
+
+🎯 OBJECTIVE
+
+Ensure the system operates within clear ethical and legal boundaries, prioritizes user safety, and transparently communicates limitations.
+
+📦 TARGET FILES
+
+src/lib/llm-api.js
+
+src/lib/medical-layer/triage-engine.js
+
+src/lib/medical-layer/fallback-engine.js
+
+src/lib/medical-layer/emergency-detector.js
+
+src/lib/medical-layer/atd-router.js
+
+src/components/FeedbackNotice.jsx
+
+src/components/TriageWarning.jsx
+
+src/types/medical-schema.d.ts
+
+src/lib/config/safety-rules.js ← 🆕 create this file
+
+✅ TASK LIST: Phase 9 Medical Safety Guidelines
+1. Triage Safety Logic
+
+ Ensure all triage-engine.js logic includes:
+
+Conservative bias: if two triage interpretations are possible, favor the more urgent one
+
+Threshold-based escalation: symptoms like "chest pain", "shortness of breath", "loss of consciousness" always escalate to Emergency
+
+Mental health triggers: if messages contain phrases like "want to harm", "ending my life", escalate to Mental Health Emergency
+
+Add safety rules in safety-rules.js to centralize high-risk symptom patterns
+
+2. Diagnostic Boundary System
+
+ Update all AI model responses (in llm-api.js):
+
+Wrap any diagnostic-like text in conditional language:
+“You may be experiencing…”
+“This could possibly suggest…”
+“It is advisable to consult a doctor to confirm…”
+
+ Add post-processing filter to redact or replace overconfident phrases from LLM responses (fallback-engine.js)
+
+3. ATD (Advice to Doctor) Routing
+
+ Create or enhance atd-router.js:
+
+Route triage level ≥ urgent or flagged symptoms to provider interface
+
+Provide structured JSON block:
+
+{
+  "triageLevel": "Emergency",
+  "recommendedActions": ["Immediate ER visit", "Avoid driving", "Bring list of medications"],
+  "flaggedSymptoms": ["chest pain", "shortness of breath"]
+}
+
+
+Integrate ATD notices into UI (e.g., red alert card on AI output)
+
+4. Limitations Disclaimer Enforcement
+
+ Add automated disclaimer injection at the end of all medical replies:
+“This is not a medical diagnosis. Always consult a licensed healthcare provider for medical decisions.”
+
+ If the LLM fails or output is ambiguous, show fallback content:
+“I wasn’t able to determine the most accurate information. Please speak with a healthcare provider.”
+
+5. Emergency Protocol Integration
+
+ Create emergency-detector.js (or reuse Phase 6 logic):
+
+Maintain keyword lists for emergencies (heart attack, stroke, suicidal ideation)
+
+Map country → emergency number (e.g., US: 911, EU: 112) via config/regions.js
+
+Inject emergency notice:
+“This may be a medical emergency. Please call 112 or seek immediate help.”
+
+6. Privacy & Ethics Compliance
+
+ Ensure no PII (personal identifiable information) is stored
+
+ Audit any logging or caching modules — exclude medical content from persistence
+
+ In analytics/usage-tracker.js, aggregate data only (no symptom or message storage)
+
+ Create test cases in __tests__/safety-engine.test.js
+
+📄 OUTPUT & DOCUMENTATION
+
+ Update LAYER_DEVELOPMENT_PLAN.md under Phase 9 with:
+
+Triage escalation logic summary
+
+Ethics & boundary guardrail notes
+
+ATD routing examples
+
+Emergency protocol design
+
+Disclaimer enforcement pattern
+
+ Create docs/Medical-Safety-Framework.md:
+
+All implemented rules, triage categories, fallback strategy
+
+Known risk phrases, model override examples
+
+Validation plan and clinical review status
+
+✅ COMPLETION CRITERIA
+
+✅ No TypeScript or ESLint errors
+
+✅ All critical symptoms escalate to emergency protocol
+
+✅ All diagnostic statements use cautious phrasing
+
+✅ All outputs include disclaimers
+
+✅ Logging is anonymized
+
+✅ Unit tests exist for triage, fallback, ATD, emergency detection

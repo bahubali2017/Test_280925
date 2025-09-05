@@ -1,0 +1,126 @@
+🚨 ROOT CAUSES & FIX STRATEGY
+❗1. Incorrect Enum Definitions (16 errors in enums.js)
+
+You're using JSDoc enums but assigning plain strings without correct TypeScript binding. Fix by using proper const assertions or literal union types.
+
+✅ Recommended Fix:
+/** @typedef {"educational" | "generic" | "flagged" | "fallback"} LLMResponseCategory */
+
+/** @type {{ [key in LLMResponseCategory]: key }} */
+export const LLMResponseCategory = {
+  EDUCATIONAL: "educational",
+  GENERIC: "generic",
+  FLAGGED: "flagged",
+  FALLBACK: "fallback"
+}
+
+
+Repeat this pattern for:
+
+SamplingPriority
+
+LogRotation
+
+QueryCategory
+
+📌 Or simplify by exporting only the literal unions with clear string literals + typedef JSDoc.
+
+❗2. Missing properties in queryResult (5 errors in data-logger.js)
+
+You're accessing:
+
+queryResult.atd
+queryResult.disclaimers
+queryResult.suggestions
+
+
+…but your local type is missing those fields.
+
+✅ Fix:
+
+Update the inline type of queryResult:
+
+/** @typedef {{
+  userInput: string;
+  enhancedPrompt: string;
+  finalPrompt?: string;
+  llmResponse?: string;
+  triageLevel: "emergency" | "urgent" | "non_urgent";
+  isHighRisk: boolean;
+  atd?: string[];
+  disclaimers?: string[];
+  suggestions?: string[];
+  metadata: any;
+}} AIQueryResult */
+
+
+Use:
+
+/** @type {AIQueryResult} */
+const queryResult = ...
+
+❗3. Dynamic metadata property fails TS2339 (anonymizer.js:98)
+
+You're adding a _anonymized property to an object without extending the type.
+
+✅ Fix:
+
+If needed, use:
+
+/** @type {{ _anonymized?: string } & AIQueryResult } */
+const anonymized = { ...original }
+anonymized._anonymized = new Date().toISOString()
+
+
+Or move the _anonymized property to metadata.
+
+❗4. Arithmetic on undefined types (metadata-logger.js:308)
+
+You're doing:
+
+.sort((a, b) => b.stats.mtime - a.stats.mtime)
+
+
+But mtime may be Date or missing.
+
+✅ Fix:
+.sort((a, b) => {
+  const timeA = a.stats.mtimeMs ?? 0
+  const timeB = b.stats.mtimeMs ?? 0
+  return timeB - timeA
+})
+
+✅ REPLIT AGENT FIX PROMPT
+
+Fix all TypeScript errors in Phase 5 analytics modules by applying the following changes:
+
+🔧 analytics/enums.js
+
+Fix all enum types using JSDoc @typedef + key in pattern
+
+Ensure exported constants have properly inferred literal types
+
+🔧 analytics/data-logger.js
+
+Define AIQueryResult type with optional disclaimers, suggestions, atd
+
+Use this type explicitly when reading queryResult
+
+Ensure type-safe access for analytics metrics
+
+🔧 analytics/anonymizer.js
+
+Extend the object type to allow setting a _anonymized metadata field without TS2339
+
+Prefer adding _anonymized inside metadata if possible
+
+🔧 analytics/metadata-logger.js
+
+Fix file sort by safely accessing mtimeMs instead of subtracting raw Date values
+
+✅ After Fix, Validate:
+npx tsc --noEmit
+npx eslint client/ --ext .js,.jsx
+
+
+Expected: ✅ 0 errors, 0 warnings

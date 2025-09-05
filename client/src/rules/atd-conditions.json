@@ -1,0 +1,73 @@
+{
+  "red_flags": [
+    {
+      "pattern": "chest pain",
+      "triage": "emergency",
+      "reason": "Possible acute coronary syndrome or other life-threatening causes",
+      "advice": "Call emergency services immediately. Seek urgent medical attention."
+    },
+    {
+      "pattern": "shortness of breath",
+      "triage": "urgent",
+      "reason": "Potential cardiopulmonary compromise",
+      "advice": "Seek urgent evaluation. If severe or sudden, treat as emergency."
+    },
+    {
+      "pattern": "severe headache with vision changes",
+      "triage": "urgent",
+      "reason": "Risk of neurologic emergency",
+      "advice": "Urgent in-person assessment recommended."
+    },
+    {
+      "pattern": "suicide",
+      "triage": "emergency",
+      "reason": "Mental health crisis requiring immediate intervention",
+      "advice": "Call emergency services or crisis hotline immediately."
+    },
+    {
+      "pattern": "suicidal",
+      "triage": "emergency",
+      "reason": "Mental health crisis requiring immediate intervention",
+      "advice": "Call emergency services or crisis hotline immediately."
+    },
+    {
+      "pattern": "kill myself",
+      "triage": "emergency",
+      "reason": "Mental health crisis requiring immediate intervention",
+      "advice": "Call emergency services or crisis hotline immediately."
+    },
+    {
+      "pattern": "thoughts of suicide",
+      "triage": "emergency",
+      "reason": "Mental health crisis requiring immediate intervention",
+      "advice": "Call emergency services or crisis hotline immediately."
+    },
+    {
+      "pattern": "difficulty breathing",
+      "triage": "emergency",
+      "reason": "Potential respiratory emergency",
+      "advice": "Call emergency services immediately."
+    },
+    {
+      "pattern": "can't breathe",
+      "triage": "emergency",
+      "reason": "Potential respiratory emergency",  
+      "advice": "Call emergency services immediately."
+    },
+    {
+      "pattern": "severe abdominal pain",
+      "triage": "emergency",
+      "reason": "Potential surgical emergency or organ compromise",
+      "advice": "Seek immediate medical evaluation."
+    },
+    {
+      "pattern": "high fever",
+      "triage": "urgent",
+      "reason": "Potential serious infection requiring evaluation",
+      "advice": "Seek urgent medical evaluation."
+    }
+  ],
+  "durations_of_concern": [
+    { "pattern": "over 2 weeks", "triage": "non_urgent", "note": "Consider evaluation for persistent symptoms." }
+  ]
+}

@@ -1,0 +1,37 @@
+You are an advanced ESLint cleanup agent assigned to the Anamnesis Medical AI Assistant frontend codebase.
+
+Your task is to eliminate all ESLint errors and warnings in the High Priority files listed in FINAL_LINT_STATUS.md.
+
+⚠️ Strict Enforcement Rules:
+
+1. You must not use any suppression comments (e.g., `// eslint-disable`, `/* @ts-ignore */`).
+2. All fixes must be TypeScript-compatible, even though the files are `.jsx`.
+3. You must resolve the root cause of the lint issue, not hide it.
+4. Every exported component must include full JSDoc annotations including `@param`, `@returns`, and `@module` or `@file`.
+5. Preserve all existing behavior. No functionality or UI changes are allowed.
+6. Do not introduce any new ESLint or TypeScript errors during the fix.
+7. If an unused variable is used indirectly in JSX, add an inline explanatory comment to prevent false positives.
+8. Apply consistent formatting and typing conventions as used in the Anamnesis project (camelCase, lowercase primitives, `className`, safe prop destructuring).
+
+📁 Target Files (High Priority Only):
+1. `client/src/components/ThemeToggle.jsx`
+   - Remove or reference unused `Moon` and `Sun` icon imports that are conditionally rendered
+   - Add missing JSDoc
+2. `client/src/components/ui/dropdown-menu.jsx`
+   - Fix incorrect or unsafe property access that causes LSP/TS errors
+   - Add missing `value`, `checked`, or `inset` props to avoid TS2339
+   - Ensure all components have safe destructuring
+3. `client/src/lib/llm-api.jsx`
+   - Remove any suppression directives (e.g., `eslint-disable`)
+   - Address the root cause of unused variables and import logic
+
+🚀 Execution Steps:
+- Open each of the above files.
+- Read the current implementation and determine which ESLint rules are violated.
+- Apply fixes in-place: remove unused variables, fix property access, add prop fallback defaults, and complete missing JSDoc.
+- Validate the file using `npx eslint <file>` and `npx tsc --noEmit <file>` after each fix.
+- After every successful fix, update FINAL_LINT_STATUS.md:
+  - Move the file to the “✅ Fixed” section under its category.
+  - Add a bullet summary of what was fixed.
+
+Your goal is to bring the total ESLint error count to zero for all high-priority files. Begin with `ThemeToggle.jsx`.

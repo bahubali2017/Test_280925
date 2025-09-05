@@ -1,0 +1,84 @@
+🛑 DO NOT PROCEED WITH ANY NEW DEVELOPMENT.
+
+You must first document all errors, fixes, and lessons learned from today’s debugging session. Generate a markdown report titled:
+
+📄 `/docs/reports/ERROR_FIX_REPORT_<today’s-date>.md`
+
+This report must include:
+
+---
+
+## 1. 🔥 Summary of Critical Issues
+
+Document each of the major problems encountered today, grouped by category:
+
+- ✅ Server Run Failures:
+  - Missing `dotenv` package
+  - Deleted `index.ts`, `storage.ts`, `vite.ts`, `routes.ts` breaking server entry point
+  - Misconfigured `MemStorage` import after TypeScript migration
+  - Broken Supabase initialization (`undefined` WebSocket port)
+
+- ✅ App Load Failures:
+  - Login page rendering blank (white screen)
+  - Missing React imports in multiple files (`App.jsx`, `ChatPage.jsx`, etc.)
+  - Flickering Chat UI due to stuck pending state
+  - ProtectedRoute crashing with `React is not defined`
+
+---
+
+## 2. 🛠️ Fixes Applied
+
+For each issue, provide:
+
+- ✅ **File Path(s)** (e.g. `server/index.js`, `src/components/ChatPage.jsx`)
+- ✅ **Code Evidence**: show before/after code if relevant
+- ✅ **Fix Description**: explain what was fixed and why
+- ✅ **Validation**: how the fix was verified (e.g. test message sent, server started)
+
+Example:
+
+**Issue**: `MemStorage` not exported  
+**Fix**: Removed broken import from `message-api.js`  
+**Validation**: Server booted successfully and `/api/chat/stream` processed messages.
+
+---
+
+## 3. ⚙️ System Validation Steps
+
+- Confirm the following endpoints work:
+  - `GET /api/messages/:userId`
+  - `POST /api/chat/stream`
+- Confirm:
+  - Server runs without crashing (`npm run dev`)
+  - App loads login screen
+  - After login, user is routed to ChatPage
+  - Chat accepts input and streams response via SSE
+
+---
+
+## 4. 🧠 Lessons Learned & Architectural/Technical Debt (ATD)
+
+Include insights such as:
+
+- Agent deleted production-critical files due to missing validation.
+- TypeScript file deletion caused runtime failures even though `.js` versions existed.
+- Supabase misconfiguration caused invalid WebSocket URL construction.
+- Over-reliance on the agent without pre-validation led to downtime.
+- Recommendations: Manual validation **before** running file removal/refactor commands.
+- Architectural TODO: Add CLI validation script before commit hooks.
+
+---
+
+## 5. ✅ Final Status Summary
+
+List:
+- Chat working ✅
+- App loading ✅
+- Login flow ✅
+- Server stable ✅
+- Streaming + suggested questions ✅
+
+---
+
+Do not continue any development until this report is complete, saved, and committed.
+Use full markdown syntax, headers, code blocks, and bullet points.

@@ -1,0 +1,87 @@
+debug and fix the failed AI behavior across all critical emergency and non-urgent tests:
+
+🚨 AGENT PROMPT — TRIAGE AI FAILURE FIX
+❗ Priority: Emergency + Non-Urgent ATD Coverage
+
+You must investigate and fix why the triage engine fails to:
+
+Detect emergency symptoms like:
+
+“chest pain”, “difficulty breathing”, “cyanosis”, “diaphoresis”, “suicidal ideation”
+
+Include required ATD keywords, such as:
+
+"immediate medical attention", "crisis", "call 988", "seek urgent care"
+
+Output structured ATD response with required fields:
+
+triageLevel (e.g., "emergency", "urgent", "non_urgent")
+
+atdKeywords[] (list of alert messages)
+
+detectedSymptoms[]
+
+disclaimerPresent: boolean
+
+🧠 Fix Instructions:
+1. Locate the triage handler function
+
+Check the main AI response generator (likely in ai-handler.js, triage-core.js, or llm-query-runner.js) and locate the function that maps AI output to structured ATD response.
+
+2. Confirm the model is prompted correctly
+
+Ensure that the model is explicitly instructed to:
+
+Output structured response JSON
+
+Include triage level, keywords, and symptoms
+
+Include a disclaimer in every output
+
+✅ If missing — update the system prompt with clear instructions and fallback defaults.
+
+3. Implement keyword post-processing
+
+Add a fallback keyword detector that:
+
+Analyzes raw AI output text for known emergency phrases
+
+Appends any missing keywords (e.g., "immediate medical attention") if symptoms match critical criteria
+
+4. Ensure ATD fallback on critical symptoms
+
+If symptoms like "chest pain", "difficulty breathing", or "suicidal ideation" are detected, force an emergency-level triage and inject required ATD keywords.
+
+5. Add Debug Logging
+
+For each failed test, output:
+
+Raw AI output
+
+Extracted symptoms
+
+Triage level
+
+ATD keywords
+
+Pass/fail status
+
+✅ When Fixed:
+
+Re-run:
+
+node client/src/tests/qa/test-executor.js --categories=emergency,non_urgent
+node client/src/tests/qa/regression-runner.js
+
+
+Confirm:
+
+✅ 100% Emergency recall
+
+✅ ≥ 95% overall test pass rate
+
+✅ Disclaimer always present
+
+✅ ATD keywords always present in emergency cases
+
+✅ Test results saved in test-results.json

@@ -1,0 +1,68 @@
+📌 TASK: Generate `GENERAL_ERROR_LIST.md`
+
+🎯 OBJECTIVE:
+Create a single, organized error tracking document that includes **all ESLint and TypeScript errors** found across the Anamnesis Medical AI Assistant project.
+
+🧱 STRUCTURE:
+Divide the report into two main sections:
+1. TypeScript Errors
+2. ESLint Errors
+
+Under each section:
+- Group by **Error Type** (e.g. `no-unused-vars`, `no-undef`, `Parsing Error`, etc.)
+- For each error type, include:
+  - 🔢 Count of total occurrences
+  - 📁 List of affected files (with line numbers or function name if available)
+  - 🚦 Priority Level: 
+    - `HIGH`: App-breaking, security risk, or >10 occurrences
+    - `MEDIUM`: Frequent or component-level issues (4-10)
+    - `LOW`: Minor style or documentation (1-3)
+
+📝 FILE FORMAT (`GENERAL_ERROR_LIST.md`):
+Use the following markdown format:
+
+---
+
+# GENERAL_ERROR_LIST.md
+
+## 🧠 TypeScript Errors
+
+### ❗ Error Type: `TS1234` – [Error Message]
+- 🔢 Total Occurrences: 17
+- 🚦 Priority: HIGH
+- 📁 Affected Files:
+  - `client/src/pages/ChatPage.jsx`: line 455
+  - `client/src/lib/llm-api.jsx`: line 1001, 1147
+  - ...
+
+---
+
+## 🧹 ESLint Errors
+
+### ❗ Rule: `no-undef` – 'setTimeout' is not defined
+- 🔢 Total Occurrences: 8
+- 🚦 Priority: HIGH
+- 📁 Affected Files:
+  - `ChatPage.jsx`: lines 237, 455, 611
+  - `ProtectedRoute.jsx`: lines 30, 35
+  - ...
+
+---
+
+⚙️ SOURCE:
+Parse errors from:
+- ESLint CLI output (`npx eslint client/ --ext .js,.jsx`)
+- ESLint CLI output for backend (`npx eslint server/ --ext .js`)
+- TypeScript errors (`tsc --noEmit` or log file)
+
+✅ RULES:
+- DO NOT skip any error types.
+- DO NOT collapse groups by file only—group by error type first.
+- DO NOT apply fixes. This task is for analysis and tracking only.
+- DO NOT omit warnings — include them with `Priority: LOW` unless frequent.
+- Categorize clearly with headers, bullet points, and count summaries.
+
+📤 OUTPUT FILE:
+Write final output to: `docs/errors/GENERAL_ERROR_LIST.md`  
+Create directories if not present.
+

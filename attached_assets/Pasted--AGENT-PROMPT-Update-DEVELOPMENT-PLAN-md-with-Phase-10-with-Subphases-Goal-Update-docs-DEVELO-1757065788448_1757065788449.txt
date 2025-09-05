@@ -1,0 +1,118 @@
+📋 AGENT PROMPT — Update DEVELOPMENT_PLAN.md with Phase 10 (with Subphases)
+
+Goal
+Update docs/DEVELOPMENT_PLAN.md by appending a new Phase 10: Deployment Readiness & CI/CD section, including detailed tasks and subphases 10.1 and 10.2. Maintain formatting consistency with previous phases (checkboxes, ✅ markers when completed).
+
+🔧 Instructions for the Agent:
+
+Locate docs/DEVELOPMENT_PLAN.md.
+
+Append the following new section after Phase 9:
+
+Phase 10: Deployment Readiness & CI/CD
+
+The objective of this phase is to prepare the MVP and Admin Dashboard for staging/production deployment with robust CI/CD pipelines, secure configuration, and validated rollout.
+
+Phase 10.1: CI/CD Setup
+
+ Repository Preparation
+
+Create separate GitHub repositories for:
+
+anamnesis-mvp (MVP app)
+
+anamnesis-admin (Admin Dashboard)
+
+Add .gitignore (exclude node_modules, dist, build, and .env* files)
+
+Push current Replit workspace to GitHub
+
+ Secrets Management
+
+Configure GitHub Actions secrets:
+
+SUPABASE_URL
+
+SUPABASE_ANON_KEY
+
+SUPABASE_SERVICE_KEY
+
+DEEPSEEK_API_KEY
+
+ADMIN_API_TOKEN
+
+ CI/CD Workflow Configuration
+
+Create .github/workflows/deploy.yml for both repos
+
+Steps:
+
+Install dependencies (npm ci)
+
+Run ESLint & TypeScript validation
+
+Run test suites
+
+Build project (npm run build)
+
+Deploy to staging (Vercel/Netlify/Fly.io/other)
+
+ Deployment Targets
+
+Configure DNS + SSL for:
+
+MVP → app.anamnesis.health
+
+Admin Dashboard → admin.anamnesis.health
+
+API → api.anamnesis.health
+
+Phase 10.2: Deployment Validation
+
+ Staging Validation
+
+Deploy MVP to staging.anamnesis.health
+
+Deploy Admin Dashboard to staging-admin.anamnesis.health
+
+Validate:
+
+Authentication (email/password + OAuth)
+
+AI streaming + Stop AI abort (<1s)
+
+Admin Dashboard WebSocket monitoring
+
+Legal pages (/legal) load correctly
+
+ Security Validation
+
+Confirm Code Protection Layer (CORS, headers, obfuscation, watermarking)
+
+Validate HTTPS enforcement & SSL certs
+
+Test rate limiting and honeypot detection
+
+ Production Rollout
+
+Promote staging builds to production
+
+Confirm DNS + SSL are live
+
+Run smoke tests on production endpoints
+
+Validate performance and logging in production (Sentry/Logtail if configured)
+
+ Final Documentation
+
+Update DEVELOPMENT_PLAN.md → Mark Phase 10.1 and 10.2 completed
+
+Add RELEASE_NOTES.md with features, fixes, and deployment notes
+
+Archive CI/CD logs for traceability
+
+Keep Phase 10 aligned with earlier phases in terms of formatting, indentation, and ✅ task style.
+
+Do not overwrite previous content; only append Phase 10.
+
+📌 Deliverable: docs/DEVELOPMENT_PLAN.md updated with Phase 10: Deployment Readiness & CI/CD, containing subphases 10.1 (CI/CD Setup) and 10.2 (Deployment Validation) fully detailed.

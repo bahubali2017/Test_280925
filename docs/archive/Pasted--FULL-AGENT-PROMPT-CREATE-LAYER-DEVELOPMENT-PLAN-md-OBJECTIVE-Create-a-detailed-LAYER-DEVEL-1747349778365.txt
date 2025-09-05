@@ -1,0 +1,188 @@
+✅ FULL AGENT PROMPT — CREATE LAYER_DEVELOPMENT_PLAN.md
+
+🎯 OBJECTIVE:
+Create a detailed `LAYER_DEVELOPMENT_PLAN.md` for the Anamnesis Medical AI Assistant.
+
+This plan defines a multi-phase architecture to develop a **Layered AI Interpretation System** that enhances AI query handling before reaching the LLM. It ensures smarter, safer, and contextually accurate responses in a medical setting.
+
+---
+
+# 📘 LAYER_DEVELOPMENT_PLAN.md
+
+## 🌐 Overview
+
+The AI Enhancement Layer (also referred to as the "Interpretation Layer" or "Intelligence Middleware") is designed to sit between the user input and the LLM response engine. It performs:
+
+- Intent classification
+- Symptom & condition extraction
+- Triage logic
+- ATD (Advice to Doctor) routing
+- Prompt shaping
+- Metadata tagging
+- Disclaimers and safety overlays
+
+---
+
+# 🧩 Phase 0 – Pre-Initiation: Infrastructure & Schema Setup
+
+### Goal:
+Prepare the codebase for structured layer logic with reusable utilities and schema foundations.
+
+### Tasks:
+- Create `/lib/router.js` as the main entry point (`routeMedicalQuery(userInput)`).
+- Define shared `LayerContext` structure in `lib/layer-context.js`.
+- Create `rules/atd-conditions.json` with symptom-condition mappings and red flag guidance.
+- Add `lib/utils/logger.js` with a dev-safe debug logger.
+- Define constants (`TRIAGE_FLAGS`, `SEVERITY_TAGS`) in `lib/constants.js`.
+
+---
+
+# 🧠 Phase 1 – Symptom & Condition Intent Parsing
+
+### Goal:
+Detect structured symptom descriptions and general health conditions from free-form input.
+
+### Tasks:
+- Implement `lib/intent-parser.js` to extract:
+  - `symptom`
+  - `duration`
+  - `location`
+  - `severity`
+  - `conditionType` (e.g., mental, physical, chronic, acute)
+- Use a keyword model and regex fallback.
+- Add basic NLP fallback with synonyms support.
+- Write `intent-parser.test.js`.
+
+---
+
+# 🚑 Phase 2 – Triage & ATD Detection
+
+### Goal:
+Identify high-risk symptoms that require escalation or disclaimers (ATD = Advice to Doctor).
+
+### Tasks:
+- Implement `lib/triage-checker.js`:
+  - Detect red flags like "chest pain", "vision loss", "unexplained weight loss", etc.
+  - Cross-reference symptoms with `rules/atd-conditions.json`.
+- Add isHighRisk and atdReason to `LayerContext`.
+- Add `triage-checker.test.js` with edge-case coverage.
+
+---
+
+# 🪄 Phase 3 – Prompt Enhancement & Routing
+
+### Goal:
+Build a system to shape LLM prompts based on extracted intent and triage level.
+
+### Tasks:
+- Implement `lib/prompt-enhancer.js`:
+  - Format LLM prompt using structured summary of parsed info.
+  - Include disclaimers inline if high-risk.
+- Adjust follow-up suggestions based on intent type (e.g., "ask about duration" if missing).
+- Append disclaimers automatically for clinical uncertainty.
+
+---
+
+# 📶 Phase 4 – Message Orchestration
+
+### Goal:
+Integrate all previous steps into a single orchestration engine (`router.js`).
+
+### Tasks:
+- Combine intent parser, triage checker, prompt enhancer in `routeMedicalQuery`.
+- Define response output format:
+  ```js
+  {
+    userInput: "my chest hurts",
+    enhancedPrompt: "...",
+    isHighRisk: true,
+    disclaimers: [...],
+    suggestions: [...],
+    metadata: {...}
+  }
+Add router test suite in tests/layer-tests/router.test.js.
+
+🧪 Phase 5 – Data Capture & Sample Training Set
+Goal:
+Prepare for future fine-tuning or rule calibration with collected samples.
+
+Tasks:
+Capture queries, intents, metadata in training-dataset/layer-decisions.jsonl.
+
+Log high-risk cases separately.
+
+Create manual audit queue for outliers.
+
+🔁 Phase 6 – Feedback Loop & Evaluation
+Goal:
+Evaluate the quality and accuracy of the layer over time.
+
+Tasks:
+Add metrics: false positives, false negatives, triage accuracy, disclaimer ratio.
+
+Create docs/LAYER_TEST_PLAN.md to define test cases and outcomes.
+
+Optionally implement a visual layer evaluator in /admin.
+
+🧬 Phase 7 – Integration with Live Chat
+Goal:
+Make the layer operational within the real-time chat interface.
+
+Tasks:
+Call routeMedicalQuery() inside sendMessageClientSide() in llm-api.js.
+
+Ensure that all LLM requests use the enhanced prompt and display disclaimers.
+
+Test fallback to raw query if layer fails (graceful degradation).
+
+🚀 Phase 8 – Post-Launch Tuning & Extension
+Goal:
+Adapt and expand the layer after live deployment.
+
+Tasks:
+Add new condition templates (autoimmune, neurological, etc.).
+
+Add localized logic (e.g. region-specific disclaimers).
+
+Begin testing with alternate models (e.g. MedPalm, GPT-4, Claude).
+
+📁 Files Created:
+
+lib/router.js
+
+lib/intent-parser.js
+
+lib/triage-checker.js
+
+lib/prompt-enhancer.js
+
+lib/constants.js
+
+rules/atd-conditions.json
+
+training-dataset/layer-decisions.jsonl
+
+tests/layer-tests/*.test.js
+
+docs/LAYER_DEVELOPMENT_PLAN.md
+
+docs/LAYER_TEST_PLAN.md
+
+🧠 ATD Logic Notes:
+
+Triage and ATD are priority first responders.
+
+Any uncertain, vague, or risk-prone condition must be flagged and advised with professional consultation.
+
+Avoid speculative diagnoses.
+
+🚫 ESLint Policy:
+
+No inline eslint-disable allowed
+
+All logic must be typed with JSDoc
+
+Maintain clear test coverage
+
+✅ OUTPUT:
+A completed, structured, cleanly formatted LAYER_DEVELOPMENT_PLAN.md with all phases above written in full markdown.

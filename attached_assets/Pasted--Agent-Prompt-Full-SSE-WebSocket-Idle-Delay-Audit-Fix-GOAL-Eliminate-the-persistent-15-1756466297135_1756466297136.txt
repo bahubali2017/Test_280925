@@ -1,0 +1,41 @@
+# 🚀 Agent Prompt: Full SSE + WebSocket Idle Delay Audit & Fix
+
+GOAL:
+Eliminate the persistent 15–20s idle delay when clicking "Stop AI" and fix invalid WebSocket fallback issues, ensuring the MVP runs with clean, modern best practices.
+
+SCOPE:
+1. **Frontend (client/src/)**  
+   - Audit all files for WebSocket fallback logic (search for `new WebSocket`, `setupWebSocket`, or retry code around `client:536`).  
+   - Disable/remove WebSocket connection attempts if SSE is the chosen transport.  
+   - Verify `llm-api.jsx` is the single streaming authority (no duplicates like `llm-api-enhanced.jsx`).  
+
+2. **Service Worker (public/sw.js)**  
+   - Ensure `/api/chat/stream` bypasses the SW cache layer.  
+   - Add explicit rule: don’t intercept or cache SSE requests.  
+   - Confirm other assets remain cached properly.  
+
+3. **Backend (server/routes.js)**  
+   - Confirm `/api/chat/stream` only exists once (no duplicate definitions in direct-endpoints.js).  
+   - Verify SSE handler uses:  
+     - `req.on("close")` + `ac.abort()`  
+     - `res.end()` + `res.socket?.destroy()`  
+   - Ensure cleanup is fire-and-forget (no blocking `await`).  
+
+4. **Debug & Verification**  
+   - Add timestamped logs: `[SSE] STREAM_STARTED`, `[SSE] STOPPED_BY_USER`, `[SSE] STREAM_ENDED`.  
+   - Confirm logs show `<1s` abort even if browser shows lingering request.  
+   - Use browser Network tab to confirm SSE requests are truly cancelled, not retried via WS.  
+
+OUTPUT:  
+- ✅ Clean architecture: SSE-only streaming, no WS fallbacks  
+- ✅ White-screen & SW cache issues eliminated  
+- ✅ Stop AI idle delay <1s (UI + network)  
+- ✅ Documentation updates in:  
+  - `docs/IDLE_LATENCY_RCA.md` (final cause + fix)  
+  - `docs/ARCHITECTURE_HEALTH.md` (SSE vs WS design decision)  
+
+IMPORTANT RULES:  
+- Do not change business logic or medical AI layers.  
+- Only address **transport, abort, and duplication issues**.  
+- Ensure the app stays clean, production-ready, and standards-compliant.  
+

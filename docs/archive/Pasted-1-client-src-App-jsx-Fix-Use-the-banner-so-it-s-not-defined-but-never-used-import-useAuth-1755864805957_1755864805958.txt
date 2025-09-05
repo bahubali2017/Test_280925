@@ -1,0 +1,149 @@
+1) client/src/App.jsx
+
+Fix: Use the banner so it’s not “defined but never used”.
+
++ import { useAuthAvailability } from "./contexts/AuthAvailabilityContext.jsx";
++ import SupabaseDownBanner from "./components/SupabaseDownBanner.jsx";
+
+ export default function App() {
++  const { supabaseUp } = useAuthAvailability();
+   return (
+     <>
++      {!supabaseUp && <SupabaseDownBanner />}
+       {/* …your routes/components */}
+     </>
+   );
+ }
+
+2) client/src/main.jsx
+
+Fix: Actually wrap the app with the provider and error boundary you imported.
+
+ import React from "react";
+ import ReactDOM from "react-dom/client";
+ import App from "./App.jsx";
++ import { AuthAvailabilityProvider } from "./contexts/AuthAvailabilityContext.jsx";
++ import { GlobalErrorBoundary } from "./components/GlobalErrorBoundary.jsx";
+
+ ReactDOM.createRoot(document.getElementById("root")).render(
+-  <App />
++  <AuthAvailabilityProvider>
++    <GlobalErrorBoundary>
++      <App />
++    </GlobalErrorBoundary>
++  </AuthAvailabilityProvider>
+ );
+
+3) client/src/components/GlobalErrorBoundary.jsx
+
+Fix: Add @returns where the linter flagged it.
+
+ import { Component } from "react";
+
+ export class GlobalErrorBoundary extends Component {
+   constructor(props) {
+     super(props);
+     this.state = { hasError: false };
+   }
+
++  /**
++   * React lifecycle: update state after an error.
++   * @returns {{ hasError: boolean }}
++   */
+   static getDerivedStateFromError() {
+     return { hasError: true };
+   }
+
+   componentDidCatch(err, info) {
+     // Keep logs PHI-free
+     // eslint-disable-next-line no-console
+     console.error("UI error boundary:", err, info);
+   }
+
++  /**
++   * Render fallback UI when an error has occurred, else children.
++   * @returns {JSX.Element}
++   */
+   render() {
+     if (this.state.hasError) {
+       return (
+         <div className="p-6 text-sm">
+           <h1 className="text-red-600 font-semibold">Something went wrong.</h1>
+           <p>Reload the page or try again later.</p>
+           <button className="mt-3 px-3 py-1 rounded border" onClick={() => location.reload()}>
+             Reload
+           </button>
+         </div>
+       );
+     }
+     return this.props.children;
+   }
+ }
+
+4) client/src/components/SupabaseDownBanner.jsx
+
+Fix: Add @returns.
+
+- export default function SupabaseDownBanner() {
++ /**
++  * Banner shown when Supabase is unavailable.
++  * @returns {JSX.Element}
++  */
++ export default function SupabaseDownBanner() {
+   return (
+     <div className="bg-yellow-100 text-yellow-900 px-4 py-3 text-sm">
+       Authentication is temporarily unavailable. You can still browse the demo, but sign‑in and data sync are disabled.
+     </div>
+   );
+ }
+
+5) client/src/contexts/AuthAvailabilityContext.jsx
+
+Fix: Add @returns on provider and hook.
+
+ import React, { createContext, useContext, useEffect, useState } from "react";
+
+ const AuthAvailabilityContext = createContext({ supabaseUp: true });
+
++ /**
++  * Provides Supabase availability to descendants.
++  * @param {{ children: React.ReactNode }} props
++  * @returns {JSX.Element}
++  */
+ export function AuthAvailabilityProvider({ children }) {
+   const [supabaseUp, setUp] = useState(true);
+
+   useEffect(() => {
+     let canceled = false;
+     (async () => {
+       try {
+         const r = await fetch("/api/health");
+         const j = await r.json();
+         if (!canceled) setUp(j?.supabase === "up");
+       } catch {
+         if (!canceled) setUp(false);
+       }
+     })();
+     return () => {
+       canceled = true;
+     };
+   }, []);
+
+   return (
+     <AuthAvailabilityContext.Provider value={{ supabaseUp }}>
+       {children}
+     </AuthAvailabilityContext.Provider>
+   );
+ }
+
++ /**
++  * Hook to read Supabase availability.
++  * @returns {{ supabaseUp: boolean }}
++  */
+ export const useAuthAvailability = () => useContext(AuthAvailabilityContext);
+
+Run checks
+npx eslint client/ --ext .js,.jsx --fix
+
+
+You should now be at 0 errors (and the JSDoc warnings gone). If anything else pops, paste the new lint output and I’ll give you exact diffs again.

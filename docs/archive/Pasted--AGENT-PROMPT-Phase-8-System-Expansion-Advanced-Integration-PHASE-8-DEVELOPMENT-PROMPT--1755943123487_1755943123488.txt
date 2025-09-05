@@ -1,0 +1,86 @@
+✅ AGENT PROMPT — Phase 8: System Expansion & Advanced Integration
+# 📘 PHASE 8 DEVELOPMENT PROMPT — SYSTEM EXPANSION & ADVANCED INTEGRATION
+
+## GOAL
+Begin Phase 8 of the Anamnesis Medical AI Layer development. This phase focuses on extending the AI assistant’s medical intelligence, enhancing regional/cultural adaptability, supporting alternative LLMs, and improving performance. All new features must preserve the platform’s:
+- ✅ HIPAA compliance
+- ✅ 100% clinical test success rate
+- ✅ 0 TypeScript/ESLint errors
+- ✅ Real-time capability
+- ✅ JSDoc and audit documentation
+
+---
+
+## ✅ TASK 1: Medical Domain Expansion
+
+### 🔹 1.1 Add specialized condition templates:
+- Autoimmune conditions (e.g., lupus, MS, RA)
+- Neurological symptoms (e.g., seizures, vertigo, neuralgia)
+- Pediatric-specific logic (age-aware triage, growth symptom handling)
+- Geriatric adaptations (multi-comorbidity handling, frailty assessment)
+
+### 🔹 1.2 Create follow-up suggestion templates:
+- Tailor suggestions based on condition type and triage level
+- Add prompt enhancements and UI component placeholders
+
+---
+
+## ✅ TASK 2: Regional & Demographic Adaptation
+
+### 🔹 2.1 Create localization hooks:
+- Region-specific medical disclaimers (e.g., EU vs. US)
+- Terminology localization infrastructure (e.g., “paracetamol” vs. “acetaminophen”)
+
+### 🔹 2.2 Build demographic-aware calibrations:
+- Logic modifiers based on user age, sex, region
+- Cultural symptom phrasing variations support (e.g., "wind in belly" → bloating)
+
+---
+
+## ✅ TASK 3: Advanced LLM Integration
+
+### 🔹 3.1 Test multiple model compatibility:
+- Implement abstraction layer for MedPalm v2, Claude 3, and GPT-4
+- Perform prompt optimization and token budgeting per model
+
+### 🔹 3.2 Create LLM fallback & preference logic:
+- Auto-select optimal model for context (e.g., Claude for ethical sensitivity)
+- Ensure full compatibility with existing `llm-api.jsx` logic
+
+---
+
+## ✅ TASK 4: System Optimization
+
+### 🔹 4.1 Performance tuning:
+- Track and minimize added latency from Phase 8 features
+- Cache symptom classification + triage output for known conditions
+
+### 🔹 4.2 Analytics & Learning Loops:
+- Log success/failure rates of new templates
+- Start collecting anonymous usage patterns for feedback integration
+
+---
+
+## 🔒 REQUIREMENTS
+
+- Maintain 100% passing status on `docs/LAYER_TEST_PLAN.md`
+- Validate new logic via new test cases in `client/tests/qa/`
+- Log all architecture and logic changes in:
+  - 📄 `docs/AI-Layer-Capability-Report.md` (append Section 8)
+  - 🧪 `docs/LAYER_TEST_PLAN.md` (expand test table)
+- NO `any` types, NO ESLint errors, NO suppressions allowed
+- All new modules/functions must have complete JSDoc annotations
+- Add entries in `CHANGELOG.md` under Phase 8 heading
+
+---
+
+## 🔁 OUTPUT
+
+When finished, respond with:
+
+- ✅ Summary of new domain templates implemented
+- ✅ Region/disclaimer/localization capabilities added
+- ✅ LLM model compatibility matrix and routing strategy
+- ✅ Performance benchmarks before and after optimization
+- ✅ Location of updated docs (e.g., `docs/AI-Layer-Capability-Report.md`)
+- ✅ Confirmation of 100% test pass and zero code quality errors

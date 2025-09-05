@@ -1,0 +1,48 @@
+✅ PHASE 5 BATCH TASKS – HIGH PRIORITY STRUCTURAL FIXES
+1. 🧩 Consolidate Duplicate Hooks (use-toast)
+Delete: client/src/hooks/use-toast.js
+Keep: client/src/hooks/use-toast.jsx
+Update all imports across the project to reference use-toast.jsx only.
+Do not rename the file or change its internals unless broken.
+Verify import paths in any affected components or pages.
+
+2. 🎨 Component Naming Conflict Resolution
+Delete:
+client/src/components/Button.jsx
+client/src/components/Input.jsx
+Use only the standardized client/src/components/ui/button.jsx and ui/input.jsx.
+Update all import paths referencing Button or Input to use the ui/ directory version.
+Do not modify any other components.
+
+3. 💬 Chat Flow Error Handling Cleanup
+File: client/src/components/MessageBubble.jsx
+Consolidate the error display logic under a single, clean path.
+Remove redundant checks between lines 325–370 and 580–620.
+All message-related errors should follow this logic:
+If status === 'failed', show a single styled error bubble.
+If error exists in metadata but message is delivered, suppress the error bubble.
+Do not introduce animations or UI changes.
+Do not touch streaming logic in this step.
+
+4. 🔄 Stream Handling Cleanup
+File: server/routes.js
+Remove old simulation/test streaming code between lines 538–580.
+Consolidate redundant termination/cleanup logic between lines 880–920.
+All stream responses should cleanly resolve on res.end() or client abort.
+Do not modify live endpoints or business logic.
+
+🛡️ RULES AND CONSTRAINTS
+✅ Do not rename or move files.
+✅ Do not modify unrelated files.
+✅ Do not add new files unless strictly required to complete a listed fix.
+❌ Do not change any styling, text content, layout, or markup structure.
+❌ Do not touch Vite, Supabase, or configuration files.
+
+✅ POST-ACTION
+After all changes, generate a markdown report file at:
+docs/audits/PHASE5_STRUCTURAL_CLEANUP_REPORT.md
+
+Include:
+✅ Summary of each task completed
+🗂️ List of updated files
+⚠️ Any unresolved issues or TODOs for review

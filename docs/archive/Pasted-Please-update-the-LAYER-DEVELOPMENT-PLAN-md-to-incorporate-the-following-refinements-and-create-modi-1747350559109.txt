@@ -1,0 +1,96 @@
+Please update the LAYER_DEVELOPMENT_PLAN.md to incorporate the following refinements and create/modify the necessary code files accordingly. These tasks should be added as sub-tasks within existing phases, without creating new top-level phases.
+
+📁 Phase 0.1 – Infrastructure Hardening (inserted before Phase 1)
+Tasks to Add:
+
+ Create validateLayerContext() helper inside lib/layer-context.js
+
+Validates required fields: userInput, intent, symptoms, triage, etc.
+
+Ensures schema consistency across all layer phases
+
+ Add lib/utils/schema-validator.js for cross-phase type safety enforcement
+
+🧠 Phase 1 – Intent Recognition (additional NLP sub-tasks)
+Tasks to Add:
+
+ Create lib/nlp/negation-detector.js
+
+Parses common negation terms (e.g., "no", "not", "without", "never")
+
+Adds a negated: true flag to affected symptoms or conditions
+
+ Update intent-parser.js to call negation-detector during symptom extraction
+
+ Add test cases for phrases like:
+
+"No fever"
+
+"I’m not diabetic"
+
+"Never had chest pain"
+
+🧩 Phase 3 – Prompt Engineering (enhance prompt-tier system)
+Tasks to Add:
+
+ Create 3 severity-specific prompt templates:
+
+mild-template.txt
+
+moderate-template.txt
+
+severe-template.txt
+
+ Modify prompt-enhancer.js to select the appropriate template based on:
+
+Triage level (e.g., "urgent", "non-urgent")
+
+Symptom severity (LayerContext.severity)
+
+ Add inline logic for conditional template injection into system prompts
+
+📊 Phase 5 – Metadata & Outcome Logging (enhance data logger)
+Tasks to Add:
+
+ In utils/data-logger.js, add:
+
+finalPrompt string
+
+LLMResponseCategory enum: "educational", "generic", "flagged", "fallback"
+
+ Modify logging output in router.js to include these fields in JSON logs
+
+ Create unit tests to verify proper metadata logging
+
+⚠️ Phase 6 – Fault Recovery
+Tasks to Add:
+
+ Implement try/catch block in sendMessageClientSide() or router.js:
+
+On error, bypass the layer and send raw query directly to the LLM
+
+Display fallback disclaimer in UI: "The enhanced AI layer encountered an issue. Here's a direct response:"
+
+ Log fallback reason and timestamp in data-logger.js
+
+🧪 Phase 7 – Visual Trace Debugging
+Tasks to Add:
+
+ Create /admin/debug/:sessionId endpoint
+
+Displays: parsed intent → triage → generated prompt → LLM output
+
+Pulls session data from the training-dataset/ folder or live cache
+
+ Use server-side rendering or basic HTML+JSON viewer
+
+ Add link in admin panel for quick access during QA
+
+🧰 Additional Notes
+Use JSDoc annotations in all new helper modules
+
+All enhancements must pass ESLint and follow modular structure
+
+Include updates to docs/LAYER_TEST_PLAN.md and LAYER_DEVELOPMENT_PLAN.md for each task added
+
+✅ Confirm each enhancement is implemented and logged in LAYER_PROGRESS.md.

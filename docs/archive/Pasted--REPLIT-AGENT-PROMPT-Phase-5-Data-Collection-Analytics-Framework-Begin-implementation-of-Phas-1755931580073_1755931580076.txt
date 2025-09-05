@@ -1,0 +1,123 @@
+✅ REPLIT AGENT PROMPT — Phase 5: Data Collection & Analytics Framework
+
+Begin implementation of Phase 5 of the Anamnesis AI system:
+"Data Collection & Analytics Framework"
+
+All files should use clean JavaScript with JSDoc annotations, strict ESLint compliance, and structured JSON-compatible data outputs.
+
+📁 DIRECTORY STRUCTURE TO CREATE:
+client/
+└── src/
+    ├── analytics/
+    │   ├── data-logger.js             // main logging utility
+    │   ├── enums.js                   // enums like LLMResponseCategory
+    │   ├── query-sampler.js           // data sampling engine
+    │   ├── anonymizer.js              // anonymization utility
+    │   ├── metadata-logger.js         // logs enriched metadata
+    │   └── analytics-utils.js         // pattern analysis helpers
+    └── training-dataset/
+        ├── layer-decisions.jsonl      // primary dataset (JSON Lines format)
+        └── logs/                      // rotating raw logs
+
+📋 IMPLEMENTATION TASKS:
+🧩 1. data-logger.js (core logger)
+
+Logs each processed query to training-dataset/layer-decisions.jsonl
+
+Includes:
+
+{
+  timestamp,
+  userInput,
+  finalPrompt,
+  llmResponse,
+  triageLevel,
+  isHighRisk,
+  responseCategory, // enum
+  metadata: { processingTime, confidence, bodySystem }
+}
+
+
+Uses fs.appendFileSync() (or Replit-compatible storage API)
+
+🧩 2. enums.js
+/**
+ * @readonly
+ * @enum {"educational" | "generic" | "flagged" | "fallback"}
+ */
+export const LLMResponseCategory = {
+  EDUCATIONAL: "educational",
+  GENERIC: "generic",
+  FLAGGED: "flagged",
+  FALLBACK: "fallback"
+}
+
+🧩 3. query-sampler.js
+
+Buffers queries and only writes to dataset at specified sampling intervals
+
+Randomized probability with adjustable threshold
+
+Supports forceLog = true for high-risk queries
+
+🧩 4. metadata-logger.js
+
+Adds detailed timing + quality metrics to logs:
+
+parseTime, triageTime, promptTime, totalTime
+
+Flags missing key fields
+
+Writes enriched log objects to rotating .log files in training-dataset/logs/
+
+🧩 5. anonymizer.js
+
+Strips names, emails, phone numbers, and known entities
+
+Simple RegExp-based first implementation (refinable later)
+
+Use during data-logger write
+
+🧩 6. analytics-utils.js
+
+Functions:
+
+detectOutliers(): flag unusual query structures
+
+tagQueryCategory(): infer category based on keywords
+
+flagMissingSymptoms(): alert if no symptoms detected
+
+🧪 7. analytics.test.js
+
+Verify:
+
+Logger writes valid JSONL
+
+Sampler selects properly
+
+Metadata enriches logs
+
+Anonymizer strips PII
+
+🛡️ SECURITY & PRIVACY:
+
+❌ Never store full chat history or personal details
+
+✅ All samples must be anonymized before being written
+
+✅ Redact all free-text fields before use in analytics
+
+✅ Include privacy disclaimer in code headers
+
+✅ OBJECTIVE:
+
+Implement all modules above and verify that:
+
+npm run dev still works
+
+npx tsc --noEmit returns 0 errors
+
+npx eslint client/ --ext .js,.jsx returns 0 errors/warnings
+
+training-dataset/layer-decisions.jsonl is properly created with anonymized, structured samples

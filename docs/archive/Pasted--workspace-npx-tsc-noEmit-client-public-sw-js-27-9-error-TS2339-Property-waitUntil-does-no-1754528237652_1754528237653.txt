@@ -1,0 +1,174 @@
+~/workspace$ npx tsc --noEmit
+client/public/sw.js:27:9 - error TS2339: Property 'waitUntil' does not exist on type 'Event'.
+
+27   event.waitUntil(
+           ~~~~~~~~~
+
+client/public/sw.js:35:21 - error TS2339: Property 'skipWaiting' does not exist on type 'Window & typeof globalThis'.
+
+35         return self.skipWaiting();
+                       ~~~~~~~~~~~
+
+client/public/sw.js:46:9 - error TS2339: Property 'waitUntil' does not exist on type 'Event'.
+
+46   event.waitUntil(
+           ~~~~~~~~~
+
+client/public/sw.js:64:21 - error TS2339: Property 'clients' does not exist on type 'Window & typeof globalThis'.
+
+64         return self.clients.claim();
+                       ~~~~~~~
+
+client/public/sw.js:71:11 - error TS2339: Property 'request' does not exist on type 'Event'.
+
+71   const { request } = event;
+             ~~~~~~~
+
+client/public/sw.js:81:11 - error TS2339: Property 'respondWith' does not exist on type 'Event'.
+
+81     event.respondWith(networkFirstStrategy(request));
+             ~~~~~~~~~~~
+
+client/public/sw.js:89:11 - error TS2339: Property 'respondWith' does not exist on type 'Event'.
+
+89     event.respondWith(cacheFirstStrategy(request));
+             ~~~~~~~~~~~
+
+client/public/sw.js:94:9 - error TS2339: Property 'respondWith' does not exist on type 'Event'.
+
+94   event.respondWith(networkFirstStrategy(request));
+           ~~~~~~~~~~~
+
+client/public/sw.js:155:13 - error TS2339: Property 'tag' does not exist on type 'Event'.
+
+155   if (event.tag === 'background-message-sync') {
+                ~~~
+
+client/public/sw.js:163:13 - error TS2339: Property 'data' does not exist on type 'Event'.
+
+163   if (event.data) {
+                ~~~~
+
+client/public/sw.js:164:24 - error TS2339: Property 'data' does not exist on type 'Event'.
+
+164     const data = event.data.json();
+                           ~~~~
+
+client/public/sw.js:183:11 - error TS2339: Property 'waitUntil' does not exist on type 'Event'.
+
+183     event.waitUntil(
+              ~~~~~~~~~
+
+client/public/sw.js:184:12 - error TS2339: Property 'registration' does not exist on type 'Window & typeof globalThis'.
+
+184       self.registration.showNotification(data.title || 'Anamnesis', options)
+               ~~~~~~~~~~~~
+
+client/public/sw.js:191:9 - error TS2339: Property 'notification' does not exist on type 'Event'.
+
+191   event.notification.close();
+            ~~~~~~~~~~~~
+
+client/public/sw.js:193:13 - error TS2339: Property 'action' does not exist on type 'Event'.
+
+193   if (event.action === 'view' || !event.action) {
+                ~~~~~~
+
+client/public/sw.js:193:41 - error TS2339: Property 'action' does not exist on type 'Event'.
+
+193   if (event.action === 'view' || !event.action) {
+                                            ~~~~~~
+
+client/public/sw.js:194:11 - error TS2339: Property 'waitUntil' does not exist on type 'Event'.
+
+194     event.waitUntil(
+              ~~~~~~~~~
+
+client/public/sw.js:195:7 - error TS2304: Cannot find name 'clients'.
+
+195       clients.openWindow('/chat')
+          ~~~~~~~
+
+client/src/components/AnimatedNeuralLogo.jsx:2:24 - error TS2307: Cannot find module '../assets/neural-logo.png' or its corresponding type declarations.
+
+2 import neuralLogo from '../assets/neural-logo.png';
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/AnimatedNeuralLogo.jsx:48:7 - error TS2322: Type '{ width: string; height: string; position: string; animation: string; transformOrigin: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'position' are incompatible.
+    Type 'string' is not assignable to type 'Position'.
+
+48       style={containerStyle}
+         ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:52:9 - error TS2322: Type '{ border: string; animation: "continuousRipples 3s ease-out infinite"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+52         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:61:9 - error TS2322: Type '{ border: string; animation: "continuousRipples 3s ease-out infinite 1s"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+61         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:70:9 - error TS2322: Type '{ border: string; animation: "rippleLayer1 3s ease-out infinite 0.5s"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+70         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:79:9 - error TS2322: Type '{ border: string; animation: "rippleLayer2 3s ease-out infinite 2s"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+79         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:93:9 - error TS2322: Type '{ width: string; height: string; objectFit: string; filter: string; position: string; zIndex: number; }' is not assignable to type 'CSSProperties'.
+  Types of property 'objectFit' are incompatible.
+    Type 'string' is not assignable to type 'ObjectFit'.
+
+93         style={logoStyle}
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>'
+
+
+Found 25 errors in 2 files.
+
+Errors  Files
+    18  client/public/sw.js:27
+     7  client/src/components/AnimatedNeuralLogo.jsx:2

@@ -1,0 +1,56 @@
+You're now entering a critical code stabilization task for the Anamnesis Medical AI Assistant.
+
+🎯 Objective:
+Detect and eliminate any duplicate function definitions or overlapping logic patterns across the codebase, especially those introduced during Phases 4.0–4.2 (AI chat streaming, retry logic, disclaimers, metadata formatting).
+
+📍 Scope of Files:
+- client/src/lib/llm-api.jsx
+- client/src/pages/ChatPage.jsx
+- client/src/components/MessageBubble.jsx
+- client/src/hooks/useAuth.jsx
+- Any helper or utility module in client/src/lib or client/src/hooks
+
+🔍 Tasks:
+
+1. 🔁 **Identify Duplicate Functions**:
+   - Search for duplicate definitions of the following key functions:
+     - `withExponentialBackoff`
+     - `addDisclaimers`
+     - `extractQueryIntentMetadata`
+     - `createResponseMetadata`
+     - `retryApiRequest`
+     - `sendMessageClientSide`
+   - Ensure **each function exists only once** across the relevant files.
+
+2. ✅ **Preserve the most recent, enhanced version**:
+   - Keep the version that includes:
+     - JSDoc annotations
+     - Error handling
+     - Streaming or retry improvements
+   - Remove any earlier or partial versions.
+
+3. 🔧 **Update all import/usage references**:
+   - Refactor all references to use the centralized, single source version of each helper.
+   - Ensure `llm-api.jsx` acts as the primary export point for all AI utilities.
+
+4. 🧪 **Lint and Parse Check**:
+   - Run ESLint on the entire project and confirm:
+     - No parsing errors
+     - No "identifier already declared" errors
+     - No unused duplicate imports
+
+5. 📜 **Log Results**:
+   - Record all fixes in `PHASE4_PROGRESS.md` under a new section: `Duplicate Function Cleanup`
+   - Include the list of functions cleaned and their source of truth location.
+
+6. 🚫 **No suppression directives allowed**:
+   - Do **not** use `eslint-disable` or comment suppressions to hide errors.
+   - All issues must be resolved by fixing the root cause.
+
+7. 🔁 **Restart the development server** after cleanup and:
+   - Confirm that the chat interface loads correctly.
+   - Confirm that sending a message does **not crash the server**.
+   - Confirm streaming and retry logic still work as intended.
+
+🧠 Reminder:
+This step is mission-critical to ensure stability before advancing to Phase 5. All AI logic must be deduplicated, error-free, and properly modularized.

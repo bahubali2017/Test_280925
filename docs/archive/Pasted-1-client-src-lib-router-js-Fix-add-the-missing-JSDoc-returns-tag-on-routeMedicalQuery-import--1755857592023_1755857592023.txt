@@ -1,0 +1,149 @@
+1) client/src/lib/router.js
+
+Fix: add the missing JSDoc @returns tag on routeMedicalQuery.
+
+import { createLogger } from "./utils/logger.js";
+import { createLayerContext, updateLayerContext, validateLayerContext } from "./layer-context.js";
+import { parseIntent } from "./intent-parser.js";
+import { performTriage } from "./triage-checker.js";
+import { enhancePrompt } from "./prompt-enhancer.js";
+
+const log = createLogger("layer:router");
+
+/** Safe timestamp helper for browser/node environments. */
+function now() {
+  // eslint-disable-next-line no-restricted-globals
+  const perf = typeof globalThis !== "undefined" ? globalThis.performance : undefined;
+  return (perf && typeof perf.now === "function") ? perf.now() : Date.now();
+}
+
+/**
+ * Orchestrate the Interpretation Layer for a single user query.
+ * Always returns a standardized payload; on error, falls back safely.
+ *
+ * @param {string} userInput
+ * @returns {Promise<{
+ *   userInput: string,
+ *   enhancedPrompt: string,
+ *   isHighRisk: boolean,
+ *   disclaimers: string[],
+ *   suggestions: string[],
+ *   metadata: { processingTime: number, intentConfidence?: number, triageLevel?: string, bodySystem?: string }
+ * }>} A standardized result payload including safety disclaimers and metadata.
+ */
+export async function routeMedicalQuery(userInput) {
+  const t0 = now();
+  const ctx = createLayerContext(userInput);
+
+  try {
+    const v0 = validateLayerContext(ctx, { strict: false });
+    if (!v0.ok) {
+      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
+      throw new Error("Invalid input");
+    }
+
+    const { intent, symptoms } = parseIntent(ctx.userInput);
+    updateLayerContext(ctx, { intent, symptoms });
+
+    const triage = performTriage(ctx);
+    updateLayerContext(ctx, { triage });
+
+    const { systemPrompt, enhancedPrompt } = enhancePrompt(ctx);
+    updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
+
+    const processingTime = Math.round(now() - t0);
+
+    return {
+      userInput: ctx.userInput,
+      enhancedPrompt,
+      isHighRisk: !!ctx.triage?.isHighRisk,
+      disclaimers: ctx.triage?.isHighRisk
+        ? ["This may warrant urgent medical attention. This assistant is informational and not a diagnostic tool."]
+        : ["This assistant is informational and not a diagnostic tool."],
+      suggestions: ctx.triage?.isHighRisk
+        ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
+        : ["Can you share duration, severity, and associated symptoms?", "Any triggers or relieving factors?"],
+      metadata: {
+        processingTime,
+        intentConfidence: intent?.confidence,
+        triageLevel: ctx.triage?.level,
+      },
+    };
+  } catch (err) {
+    const processingTime = Math.round(now() - t0);
+    log.error("router_failed", { message: String(err?.message || err), safe: true });
+
+    return {
+      userInput: String(userInput || ""),
+      enhancedPrompt: "System fallback: Provide general, low-risk educational guidance and suggest appropriate next steps. Include red-flag checklist and advise contacting a clinician if concerned.",
+      isHighRisk: false,
+      disclaimers: ["The enhanced AI layer encountered an issue. This is a general response and not a diagnosis."],
+      suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
+      metadata: { processingTime },
+    };
+  }
+}
+
+2) client/src/lib/triage-checker.js
+
+Fix: replace deprecated assert { type: "json" } with the new with { type: "json" } syntax.
+
+// If your toolchain supports JSON import attributes (Vite/modern ESM):
+import atd from "../../rules/atd-conditions.json" with { type: "json" };
+
+/**
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {import("./layer-context.js").Triage}
+ */
+export function performTriage(ctx) {
+  const text = ctx.userInput.toLowerCase();
+  const reasons = [];
+
+  /** @type {import("./layer-context.js").Triage["level"]} */
+  let level = "non_urgent";
+
+  for (const rf of atd.red_flags) {
+    if (text.includes(rf.pattern)) {
+      if (rf.triage === "emergency") { level = "emergency"; reasons.push(rf.reason); break; }
+      if (rf.triage === "urgent" && level !== "emergency") { level = "urgent"; reasons.push(rf.reason); }
+    }
+  }
+
+  const isHighRisk = level !== "non_urgent";
+  return { level, isHighRisk, reasons };
+}
+
+
+Fallback (only if your ESLint/parser/toolchain can’t handle with { type: "json" } yet):
+Replace the static import with a lazy dynamic import (works in Vite/ESM):
+
+let atd;
+async function getATD() {
+  if (!atd) {
+    const mod = await import("../../rules/atd-conditions.json", { with: { type: "json" } });
+    atd = mod.default || mod;
+  }
+  return atd;
+}
+
+export async function performTriage(ctx) {
+  const rules = await getATD();
+  const text = ctx.userInput.toLowerCase();
+  const reasons = [];
+  /** @type {import("./layer-context.js").Triage["level"]} */
+  let level = "non_urgent";
+  for (const rf of rules.red_flags) {
+    if (text.includes(rf.pattern)) {
+      if (rf.triage === "emergency") { level = "emergency"; reasons.push(rf.reason); break; }
+      if (rf.triage === "urgent" && level !== "emergency") { level = "urgent"; reasons.push(rf.reason); }
+    }
+  }
+  const isHighRisk = level !== "non_urgent";
+  return { level, isHighRisk, reasons };
+}
+
+
+If you use the async fallback, be sure to await performTriage(ctx) where it’s called.
+
+Run ESLint again
+npx eslint client/ --ext .js,.jsx --fix

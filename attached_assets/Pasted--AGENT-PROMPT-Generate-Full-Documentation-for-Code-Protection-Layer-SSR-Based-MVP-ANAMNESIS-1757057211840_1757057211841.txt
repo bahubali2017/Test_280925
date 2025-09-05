@@ -1,0 +1,114 @@
+✅ AGENT PROMPT: Generate Full Documentation for Code Protection Layer (SSR-Based MVP)
+# 📘 ANAMNESIS MVP — CODE PROTECTION PLAN (SSR DEPLOYMENT)
+
+**Target:** `https://mvp.anamnesis.health`  
+**Deployment Type:** Web App (Server-Side Rendering)  
+**Protection Goal:** Prevent reverse engineering, copying, scraping, or AI misuse of any part of the MVP system.
+
+---
+
+## 🔐 CODE PROTECTION OVERVIEW
+
+This document outlines the proposed tasks and architecture for implementing a **Code Protection Layer** on the Anamnesis MVP platform before production deployment.
+
+The selected model is:
+> **🔒 Web App (SSR) — All business logic and AI orchestration run server-side.**
+
+---
+
+## 🧱 PROTECTION PHASE STRUCTURE
+
+### ✅ PHASE 1 — PLANNING & DOCUMENTATION (✅ CURRENT STEP)
+
+- [x] Decide deployment strategy: ✅ SSR selected
+- [x] Create this protection plan documentation
+- [ ] Review and approve checklist before making changes
+- [ ] Archive as `MVP_CODE_PROTECTION_PLAN.md` under `/docs/`
+
+---
+
+### 🔐 PHASE 2 — FRONTEND PROTECTION TASKS (SSR-HARDENED CLIENT)
+
+| Task | Description | Status |
+|------|-------------|--------|
+| Obfuscate JS output | Use `vite-plugin-obfuscator` for JS code hardening | ☐ Planned |
+| Build fingerprinting | Inject per-deploy build ID for tracing copies | ☐ Planned |
+| Disable devtools | Prevent inspection (aggressive: disable right-click, F12) | ☐ Optional |
+| Hide network logic | Move all chat/A.I. orchestration behind secured API calls | ✅ Already done |
+
+---
+
+### 🛡️ PHASE 3 — BACKEND API PROTECTION (SERVER-SIDE LOGIC)
+
+| Task | Description | Status |
+|------|-------------|--------|
+| Enforce CORS | Lock access to `https://mvp.anamnesis.health` only | ☐ Planned |
+| Rate-limiting | Use `express-rate-limit` on `/api/ask`, `/api/chat` | ☐ Planned |
+| Device fingerprint checks | Tie sessions to unique client fingerprint | ☐ Optional |
+| IP binding (Enterprise only) | Optional IP pinning for high-risk endpoints | ☐ Optional |
+| Token auth | ✅ Already implemented via Bearer token | ✅ Complete |
+
+---
+
+### 🧬 PHASE 4 — AI OUTPUT WATERMARKING & MISUSE PREVENTION
+
+| Task | Description | Status |
+|------|-------------|--------|
+| Zero-width character injection | Embed invisible tokens in AI responses | ☐ Planned |
+| Stylometry watermark | Adjust text patterns to trace output reuse | ☐ Optional |
+| Log & hash outputs | Track generated answers for legal proof | ☐ Planned |
+
+---
+
+### 📦 PHASE 5 — DEPLOYMENT-LAYER SHIELDING
+
+| Task | Description | Status |
+|------|-------------|--------|
+| Enable HSTS | Add `Strict-Transport-Security` headers | ☐ Planned |
+| SSL Certs | Ensure HTTPS only, no fallback to HTTP | ☐ Pending |
+| Disable directory listing | Prevent access to `/public/`, `/dist/` | ☐ Planned |
+| CSP Headers | Block script injection / eval() on frontend | ☐ Optional |
+
+---
+
+### 🔥 PHASE 6 — TAMPER DETECTION & HONEYPOTS
+
+| Task | Description | Status |
+|------|-------------|--------|
+| Honeypot endpoints | Fake `/api/model-config`, `/admin/test`, etc. | ☐ Planned |
+| Auto-ban bot IPs | Add middleware to block suspicious access | ☐ Planned |
+| Self-monitoring loop | Watch for tampering or cloned frontend access | ☐ Optional |
+
+---
+
+### 📄 PHASE 7 — LEGAL & LICENSE FILES
+
+| Task | Description | Status |
+|------|-------------|--------|
+| LICENSE.txt | Strict EULA for public users | ☐ Drafting |
+| TERMS.md | Link from footer + /legal route | ☐ Planned |
+| Output reuse clause | Ban use of content for training LLMs | ☐ Planned |
+
+---
+
+## 📁 FILES TO BE CREATED OR MODIFIED
+
+- `/vite.config.ts` → Add obfuscation plugin
+- `/src/constants/build.ts` → Inject fingerprint ID
+- `/server/middleware/rateLimiter.ts` → New file for rate limit config
+- `/server/routes/ask.ts` → Add watermarking
+- `/public/LICENSE.txt` → Legal restriction notice
+- `/public/TERMS.md` → Frontend terms of use
+
+---
+
+## 📌 NEXT ACTIONS
+
+- [ ] Review and confirm plan with project owner (Dr. Wisam Naddaf)
+- [ ] Mark this plan as approved
+- [ ] Create `/docs/MVP_CODE_PROTECTION_PLAN.md`
+- [ ] Move to PHASE 2 implementation task-by-task
+
+---
+
+✅ *End of Plan Draft. No changes have been made to the codebase yet.*

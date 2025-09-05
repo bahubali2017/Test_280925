@@ -1,0 +1,67 @@
+📍 AGENT DIRECTIVE PROMPT – PHASE 2.5
+Goal: Begin structured development of Phase 2.5: Backend Integration & Real Authentication for the Anamnesis Medical AI Assistant. Follow all tasks exactly as listed below and adhere to the highest standards of modern JavaScript + JSDoc development.
+
+🎯 OBJECTIVE:
+Implement real user authentication using Supabase (preferred) or Firebase, integrate secure credential handling, and configure backend environment settings — ensuring the codebase remains error-free, simple, and production-ready.
+
+✅ MANDATORY GUIDELINES:
+You must follow these rules exactly:
+
+✅ All code must be written in modern JavaScript (ESM) with full JSDoc annotations
+
+🚫 Do not use TypeScript
+🚫 Do not use any eslint-disable or suppression comments
+🚫 Do not introduce duplicate files or functions
+
+🧪 After every implementation, run ESLint checks (npx eslint client/ --ext .js,.jsx) to confirm there are 0 errors
+
+🧩 Ensure all new files integrate cleanly into the existing application structure (no broken references)
+🔐 Handle all secrets through .env files and Replit secrets (do not hardcode keys)
+
+🔐 TASKS TO IMPLEMENT:
+1. 🔧 Backend Infrastructure
+ Set up Supabase (or Firebase) project
+ Configure auth rules: enable email/password, Google, Microsoft, and Apple providers
+ Generate secure API keys and credentials
+ Store sensitive values in .env (not in source code)
+ Add .env.example for documentation (no secrets)
+ Ensure .env is added to .gitignore
+
+2. 📁 Environment Configuration
+ Create config.js in the /server or /shared directory:
+Use process.env for values
+Add JSDoc annotations for all environment types
+Add validation for required environment variables
+Provide meaningful error messages or fallback logic
+
+3. 🔐 Secure Credential Access
+ Ensure every credential (e.g. SUPABASE_URL, SUPABASE_ANON_KEY) is validated and loaded securely
+ Confirm no sensitive values are exposed to frontend unless necessary and safe
+ Test credential access via local .env and Replit Secrets
+
+4. 🧪 ESLint + Quality Check
+
+ Run full ESLint after each change:
+npx eslint client/ --ext .js,.jsx
+
+ If ESLint fails, fix the root cause — do not bypass
+
+ Confirm that all new files, config modules, and logic have:
+No unused variables
+Valid import paths
+Proper error handling
+JSDoc on all exported functions, parameters, and return types
+
+5. 🧪 Connection Test
+ Create a basic Supabase test script (e.g. test-connection.js) in the /server folder
+ Validate it successfully connects and reads user metadata
+
+🏁 COMPLETION CRITERIA:
+You may only mark this task as complete if:
+All environment keys load successfully without errors
+Auth providers are configured and testable
+config.js includes full JSDoc annotations and proper fallbacks
+No ESLint errors or warnings are introduced
+Application server still runs and displays login interface
+Nothing is broken in the frontend or backend connection
+.env.example is updated with correct structure

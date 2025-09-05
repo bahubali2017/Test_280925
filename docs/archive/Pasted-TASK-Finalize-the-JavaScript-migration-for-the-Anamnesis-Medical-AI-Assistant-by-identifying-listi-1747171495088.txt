@@ -1,0 +1,66 @@
+TASK: Finalize the JavaScript migration for the Anamnesis Medical AI Assistant by identifying, listing, and fixing all remaining ESLint parsing errors across `client/src/`.
+
+🎯 GOAL:
+Fully eliminate all JSX parsing errors, leftover TypeScript syntax, and incomplete JSDoc coverage. Produce a stable, ESLint-clean, runtime-safe frontend with no suppression directives, dead code, or placeholder failures.
+
+---
+
+PHASE 1: REVALIDATE & UPDATE MIGRATION TRACKER
+
+1. Parse the full ESLint error report provided in the last message
+2. Identify and list all remaining files with:
+   - JSX parsing errors (e.g. `Unexpected token <`)
+   - Invalid JSDoc
+   - Incomplete JSX return values
+   - Broken imports or component structure
+3. Add these files under a new section in `migration-tracker.md`:
+   - "🚨 Remaining Errors for Final Pass"
+   - Include line numbers, error types, and short notes
+   - Mark each with `[ ]` checkboxes for tracking
+
+---
+
+PHASE 2: SYSTEMATIC FIX & VALIDATION PER FILE
+
+For each file listed:
+
+✅ 1. Fix JSX syntax:
+   - Ensure valid return blocks (`return (...)`)
+   - Wrap in fragments if needed (`<>...</>`)
+   - Close all tags
+
+✅ 2. Remove residual TypeScript syntax:
+   - Type annotations (`: string`, `JSX.Element`, etc.)
+   - Interfaces or custom `type` definitions
+   - `as` casts and `import type`
+
+✅ 3. Add or fix JSDoc:
+   - `@param` for all props
+   - `@returns {JSX.Element}` or `@returns {void}` where needed
+   - Add file-level doc if missing
+
+✅ 4. Validate with ESLint:
+   - Run `npx eslint <file>` after each fix
+   - ESLint must return **0 errors, 0 warnings**
+   - No use of `eslint-disable`, `@ts-ignore`, or TODO comments allowed
+
+✅ 5. Update `migration-tracker.md`:
+   - Move file from “🚨 Remaining” to “✅ Completed”
+   - Include summary: “Fixed JSX wrapping, removed `type`, added JSDoc”
+
+---
+
+🚫 DO NOT:
+- Use `eslint-disable`, `@ts-ignore`, or suppressions
+- Leave any TODOs or broken props
+- Skip runtime checks or JSX validation
+- Leave ESLint warnings unresolved
+
+---
+
+✅ FINAL COMPLETION CRITERIA:
+- `migration-tracker.md` updated with 100% completion
+- `client/src/` contains no `.ts` or `.tsx` files
+- `npx eslint client/src` returns **no errors**
+- All React files render without runtime errors
+- All functions/components are JSDoc documented

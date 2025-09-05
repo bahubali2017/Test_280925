@@ -1,0 +1,150 @@
+🔧 AGENT PROMPT — “Stop AI idle 20s” Backend Fix (Minimal Touch)
+
+Goal: Remove the ~20s delay after “Stop AI” by ensuring the server cancels the upstream stream immediately when the client disconnects.
+Constraints: No change to business order/UX, no extra endpoints, no verbose debugging. Tiny, surgical edits only.
+
+1) Verify & set proper SSE headers (once)
+
+File: server/<your-sse-route>.js
+
+Ensure these headers are set before writing any data:
+
+res.setHeader("Content-Type", "text/event-stream");
+res.setHeader("Cache-Control", "no-cache, no-transform"); // no proxy buffering
+res.setHeader("Connection", "keep-alive");
+res.flushHeaders?.();
+
+
+If you use compression middleware, bypass it for this route (compression breaks SSE):
+
+// before route: app.get('/api/ai/stream', noCompression, handler)
+
+2) Handle client disconnect immediately (no 20s linger)
+
+File: server/<your-sse-route>.js
+
+Add a single abort handler that triggers as soon as client drops:
+
+import { AbortController } from "node-abort-controller";
+
+app.get("/api/ai/stream", async (req, res) => {
+  const started = Date.now();
+  const ac = new AbortController();
+  let closed = false;
+
+  const closeNow = (why) => {
+    if (closed) return;
+    closed = true;
+    try { ac.abort(); } catch {}
+    try { res.end(); } catch {}
+  };
+
+  // Critical: react the moment client goes away
+  req.on("aborted", () => closeNow("req.aborted"));
+  req.on("close",   () => closeNow("req.close"));
+
+  try {
+    await streamModel({
+      input: String(req.query.q ?? ""),
+      signal: ac.signal,
+      onToken: (t) => { if (!closed) res.write(`data:${t}\n\n`); },
+      onDone:  () => { if (!closed) res.end(); }
+    });
+  } catch {
+    // swallow; client-initiated abort is normal
+  }
+});
+
+
+This ensures the server immediately aborts upstream and ends the response as soon as the browser cancels.
+
+3) Ensure upstream stream actually cancels (no 20s read hang)
+
+File: server/model/streamModel.js (or equivalent wrapper calling DeepSeek)
+
+Make sure AbortSignal is passed, and force-cancel the reader in finally.
+
+export async function streamModel({ input, signal, onToken, onDone }) {
+  const resp = await fetch(PROVIDER_URL, {
+    method: "POST",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ input }),
+    signal, // MUST pass the AbortSignal
+  });
+
+  if (!resp.ok || !resp.body) throw new Error(`provider http ${resp.status}`);
+
+  const reader = resp.body.getReader();
+  const dec = new TextDecoder();
+
+  try {
+    while (true) {
+      if (signal?.aborted) throw new Error("aborted");
+      const { done, value } = await reader.read();   // <- may hang if not canceled
+      if (done) break;
+      const chunk = dec.decode(value, { stream: true });
+      for (const t of parseTokens(chunk)) onToken(t);
+    }
+    onDone?.();
+  } finally {
+    // Hard stop to prevent lingering ~20s waits
+    try { reader.cancel(); } catch {}
+    try { reader.releaseLock(); } catch {}
+    try { resp.body?.cancel?.(); } catch {}
+  }
+}
+
+
+The finally block guarantees we don’t wait on the provider if the client already left.
+
+4) Remove any long server timeouts affecting streams
+
+File: server/index.js (where you create the HTTP server)
+
+Ensure there’s no artificial 20s timer around SSE (e.g., error or retry timers).
+
+Set short server timeouts to avoid lingering sockets (optional but safe):
+
+const server = app.listen(PORT, () => { /* ... */ });
+
+// Shorten low-level timeouts to avoid long hangs
+server.requestTimeout = 10000;   // 10s
+server.headersTimeout = 12000;   // 12s
+server.keepAliveTimeout = 5000;  // 5s
+
+
+These do not change business logic; they just prevent idle sockets from hanging around.
+
+5) Single sanity check (no extra tooling)
+
+Run one manual test:
+
+Start a long answer, click Stop mid-stream.
+
+Expected:
+
+UI flips immediately (existing behavior).
+
+The network request shows (canceled) right away.
+
+Server stops work immediately (no ~20s CPU or await).
+
+If any delay remains, it’s almost always because the upstream provider call wasn’t canceled. Re-check step 3 to ensure:
+
+signal is passed into fetch,
+
+reader.cancel() and resp.body.cancel() are in finally.
+
+6) Do not modify business logic / order
+
+Keep your current send/stream/stop flow.
+
+We only ensured server abort → upstream cancel → response end with minimal code.
+
+✅ Success Criteria
+
+After “Stop”, the app no longer waits ~20s; server processing halts within ≤ 1s.
+
+No change to routes, UI, or feature flow.
+
+No extra debug output or new endpoints introduced.

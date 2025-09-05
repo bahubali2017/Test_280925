@@ -1,0 +1,136 @@
+✅ AGENT PROMPT — Phase 9: External Admin Dashboard Integration (MVP Infrastructure)
+
+You are now responsible for executing Phase 9: External Admin Dashboard Integration of the Anamnesis MVP AI module. This is a critical infrastructure phase that enables real-time observability, diagnostics, and monitoring by the external Admin Dashboard.
+
+🔐 Security priority: All endpoints and WebSockets must be protected by Bearer token middleware. Never expose user data or PHI.
+
+🔧 Tasks to Implement:
+9.1 System Status API
+
+File: server/routes/system-status.js
+
+Create GET /api/system/status
+
+Response should include:
+
+{
+  "status": "healthy" | "degraded" | "down",
+  "version": "1.0.0-beta",
+  "uptime": 3600000,
+  "ai_active_sessions": 5,
+  "flagged_sessions": 2,
+  "latency_ms": 145,
+  "timestamp": "2025-08-30T12:30:00.000Z"
+}
+
+
+Protect with Bearer token auth middleware.
+
+9.2 AI Metrics Endpoint
+
+File: server/routes/admin-metrics.js
+
+Create GET /api/admin/ai-metrics
+
+Include:
+
+Session counts
+
+Duration
+
+Flagging/ATD counts
+
+Latency percentiles (P50, P95, P99)
+
+9.3 Authentication Middleware
+
+File: server/middleware/adminAuthMiddleware.js
+
+Validate Bearer token (Authorization: Bearer <ADMIN_API_TOKEN>)
+
+Use process.env.ADMIN_API_TOKEN
+
+Implement masked logging & IP capture
+
+9.4 Admin WebSocket
+
+File: server/websocket/adminMonitoring.js
+
+Endpoint: WS /ws/admin
+
+Events: session_started, session_flagged, session_ended, error_occurred
+
+Authenticate with token
+
+Heartbeat + auto-reconnect
+
+9.5 CORS Setup
+
+File: server/index.js
+
+Whitelist:
+
+https://admin.anamnesis.health
+
+https://dashboard.anamnesis.health
+
+http://localhost:3000
+
+Allow Authorization, Content-Type, X-Admin-Role
+
+9.6 Rate Limiting
+
+File: server/middleware/rateLimiter.js
+
+/api/system/status: 10 req/min/IP
+
+/api/admin/*: 20 req/min/token
+
+/ws/admin: 5 concurrent connections/token
+
+9.7 Admin Logging
+
+File: server/utils/adminLogger.js
+
+Log token-masked activity, IP, timestamps
+
+JSON logs with daily rotation
+
+9.8 Session State
+
+File: server/utils/sessionTracker.js
+
+Track lifecycle: start, end, flag
+
+Enable broadcasting over WebSocket
+
+9.9 Integration Points
+
+llm-api.jsx: Register session start/end + flag status
+
+ChatPage.jsx: Hook into sessionTracker
+
+server/routes.js: Use adminAuthMiddleware
+
+Streaming pipeline: Emit WebSocket events
+
+📁 ENVIRONMENT VARIABLES (Add to .env)
+ADMIN_API_TOKEN=secure_generated_token_here
+ADMIN_DASHBOARD_URL=https://admin.anamnesis.health
+LOG_LEVEL=debug
+
+✅ COMPLETION CRITERIA
+
+All endpoints protected
+
+WebSocket events live
+
+Dashboard can poll or subscribe to real-time data
+
+CORS and rate limiting enforced
+
+No TypeScript or ESLint errors
+
+Documentation for all endpoints + events
+
+Let me know when Phase 9 infrastructure is fully implemented and tested. We will then begin connection testing from the Admin Dashboard.

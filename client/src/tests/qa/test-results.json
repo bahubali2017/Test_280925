@@ -1,0 +1,124 @@
+{
+  "executionSummary": {
+    "totalTests": 3,
+    "passed": 3,
+    "failed": 0,
+    "passRate": "100.0%",
+    "totalExecutionTimeMs": 10,
+    "timestamp": "2025-08-23T09:03:15.136Z"
+  },
+  "categoryBreakdown": [
+    {
+      "category": "emergency",
+      "total": 3,
+      "passed": 3,
+      "passRate": "100.0%"
+    }
+  ],
+  "medicalSafetyMetrics": {
+    "emergencyDetectionRate": "1.000",
+    "urgentDetectionRate": "1.000",
+    "averageProcessingTimeMs": 3,
+    "maxProcessingTimeMs": 6
+  },
+  "detailedResults": [
+    {
+      "testId": "emergency_001",
+      "category": "emergency",
+      "description": "Acute chest pain with radiation",
+      "passed": true,
+      "actualResult": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "hasATD": true,
+        "hasDisclaimer": true,
+        "processingTimeMs": 6,
+        "symptoms": [
+          "chest pain"
+        ]
+      },
+      "expectedResult": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [
+          "emergency",
+          "immediate medical attention"
+        ],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      },
+      "failures": [],
+      "processingTimeMs": 6,
+      "timestamp": "2025-08-23T09:03:15.132Z"
+    },
+    {
+      "testId": "emergency_002",
+      "category": "emergency",
+      "description": "Suicidal ideation with plan",
+      "passed": true,
+      "actualResult": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "hasATD": true,
+        "hasDisclaimer": true,
+        "processingTimeMs": 2,
+        "symptoms": []
+      },
+      "expectedResult": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [
+          "crisis",
+          "emergency services",
+          "988"
+        ],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      },
+      "failures": [],
+      "processingTimeMs": 2,
+      "timestamp": "2025-08-23T09:03:15.135Z"
+    },
+    {
+      "testId": "emergency_003",
+      "category": "emergency",
+      "description": "Severe difficulty breathing",
+      "passed": true,
+      "actualResult": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "hasATD": true,
+        "hasDisclaimer": true,
+        "processingTimeMs": 1,
+        "symptoms": []
+      },
+      "expectedResult": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [
+          "immediate medical attention",
+          "emergency"
+        ],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      },
+      "failures": [],
+      "processingTimeMs": 1,
+      "timestamp": "2025-08-23T09:03:15.136Z"
+    }
+  ],
+  "failedTests": [],
+  "regressionBaselines": {
+    "emergency_detection_rate": 1,
+    "urgent_detection_rate": 0.95,
+    "false_positive_rate": 0.05,
+    "average_processing_time_ms": 150,
+    "disclaimer_coverage": 0.95
+  }
+}

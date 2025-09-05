@@ -1,0 +1,83 @@
+🟦 AGENT DIRECTIVE: Initiate Phase 5 – Styling & Responsiveness
+
+You are now entering Phase 5 of the Anamnesis Medical AI Assistant development plan. Your objective is to finalize styling, ensure full responsiveness, and implement accessibility and UI enhancements across the application. Follow the tasks precisely as outlined below.
+
+🎯 Objective
+Implement consistent, responsive, accessible, and branded user interface styling across all supported devices and screen sizes.
+
+✅ TASK CHECKLIST
+1. Apply Anamnesis Branding
+Ensure consistent application of primary brand colors, typography, and UI structure across all components.
+
+Use shared Tailwind CSS configuration where applicable.
+
+Standardize headers, buttons, inputs, cards, modals, and toast notifications.
+
+2. Ensure Responsive Design
+Audit the layout across major breakpoints (mobile, tablet, desktop).
+
+Use Tailwind utilities to ensure adaptive spacing, text sizing, and stacking behavior.
+
+Validate all core pages (ChatPage, LoginPage, Home, etc.) on small and large screens.
+
+3. Implement Dark Mode Support
+Enable Tailwind's darkMode configuration (class-based).
+
+Ensure UI components switch correctly between light and dark modes.
+
+Update color tokens and conditional background/text styling accordingly.
+
+4. Add Micro-Interactions
+Add transitions and hover/focus animations to:
+
+Buttons
+
+Inputs
+
+Toast notifications
+
+Message bubbles
+
+Use transition, ease-in-out, and duration-* classes responsibly for polished feedback.
+
+5. Ensure Accessibility Compliance (WCAG)
+Ensure all interactive elements are reachable via keyboard (Tab navigation).
+
+Add appropriate ARIA labels, alt text, and roles.
+
+Validate color contrast ratios against WCAG AA/AAA standards.
+
+Confirm accessible error states and screen-reader support.
+
+6. Cross-Browser Testing
+Test the interface in:
+
+Chrome (desktop & mobile)
+
+Firefox
+
+Safari
+
+Edge
+
+Confirm layout, scroll, font rendering, and input behaviors are consistent.
+
+📋 Completion Criteria
+✅ UI follows Anamnesis brand guidelines
+
+✅ Layout adapts gracefully to all screen sizes
+
+✅ Dark mode is toggleable and visually consistent
+
+✅ All primary UI components are accessible (WCAG compliant)
+
+✅ ESLint passes with no errors across updated files
+
+✅ Animations and transitions are subtle, functional, and consistent
+
+⚠️ IMPORTANT CONSTRAINTS
+Do not introduce new UI components unless necessary.
+
+Avoid breaking layout or introducing regressions—use PHASE5_PROGRESS.md to track each file/page you touch.
+
+Document dark mode and responsive breakpoints clearly in STYLE_GUIDE.md.

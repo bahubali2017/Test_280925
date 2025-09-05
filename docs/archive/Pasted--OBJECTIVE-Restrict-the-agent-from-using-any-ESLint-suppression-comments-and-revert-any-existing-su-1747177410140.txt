@@ -1,0 +1,53 @@
+✅ OBJECTIVE
+Restrict the agent from using any ESLint suppression comments and revert any existing suppression usage. Instead, the agent must identify and fix the root causes of the ESLint issues.
+
+🧭 YOUR NEXT STEPS
+1. Search for Suppressions
+Run the following in your Replit shell to find all instances of ESLint suppression:
+
+grep -r --include="*.{js,jsx}" "eslint-disable" client/src
+This will show which files contain suppression comments like:
+
+// eslint-disable-line
+/* eslint-disable */
+/* eslint-disable-next-line no-unused-vars */
+
+2. Create a Suppression Report
+Use the output from the command above to create a file like:
+ESLINT_SUPPRESSION_AUDIT.md
+Example structure:
+
+# ESLint Suppression Audit
+
+The following files contain ESLint suppression comments that must be removed and replaced with proper code fixes:
+
+- [ ] client/src/components/ui/button.jsx
+- [ ] client/src/components/ui/sidebar.jsx
+- [ ] client/src/pages/LoginPage.jsx
+
+## Fix Plan
+- Remove suppression comments
+- Fix root issue (e.g., unused imports, missing JSDoc, invalid JSX)
+- Verify ESLint passes with zero suppressions
+
+3. Directive for the Agent
+Use this prompt in your next Replit Agent instruction:
+
+TASK: REMOVE ALL ESLINT SUPPRESSIONS
+
+Objective: Ensure strict code quality by eliminating all ESLint suppression comments across the codebase.
+
+Instructions:
+1. Search all project files for any usage of `eslint-disable`, `eslint-disable-line`, or `eslint-disable-next-line`.
+2. For each instance:
+   - Remove the suppression comment
+   - Identify the underlying issue that was suppressed
+   - Apply the correct fix (e.g., remove unused variable, add missing JSDoc, restructure JSX)
+3. Do not introduce any new ESLint suppressions under any circumstance.
+4. For each file updated:
+   - Run ESLint to confirm the issue is resolved
+   - Update `migration-tracker.md` or `ESLINT_SUPPRESSION_AUDIT.md` to reflect the fix
+
+⚠️ Absolutely **no `eslint-disable` comments are allowed going forward**. All code must pass ESLint cleanly by fixing issues directly.
+
+Final Goal: `npx eslint client/ --ext .js,.jsx` returns **0 errors and 0 warnings**, with **no suppressions present in the codebase**.

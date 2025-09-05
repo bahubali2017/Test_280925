@@ -1,0 +1,54 @@
+TASK: Systematically migrate each file listed in `migration-tracker.md` from TypeScript (.ts/.tsx) to JavaScript (.js/.jsx) while ensuring ESLint and JSDoc compliance. The goal is to fully convert the frontend to stable, clean JavaScript before backend integration begins.
+
+🎯 Objective:
+Complete one file at a time, following the checklist in `migration-tracker.md`. Do not skip ahead. Only proceed to the next file after fully completing and validating the current one.
+
+---
+
+🔧 For Each File in Sequence:
+
+1. **Rename** `.ts` → `.js` or `.tsx` → `.jsx`  
+2. **Remove all TypeScript syntax**:
+   - Type annotations (`: string`, `interface`, `type`, etc.)
+   - `as` casting and `import type` lines
+
+3. **Add full JSDoc annotations**:
+   - Document all component props with `@param`
+   - Add `@returns {JSX.Element}` for components
+   - Use typedefs in `lib/types.js` where necessary
+
+4. **Run ESLint**:
+   - Confirm the file has **zero ESLint errors or warnings**
+   - Fix any violations found
+
+5. **Verify UI/logic behavior**:
+   - Confirm the component still renders or functions correctly
+   - Do not break runtime behavior during cleanup
+
+6. **Update `migration-tracker.md`**:
+   - Mark the file’s checklist as completed
+   - Add a short summary of what was changed (e.g., “Removed interface, added 3 JSDoc blocks, fixed ESLint warning”)
+
+---
+
+✅ Completion Criteria per File:
+- File extension renamed to `.js` or `.jsx`
+- No remaining TypeScript syntax
+- All functions/components fully documented with JSDoc
+- ESLint passes with zero errors
+- Runtime behavior remains stable
+- Tracker updated with completion status
+
+🚦 Sequence:
+- Work **top-down** through the file list in `migration-tracker.md`
+- Do not skip files or batch them
+- Finish 100% of one file before moving on to the next
+
+🛑 Do not:
+- Use `eslint-disable`
+- Leave TODOs or incomplete JSDoc
+- Skip validation or renaming steps
+
+---
+
+End goal: A fully migrated, ESLint-clean JavaScript frontend that runs without errors or warnings and is stable across UI and routing.

@@ -1,0 +1,67 @@
+TASK: Update the existing development plan for the Anamnesis – Medical AI Assistant MVP to align with real-world deployment objectives.
+
+🎯 New Goal:
+Evolve the MVP from a frontend-only prototype into a **fully functional MVP+** that supports real user registration, persistent sessions, message logging, and traffic analytics. This MVP is intended for live user testing and lead generation.
+
+🛠️ Tech Scope Update:
+Add lightweight backend infrastructure using Supabase or Firebase for authentication, database, and analytics.
+
+📋 Modify the development plan (DEVELOPMENT_PLAN.md) to include:
+
+---
+
+✅ Updated MVP Scope & Vision:
+- Support real user **sign-up**, **login**, and **session persistence**
+- Store user information securely in a managed database
+- Log AI interactions (prompt/response pairs) per user
+- Enable lead tracking and usage monitoring for growth and iteration
+- Keep codebase in **JavaScript** with `.tsx` files and **JSDoc annotations**
+- Maintain clean ESLint compliance throughout
+
+---
+
+🧱 Add New Phase(s) to Development Plan:
+
+**Phase 2.5 – Backend Integration & Real Authentication**
+
+**Objective:** Replace mock authentication with real user auth and connect to a managed database.
+
+**Tasks:**
+- Choose and configure backend service: Supabase (preferred) or Firebase
+- Set up database schema for:
+  - Users
+  - Sessions
+  - Messages (optional)
+- Replace `useAuth.tsx` logic with real Supabase/Firebase integration
+- Update `login()` and `signup()` to hit real auth API
+- Add new user registration form logic
+- Persist session tokens in localStorage
+- Add error handling and feedback for login failures
+- Secure routes using token/session checks
+- Add JSDoc annotations for all changes
+
+**Completion Criteria:**
+- Users can register and log in with real credentials
+- Session is maintained between reloads
+- Chat interface only loads for logged-in users
+- ESLint passes with no errors
+- JSDoc annotations are complete
+
+---
+
+🔐 Additional Enhancements:
+- Add “Sign up” / “Log in” toggle to login page
+- Add legal disclaimer text below form (about AI usage, medical info, etc.)
+- Track leads (registered emails) for future contact
+
+---
+
+📦 Optional Future Phase: Message Logging & Admin Review (Phase 4.5)
+- Store chat messages per user in backend
+- Export logs or provide admin interface for future analysis
+
+---
+
+✅ Final Instructions:
+Update `DEVELOPMENT_PLAN.md` to reflect this revised, deployment-ready MVP+ plan. Do not implement anything yet — only update the plan with this new scope and roadmap.
+

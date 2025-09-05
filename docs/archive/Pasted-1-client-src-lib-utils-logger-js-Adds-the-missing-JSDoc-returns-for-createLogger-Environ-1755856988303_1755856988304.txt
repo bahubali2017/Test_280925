@@ -1,0 +1,193 @@
+1) client/src/lib/utils/logger.js
+
+Adds the missing JSDoc @returns for createLogger.
+
+/**
+ * Environment-aware logger with scoped categories.
+ * Never log PHI or raw user text at info/warn/error levels.
+ *
+ * @typedef {"debug"|"info"|"warn"|"error"} LogLevel
+ */
+
+/**
+ * Create a scoped logger.
+ * @param {string} [scope="layer"]
+ * @returns {{debug:(...a:any[])=>void, info:(...a:any[])=>void, warn:(...a:any[])=>void, error:(...a:any[])=>void, child:(childScope:string)=>ReturnType<typeof createLogger>}}
+ */
+export function createLogger(scope = "layer") {
+  const level = (process.env.LOG_LEVEL || "info").toLowerCase();
+
+  /** @param {LogLevel} lvl @param {...any} args */
+  function log(lvl, ...args) {
+    const order = ["debug", "info", "warn", "error"];
+    if (order.indexOf(lvl) < order.indexOf(level)) return;
+    const ts = new Date().toISOString();
+    // eslint-disable-next-line no-console
+    console[lvl === "debug" ? "log" : lvl](`[${ts}] [${scope}] [${lvl}]`, ...args);
+  }
+
+  return {
+    debug: (...a) => log("debug", ...a),
+    info:  (...a) => log("info",  ...a),
+    warn:  (...a) => log("warn",  ...a),
+    error: (...a) => log("error", ...a),
+    child(childScope) { return createLogger(`${scope}:${childScope}`); },
+  };
+}
+
+export const adminAccessLogger = createLogger("admin-remote-access");
+
+2) client/src/lib/router.js
+
+Fixes no-undef by not referencing performance directly.
+
+Uses a safe now() helper (globalThis.performance?.now() fallback to Date.now()).
+
+import { createLogger } from "./utils/logger.js";
+import { createLayerContext, updateLayerContext, validateLayerContext } from "./layer-context.js";
+import { parseIntent } from "./intent-parser.js";
+import { performTriage } from "./triage-checker.js";
+import { enhancePrompt } from "./prompt-enhancer.js";
+
+const log = createLogger("layer:router");
+
+/** Safe timestamp helper for browser/node environments. */
+function now() {
+  // eslint-disable-next-line no-restricted-globals
+  const perf = typeof globalThis !== "undefined" ? globalThis.performance : undefined;
+  return (perf && typeof perf.now === "function") ? perf.now() : Date.now();
+}
+
+/**
+ * Orchestrate the Interpretation Layer for a single user query.
+ * Always returns a standardized payload; on error, falls back safely.
+ *
+ * @param {string} userInput
+ * @returns {Promise<{
+ *   userInput: string,
+ *   enhancedPrompt: string,
+ *   isHighRisk: boolean,
+ *   disclaimers: string[],
+ *   suggestions: string[],
+ *   metadata: { processingTime: number, intentConfidence?: number, triageLevel?: string, bodySystem?: string }
+ * }>}
+ */
+export async function routeMedicalQuery(userInput) {
+  const t0 = now();
+  const ctx = createLayerContext(userInput);
+
+  try {
+    const v0 = validateLayerContext(ctx, { strict: false });
+    if (!v0.ok) {
+      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
+      throw new Error("Invalid input");
+    }
+
+    const { intent, symptoms } = parseIntent(ctx.userInput);
+    updateLayerContext(ctx, { intent, symptoms });
+
+    const triage = performTriage(ctx);
+    updateLayerContext(ctx, { triage });
+
+    const { systemPrompt, enhancedPrompt } = enhancePrompt(ctx);
+    updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
+
+    const processingTime = Math.round(now() - t0);
+
+    return {
+      userInput: ctx.userInput,
+      enhancedPrompt,
+      isHighRisk: !!ctx.triage?.isHighRisk,
+      disclaimers: ctx.triage?.isHighRisk
+        ? ["This may warrant urgent medical attention. This assistant is informational and not a diagnostic tool."]
+        : ["This assistant is informational and not a diagnostic tool."],
+      suggestions: ctx.triage?.isHighRisk
+        ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
+        : ["Can you share duration, severity, and associated symptoms?", "Any triggers or relieving factors?"],
+      metadata: {
+        processingTime,
+        intentConfidence: intent?.confidence,
+        triageLevel: ctx.triage?.level,
+      },
+    };
+  } catch (err) {
+    const processingTime = Math.round(now() - t0);
+    log.error("router_failed", { message: String(err?.message || err), safe: true });
+
+    return {
+      userInput: String(userInput || ""),
+      enhancedPrompt: "System fallback: Provide general, low-risk educational guidance and suggest appropriate next steps. Include red-flag checklist and advise contacting a clinician if concerned.",
+      isHighRisk: false,
+      disclaimers: ["The enhanced AI layer encountered an issue. This is a general response and not a diagnosis."],
+      suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
+      metadata: { processingTime },
+    };
+  }
+}
+
+3) client/src/lib/intent-parser.js
+
+Removes unused imports (SEVERITY_TAGS, CONDITION_TYPES) per your ESLint output.
+
+import { BODY_LOCATIONS } from "./constants.js";
+import { makeNegationPredicate } from "./nlp/negation-detector.js";
+
+/**
+ * Very small starter parser to unblock Phase 0/0.1 end-to-end flow.
+ * @param {string} userInput
+ * @returns {{ intent: import("./layer-context.js").Intent, symptoms: import("./layer-context.js").Symptom[] }}
+ */
+export function parseIntent(userInput) {
+  const text = String(userInput || "").trim();
+  const neg = makeNegationPredicate(text);
+  /** @type {import("./layer-context.js").Symptom[]} */
+  const symptoms = [];
+
+  if (/chest/i.test(text)) symptoms.push({ name: "chest pain", location: "CHEST", negated: neg("chest pain") });
+  if (/headache/i.test(text)) symptoms.push({ name: "headache",   location: "HEAD",  negated: neg("headache") });
+
+  /** @type {import("./layer-context.js").Intent} */
+  const intent = { type: "symptom_check", confidence: 0.6 };
+
+  // normalize locations to keys present in BODY_LOCATIONS
+  symptoms.forEach(s => {
+    if (s.location && BODY_LOCATIONS[s.location]) return;
+    if (/chest/i.test(text)) s.location = "CHEST";
+    else if (/head/i.test(text)) s.location = "HEAD";
+    else s.location = "UNSPECIFIED";
+    if (!("negated" in s)) s.negated = false;
+  });
+
+  return { intent, symptoms };
+}
+
+4) client/src/lib/triage-checker.js
+
+Removes unused TRIAGE_FLAGS import per your ESLint output.
+
+import atd from "../../rules/atd-conditions.json" assert { type: "json" };
+
+/**
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {import("./layer-context.js").Triage}
+ */
+export function performTriage(ctx) {
+  const text = ctx.userInput.toLowerCase();
+  const reasons = [];
+
+  /** @type {import("./layer-context.js").Triage["level"]} */
+  let level = "non_urgent";
+
+  for (const rf of atd.red_flags) {
+    if (text.includes(rf.pattern)) {
+      if (rf.triage === "emergency") { level = "emergency"; reasons.push(rf.reason); break; }
+      if (rf.triage === "urgent" && level !== "emergency") { level = "urgent"; reasons.push(rf.reason); }
+    }
+  }
+
+  const isHighRisk = level !== "non_urgent";
+  return { level, isHighRisk, reasons };
+}
+
+
+Note: The relative path to rules/atd-conditions.json assumes your rules/ folder sits at client/src/rules/. If it’s elsewhere, adjust the ../../ segments accordingly (the ESLint error you posted wasn’t about the path, so I left logic intact).

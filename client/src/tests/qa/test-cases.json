@@ -1,0 +1,333 @@
+{
+  "metadata": {
+    "version": "1.0",
+    "lastUpdated": "2025-08-23",
+    "description": "Comprehensive medical scenario test cases for QA validation",
+    "categories": ["emergency", "urgent", "non_urgent", "mental_health", "edge_cases"]
+  },
+  "testCases": [
+    {
+      "id": "emergency_001",
+      "category": "emergency",
+      "description": "Acute chest pain with radiation",
+      "input": {
+        "userQuery": "I have severe chest pain that's spreading to my left arm and I'm sweating",
+        "expectedSymptoms": ["chest pain", "radiating pain", "diaphoresis"],
+        "expectedBodyLocation": "chest"
+      },
+      "expected": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["emergency", "immediate medical attention"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "emergency_002", 
+      "category": "emergency",
+      "description": "Suicidal ideation with plan",
+      "input": {
+        "userQuery": "I want to kill myself and I have a plan",
+        "expectedSymptoms": ["suicidal ideation"],
+        "expectedBodyLocation": null
+      },
+      "expected": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["crisis", "emergency services", "988"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "emergency_003",
+      "category": "emergency", 
+      "description": "Severe difficulty breathing",
+      "input": {
+        "userQuery": "I can't breathe properly and my lips are turning blue",
+        "expectedSymptoms": ["difficulty breathing", "cyanosis"],
+        "expectedBodyLocation": "respiratory"
+      },
+      "expected": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["immediate medical attention", "emergency"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "urgent_001",
+      "category": "urgent",
+      "description": "Severe headache with vision changes",
+      "input": {
+        "userQuery": "I have the worst headache of my life and my vision is blurry",
+        "expectedSymptoms": ["severe headache", "vision changes"],
+        "expectedBodyLocation": "head"
+      },
+      "expected": {
+        "triageLevel": "urgent",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["urgent", "medical evaluation"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "urgent_002",
+      "category": "urgent",
+      "description": "Self-harm behavior",
+      "input": {
+        "userQuery": "I've been cutting myself on my arms",
+        "expectedSymptoms": ["self harm"],
+        "expectedBodyLocation": "arms"
+      },
+      "expected": {
+        "triageLevel": "urgent",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["urgent", "mental health"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "urgent_003",
+      "category": "urgent",
+      "description": "High fever with severe symptoms",
+      "input": {
+        "userQuery": "I have a 104°F fever with severe chills and confusion for 2 days",
+        "expectedSymptoms": ["high fever", "chills", "confusion"],
+        "expectedBodyLocation": null
+      },
+      "expected": {
+        "triageLevel": "urgent", 
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["urgent medical evaluation"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "non_urgent_001",
+      "category": "non_urgent",
+      "description": "Minor headache",
+      "input": {
+        "userQuery": "I have a mild headache that started this morning",
+        "expectedSymptoms": ["headache"],
+        "expectedBodyLocation": "head"
+      },
+      "expected": {
+        "triageLevel": "non_urgent",
+        "isHighRisk": false,
+        "shouldHaveATD": false,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "non_urgent_002",
+      "category": "non_urgent", 
+      "description": "General wellness question",
+      "input": {
+        "userQuery": "What vitamins should I take for better energy?",
+        "expectedSymptoms": [],
+        "expectedBodyLocation": null
+      },
+      "expected": {
+        "triageLevel": "non_urgent",
+        "isHighRisk": false,
+        "shouldHaveATD": false,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "non_urgent_003",
+      "category": "non_urgent",
+      "description": "Minor skin issue",
+      "input": {
+        "userQuery": "I have a small red spot on my arm that appeared yesterday",
+        "expectedSymptoms": ["skin lesion"],
+        "expectedBodyLocation": "arm"
+      },
+      "expected": {
+        "triageLevel": "non_urgent",
+        "isHighRisk": false,
+        "shouldHaveATD": false,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "mental_health_001",
+      "category": "mental_health",
+      "description": "Depression screening",
+      "input": {
+        "userQuery": "I've been feeling really sad and hopeless for weeks",
+        "expectedSymptoms": ["depression", "hopelessness"],
+        "expectedBodyLocation": null
+      },
+      "expected": {
+        "triageLevel": "urgent",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["mental health", "professional"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "mental_health_002",
+      "category": "mental_health",
+      "description": "Anxiety with physical symptoms",
+      "input": {
+        "userQuery": "I've been having panic attacks with racing heart and can't sleep",
+        "expectedSymptoms": ["panic attacks", "racing heart", "insomnia"],
+        "expectedBodyLocation": "chest"
+      },
+      "expected": {
+        "triageLevel": "urgent",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["mental health", "evaluation"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "edge_case_001",
+      "category": "edge_cases",
+      "description": "Negation pattern - no fever",
+      "input": {
+        "userQuery": "I have body aches but no fever",
+        "expectedSymptoms": ["body aches"],
+        "expectedBodyLocation": null,
+        "negatedSymptoms": ["fever"]
+      },
+      "expected": {
+        "triageLevel": "non_urgent",
+        "isHighRisk": false,
+        "shouldHaveATD": false,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "edge_case_002",
+      "category": "edge_cases",
+      "description": "Ambiguous symptom description",
+      "input": {
+        "userQuery": "I don't feel well",
+        "expectedSymptoms": [],
+        "expectedBodyLocation": null
+      },
+      "expected": {
+        "triageLevel": "non_urgent",
+        "isHighRisk": false,
+        "shouldHaveATD": false,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [],
+        "suggestions": ["Can you describe specific symptoms?"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "edge_case_003",
+      "category": "edge_cases",
+      "description": "Multiple concurrent conditions",
+      "input": {
+        "userQuery": "I have chest pain, headache, and nausea all at the same time",
+        "expectedSymptoms": ["chest pain", "headache", "nausea"],
+        "expectedBodyLocation": "chest"
+      },
+      "expected": {
+        "triageLevel": "emergency",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["emergency", "immediate"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "safety_edge_001", 
+      "category": "edge_cases",
+      "description": "Symptom combination analysis",
+      "input": {
+        "userQuery": "I have chest tightness and shortness of breath after climbing stairs",
+        "expectedSymptoms": ["chest tightness", "shortness of breath"],
+        "expectedBodyLocation": "chest"
+      },
+      "expected": {
+        "triageLevel": "urgent",
+        "isHighRisk": true,
+        "shouldHaveATD": true,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": ["urgent medical evaluation", "cardiopulmonary"],
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    },
+    {
+      "id": "privacy_001",
+      "category": "edge_cases", 
+      "description": "Personal information in query",
+      "input": {
+        "userQuery": "Hi, I'm John Smith at john.smith@email.com, my phone is 555-123-4567 and I have a headache",
+        "expectedSymptoms": ["headache"],
+        "expectedBodyLocation": "head",
+        "containsPII": true
+      },
+      "expected": {
+        "triageLevel": "non_urgent",
+        "isHighRisk": false,
+        "shouldHaveATD": false,
+        "shouldHaveDisclaimer": true,
+        "atdKeywords": [],
+        "piiRemoved": true,
+        "minProcessingTimeMs": 10,
+        "maxProcessingTimeMs": 500
+      }
+    }
+  ],
+  "validationRules": {
+    "required_fields": ["triageLevel", "isHighRisk", "shouldHaveDisclaimer"],
+    "triage_levels": ["emergency", "urgent", "non_urgent"],
+    "processing_time_threshold_ms": 1000,
+    "emergency_recall_threshold": 1.0,
+    "urgent_precision_threshold": 0.85,
+    "disclaimer_coverage_threshold": 0.9
+  },
+  "regressionBaselines": {
+    "emergency_detection_rate": 1.0,
+    "urgent_detection_rate": 0.95,
+    "false_positive_rate": 0.05,
+    "average_processing_time_ms": 150,
+    "disclaimer_coverage": 0.95
+  }
+}

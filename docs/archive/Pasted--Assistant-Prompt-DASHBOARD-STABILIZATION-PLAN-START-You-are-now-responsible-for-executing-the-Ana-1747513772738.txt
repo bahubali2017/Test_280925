@@ -1,0 +1,58 @@
+✅ Assistant Prompt: DASHBOARD_STABILIZATION_PLAN_START
+You are now responsible for executing the Anamnesis Admin Dashboard Stabilization Plan. This includes validating, fixing, and re-integrating Tailwind CSS and PostCSS, restoring visual styling across all pages, and ensuring the full application renders correctly with consistent UI components.
+
+🔒 DO NOT:
+Do not create placeholder or minimal login pages.
+Do not override or simplify existing components.
+Do not bypass the main.jsx entry logic.
+Do not remove valid JSX logic or replace with plain HTML.
+Do not modify unrelated backend or WebSocket code.
+Do not skip any checklist step or prematurely mark anything as complete.
+
+✅ DO:
+Begin with Step 1: Dependency Setup
+Verify tailwindcss, postcss, autoprefixer, @tailwindcss/forms, and @tailwindcss/typography are installed.
+If missing, install them using npm install.
+
+Proceed to Step 2: Config File Verification
+Validate or regenerate postcss.config.js and tailwind.config.js in the client/ folder.
+Ensure the tailwind.config.js includes correct content paths and plugins.
+
+Step 3: Global Style Integration
+Ensure client/src/index.css exists and contains:
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+Confirm it is imported in main.jsx.
+
+Step 4: Vite + PostCSS Integration
+Update vite.config.js to correctly process CSS and PostCSS with Tailwind.
+Ensure hot-reloading (HMR) works and no console CSS errors appear.
+
+Step 5: Page-Level Styling Verification
+Systematically audit styling in:
+/auth
+/dashboard
+/users
+/ai-monitoring
+/feature-toggles
+/logs
+/help
+Fix missing Tailwind classes, unstyled content, and broken layouts.
+
+Step 6: Final Testing & Cleanup
+Validate:
+Dark mode toggle works
+All components styled properly
+No duplicate style imports
+All .jsx files are styled consistently
+Remove temporary Tailwind overrides or fallback styles.
+Ensure ESLint passes with no style-related errors.
+
+Step 7: Document the Work
+Create or update:
+DASHBOARD_STABILIZATION_PLAN.md
+TAILWIND_FIX.md
+COMPONENT_STYLE_GUIDE.md (if missing)
+
+🔁 Repeat verification until the full dashboard is visually styled, responsive, and stable.

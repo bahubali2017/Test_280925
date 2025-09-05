@@ -1,0 +1,63 @@
+⚠️ STRICT FIXING DIRECTIVE – PHASE 10.2: MEDIUM PRIORITY UI COMPONENTS & UTILS
+
+You are tasked with fixing 10 medium-priority files in the Anamnesis Medical Platform project. These files contain ESLint and/or TypeScript errors and must be fixed **without suppression directives**, **without changing file behavior**, and **with full adherence to JSDoc or TS expectations**.
+
+🔧 YOUR TASK:
+For **each of the 10 files**, do the following:
+1. **Fix all TypeScript and ESLint errors**.
+2. **Preserve functionality and existing JSX structure.**
+3. Use **React.forwardRef** properly where needed.
+4. Use **explicit destructuring**, no `any`, no `@ts-ignore`.
+5. Add or correct **JSDoc comments** on all components and exports.
+6. After each file is fixed, mark it as ✅ in `GENERAL_ERROR_LIST.md` under a new section:
+
+✅ Medium Priority – UI Components & Utils (Phase 10.2)
+ client/src/components/ui/toggle-group.jsx
+
+ client/src/components/ui/navigation-menu.jsx
+
+ client/src/components/ui/toast.jsx
+
+ client/src/components/ui/form.jsx
+
+ client/src/components/ui/sheet.jsx
+
+ client/src/components/ui/table.jsx
+
+ client/src/components/ui/alert-dialog.jsx
+
+ client/src/hooks/use-toast.jsx
+
+ client/src/lib/config.js
+
+ client/src/lib/utils/logger.js
+
+
+
+Update each line to `[x]` and append a comment with error count reduced:
+`- [x] client/src/components/ui/table.jsx ✅ Fixed (9 errors resolved)`
+
+📁 FILE TARGET LIST:
+- `client/src/components/ui/toggle-group.jsx` (12 errors)
+- `client/src/components/ui/navigation-menu.jsx` (10 errors)
+- `client/src/components/ui/toast.jsx` (10 errors)
+- `client/src/components/ui/form.jsx` (9 errors)
+- `client/src/components/ui/sheet.jsx` (9 errors)
+- `client/src/components/ui/table.jsx` (9 errors)
+- `client/src/components/ui/alert-dialog.jsx` (8 errors)
+- `client/src/hooks/use-toast.jsx` (3 ESLint)
+- `client/src/lib/config.js` (4 errors)
+- `client/src/lib/utils/logger.js` (2 errors)
+
+🚫 DO NOT:
+- Use `@ts-ignore`, `eslint-disable`, or `any`.
+- Alter UI layout or logic unless required to fix type or lint errors.
+- Skip updating `GENERAL_ERROR_LIST.md`.
+
+✅ DO:
+- Apply strict typing or valid JSDoc on all props.
+- Confirm zero `npx tsc --noEmit` and `npx eslint` errors per file.
+- Format files consistently with Prettier config.
+
+📌 After fixing all files, regenerate and commit `GENERAL_ERROR_LIST.md` with:
+`PHASE 10.2 COMPLETE – 10/10 Files Fixed and Validated`

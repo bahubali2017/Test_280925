@@ -1,0 +1,210 @@
+A) DOM typing (InstallationNotice.jsx)
+
+Problem: Element doesn’t have .click() in TS.
+Fix: Narrow to HTMLElement before calling .click().
+
+// client/src/components/InstallationNotice.jsx
+-        if (installButton && typeof installButton.click === 'function') {
+-          installButton.click();
+-        }
++        if (installButton instanceof HTMLElement && typeof installButton.click === 'function') {
++          installButton.click();
++        }
+
+B) Enum & duration typing alignment
+1) Expand enums + add Duration type
+
+Why: Tests expect severity === "SHARP" and duration to be an object with { value, unit, raw }. We’ll (i) add "SHARP" to SEVERITY_TAGS and (ii) formalize a Duration object.
+
+// client/src/lib/layer-context.js
+ import { TRIAGE_FLAGS, SEVERITY_TAGS, CONDITION_TYPES, BODY_LOCATIONS } from "./constants.js";
+
++/**
++ * @typedef {Object} Duration
++ * @property {number | null} [value]    // numeric value when available (e.g., 3)
++ * @property {string} unit              // "day"|"week"|"hour"|"yesterday"|"ongoing"|...
++ * @property {string} raw               // original matched text (e.g., "for 3 days", "since yesterday", "ongoing")
++ */
+
+ /**
+  * @typedef {Object} Symptom
+  * @property {string} name
+  * @property {keyof typeof BODY_LOCATIONS} [location]
+  * @property {keyof typeof SEVERITY_TAGS} [severity]
+- * @property {string} [duration] // normalized text e.g. "3 days", "2 weeks"
++ * @property {Duration} [duration]
+  * @property {boolean} [negated] // true if user denies the symptom
+  */
+
+// client/src/lib/constants.js
+ export const SEVERITY_TAGS = Object.freeze({
+   MILD: "mild",
+   MODERATE: "moderate",
+   SEVERE: "severe",
+   UNSPECIFIED: "unspecified",
++  SHARP: "sharp" // added to satisfy tests expecting "SHARP"
+ });
+
+
+Note: We keep values lowercase for display; TS/JSDoc uses the keys ("MILD" | "SHARP" | ...) for type safety.
+
+2) Make validator always return .errors (no union type headaches)
+
+Why: Tests access result.errors directly. We’ll always return { ok: boolean, errors: ValidationError[] }.
+
+// client/src/lib/utils/schema-validator.js
+-export function validateLayerSchema(ctx, opts = {}) {
++export function validateLayerSchema(ctx, opts = {}) {
+   const strict = !!opts.strict;
+   /** @type {ValidationError[]} */
+   const errors = [];
+   ...
+-  return errors.length ? { ok: false, errors } : { ok: true };
++  return { ok: errors.length === 0, errors };
+}
+
+// client/src/lib/layer-context.js
+-export function validateLayerContext(ctx, opts) {
+-  return validateLayerSchema(ctx, opts);
+-}
++export function validateLayerContext(ctx, opts) {
++  return validateLayerSchema(ctx, opts); // always: { ok: boolean, errors: ValidationError[] }
++}
+
+3) Update router to work with new validator shape
+
+Why: With .errors always present, TypeScript stops complaining.
+
+// client/src/lib/router.js
+-    if (!v0.ok) {
+-      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
+-      throw new Error("Invalid input");
+-    }
++    if (!v0.ok) {
++      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
++      throw new Error("Invalid input");
++    }
+
+// If you added more validation checkpoints later (v1, v2, vFinal), the same pattern applies:
+// log.warn(... vX.errors.map(...))
+
+4) Intent parser: enforce enum keys, object duration
+
+Why: Errors show location and severity were inferred as string. We’ll ensure we assign enum keys (e.g., "CHEST", "SEVERE", "SHARP") and produce a Duration object.
+
+// client/src/lib/intent-parser.js
+-import { BODY_LOCATIONS } from "./constants.js";
++import { BODY_LOCATIONS, SEVERITY_TAGS } from "./constants.js";
+ import { makeNegationPredicate } from "./nlp/negation-detector.js";
+
+/** util: normalize a body location key */
+function toLocationKey(text) {
+  const t = String(text).toLowerCase();
+  if (/chest/.test(t)) return "CHEST";
+  if (/head|headache|migraine/.test(t)) return "HEAD";
+  if (/abdomen|stomach|belly/.test(t)) return "ABDOMEN";
+  if (/leg|arm|hand|foot|feet|ankle|wrist/.test(t)) return "LIMB";
+  if (/general|whole body|all over/.test(t)) return "GENERAL";
+  return "UNSPECIFIED";
+}
+
+/** util: map free text to severity enum KEY */
+function toSeverityKey(text) {
+  const t = String(text).toLowerCase();
+  if (/severe|very bad|worst/.test(t)) return "SEVERE";
+  if (/moderate|medium/.test(t)) return "MODERATE";
+  if (/mild|slight|light/.test(t)) return "MILD";
+  if (/sharp|stabbing/.test(t)) return "SHARP"; // added to satisfy tests
+  return "UNSPECIFIED";
+}
+
+/** util: extract duration → {value, unit, raw} */
+function extractDuration(text) {
+  const t = String(text);
+  // 1) numeric: "for 3 days", "2 weeks", "x 4 hours"
+  const num = t.match(/\b(?:for|x)?\s*(\d+)\s*(day|days|week|weeks|hour|hours)\b/i);
+  if (num) {
+    const value = Number(num[1]);
+    const unitRaw = num[2].toLowerCase();
+    const unit = /day/.test(unitRaw) ? "day" : /week/.test(unitRaw) ? "week" : "hour";
+    return { value, unit, raw: num[0].trim() };
+  }
+  // 2) relative: "since yesterday"
+  const rel = t.match(/\bsince\s+(yesterday|last night|last week)\b/i);
+  if (rel) return { value: null, unit: rel[1].toLowerCase(), raw: rel[0].trim() };
+  // 3) ongoing
+  const ongoing = t.match(/\bongoing|persistent|chronic\b/i);
+  if (ongoing) return { value: null, unit: "ongoing", raw: ongoing[0].trim() };
+  return undefined;
+}
+
+/**
+ * @param {string} userInput
+ * @returns {{ intent: import("./layer-context.js").Intent, symptoms: import("./layer-context.js").Symptom[] }}
+ */
+export function parseIntent(userInput) {
+  const text = String(userInput || "").trim();
+  const neg = makeNegationPredicate(text);
+  /** @type {import("./layer-context.js").Symptom[]} */
+  const symptoms = [];
+
+  // naive examples (+ improved typing)
+-  if (/chest/i.test(text)) symptoms.push({ name: "chest pain", location: "CHEST", negated: neg("chest pain") });
+-  if (/headache/i.test(text)) symptoms.push({ name: "headache",   location: "HEAD",  negated: neg("headache") });
++  if (/chest/i.test(text)) {
++    symptoms.push({
++      name: "chest pain",
++      location: "CHEST",
++      severity: toSeverityKey(text),
++      duration: extractDuration(text),
++      negated: neg("chest pain"),
++    });
++  }
++  if (/headache/i.test(text)) {
++    symptoms.push({
++      name: "headache",
++      location: "HEAD",
++      severity: toSeverityKey(text),
++      duration: extractDuration(text),
++      negated: neg("headache"),
++    });
++  }
+
+  /** @type {import("./layer-context.js").Intent} */
+  const intent = { type: "symptom_check", confidence: 0.6 };
+
+  // Normalize/ensure keys exist
+  symptoms.forEach(s => {
+-    if (s.location && BODY_LOCATIONS[s.location]) return;
+-    if (/chest/i.test(text)) s.location = "CHEST";
+-    else if (/head/i.test(text)) s.location = "HEAD";
+-    else s.location = "UNSPECIFIED";
+-    if (!("negated" in s)) s.negated = false;
++    // location
++    s.location = s.location && BODY_LOCATIONS[s.location] ? s.location : toLocationKey(text);
++    // severity
++    s.severity = s.severity && SEVERITY_TAGS[s.severity] ? s.severity : toSeverityKey(text);
++    // duration
++    if (!s.duration) s.duration = extractDuration(text);
++    // negation
++    if (!("negated" in s)) s.negated = false;
+   });
+
+  return { intent, symptoms };
+}
+
+
+This ensures location is a key of BODY_LOCATIONS, severity a key of SEVERITY_TAGS, and duration an object ({ value, unit, raw }) — matching your tests.
+
+C) Tests referencing .errors
+
+Since the validator now always returns { ok, errors }, your test assertions like result.errors.length and validation.errors.some(...) will type‑check cleanly.
+
+No changes needed in test files after these patches.
+
+Re-run checks
+# TypeScript
+npx tsc --noEmit
+
+# ESLint (sanity)
+npx eslint client/ --ext .js,.jsx

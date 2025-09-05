@@ -1,0 +1,304 @@
+client/src/components/ui/accordion.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/accordion.jsx(17,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/accordion.jsx(18,6): error TS2741: Property 'value' is missing in type '{ ref: ForwardedRef<any>; className: any; }' but required in type 'AccordionItemProps'.
+client/src/components/ui/accordion.jsx(36,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/accordion.jsx(36,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/accordion.jsx(63,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/accordion.jsx(63,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/alert-dialog.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/alert-dialog.jsx(5,32): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+client/src/components/ui/alert-dialog.jsx(30,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert-dialog.jsx(51,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert-dialog.jsx(115,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert-dialog.jsx(133,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert-dialog.jsx(152,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert-dialog.jsx(170,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/alert.jsx(35,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert.jsx(35,17): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/alert.jsx(54,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/alert.jsx(72,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/avatar.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/avatar.jsx(16,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/avatar.jsx(38,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/avatar.jsx(57,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/badge.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/badge.jsx(10,7): error TS2502: 'badgeVariants' is referenced directly or indirectly in its own type annotation.
+client/src/components/ui/breadcrumb.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/breadcrumb.jsx(28,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/breadcrumb.jsx(49,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/breadcrumb.jsx(67,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/breadcrumb.jsx(85,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/button.jsx(11,7): error TS2502: 'buttonVariants' is referenced directly or indirectly in its own type annotation.
+client/src/components/ui/button.jsx(56,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/button.jsx(56,17): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/button.jsx(56,26): error TS2339: Property 'size' does not exist on type '{}'.
+client/src/components/ui/button.jsx(56,32): error TS2339: Property 'asChild' does not exist on type '{}'.
+client/src/components/ui/calendar.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/calendar.jsx(6,32): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+client/src/components/ui/card.jsx(3,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/card.jsx(13,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/card.jsx(34,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/card.jsx(52,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/card.jsx(73,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/card.jsx(91,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/card.jsx(105,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(56,7): error TS2339: Property 'orientation' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(57,7): error TS2339: Property 'opts' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(58,7): error TS2339: Property 'setApi' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(59,7): error TS2339: Property 'plugins' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(60,7): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(61,7): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(167,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(167,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(199,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(199,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(233,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(233,24): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(233,45): error TS2339: Property 'size' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(237,8): error TS2322: Type '{ children: Element[]; ref: ForwardedRef<any>; variant: any; size: any; className: string; disabled: boolean; onClick: Function; }' is not assignable to type 'IntrinsicAttributes & RefAttributes<any>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & RefAttributes<any>'.
+client/src/components/ui/carousel.jsx(272,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(272,24): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(272,45): error TS2339: Property 'size' does not exist on type '{}'.
+client/src/components/ui/carousel.jsx(276,8): error TS2322: Type '{ children: Element[]; ref: ForwardedRef<any>; variant: any; size: any; className: string; disabled: boolean; onClick: Function; }' is not assignable to type 'IntrinsicAttributes & RefAttributes<any>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & RefAttributes<any>'.
+client/src/components/ui/checkbox.jsx(15,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/checkbox.jsx(19,9): error TS2345: Argument of type 'string' is not assignable to parameter of type 'ClassValue[]'.
+client/src/components/ui/checkbox.jsx(25,23): error TS2345: Argument of type 'string' is not assignable to parameter of type 'ClassValue[]'.
+client/src/components/ui/command.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/command.jsx(6,39): error TS2307: Cannot find module '@/components/ui/dialog' or its corresponding type declarations.
+client/src/components/ui/command.jsx(16,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/command.jsx(39,10): error TS2322: Type '{ children: ReactNode; className: string; }' is not assignable to type 'IntrinsicAttributes & RefAttributes<any>'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & RefAttributes<any>'.
+client/src/components/ui/command.jsx(55,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/command.jsx(80,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/command.jsx(117,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/command.jsx(139,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/command.jsx(157,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(48,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(48,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(48,31): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(76,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(100,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(127,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(127,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(154,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(154,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(154,34): error TS2339: Property 'checked' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(187,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(187,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(189,8): error TS2741: Property 'value' is missing in type '{ children: any[]; ref: ForwardedRef<any>; className: string; }' but required in type 'Omit<MenuRadioItemProps & RefAttributes<HTMLDivElement>, "ref">'.
+client/src/components/ui/context-menu.jsx(219,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(219,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/context-menu.jsx(244,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dialog.jsx(7,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/dialog.jsx(37,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dialog.jsx(59,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dialog.jsx(59,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/dialog.jsx(129,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dialog.jsx(150,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/drawer.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/drawer.jsx(39,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/drawer.jsx(58,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/drawer.jsx(58,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/drawer.jsx(119,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/drawer.jsx(140,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(48,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(48,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(48,31): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(76,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(101,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(101,24): error TS2339: Property 'sideOffset' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(129,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(129,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(156,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(156,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(156,34): error TS2339: Property 'checked' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(189,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(189,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(191,8): error TS2741: Property 'value' is missing in type '{ children: any[]; ref: ForwardedRef<any>; className: string; }' but required in type 'Omit<MenuRadioItemProps & RefAttributes<HTMLDivElement>, "ref">'.
+client/src/components/ui/dropdown-menu.jsx(221,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(221,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/dropdown-menu.jsx(246,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/form.jsx(12,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/form.jsx(13,23): error TS2307: Cannot find module '@/components/ui/label' or its corresponding type declarations.
+client/src/components/ui/form.jsx(29,7): error TS2322: Type 'Context<{}>' is not assignable to type 'Context<FormFieldContextValue>'.
+  Property 'name' is missing in type '{}' but required in type 'FormFieldContextValue'.
+client/src/components/ui/form.jsx(80,7): error TS2322: Type 'Context<{}>' is not assignable to type 'Context<FormItemContextValue>'.
+  Property 'id' is missing in type '{}' but required in type 'FormItemContextValue'.
+client/src/components/ui/form.jsx(90,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/form.jsx(111,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/form.jsx(163,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/form.jsx(188,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/form.jsx(188,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/hover-card.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/hover-card.jsx(22,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/hover-card.jsx(22,17): error TS2339: Property 'align' does not exist on type '{}'.
+client/src/components/ui/hover-card.jsx(22,35): error TS2339: Property 'sideOffset' does not exist on type '{}'.
+client/src/components/ui/input-otp.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/input-otp.jsx(16,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/input-otp.jsx(16,17): error TS2339: Property 'containerClassName' does not exist on type '{}'.
+client/src/components/ui/input-otp.jsx(17,6): error TS2322: Type '{ ref: ForwardedRef<any>; containerClassName: any; className: any; }' is not assignable to type 'IntrinsicAttributes & (OTPInputProps & RefAttributes<HTMLInputElement>)'.
+  Property 'maxLength' is missing in type '{ ref: ForwardedRef<any>; containerClassName: any; className: any; }' but required in type '{ value?: string; onChange?: (newValue: string) => unknown; maxLength: number; textAlign?: "center" | "left" | "right"; onComplete?: (...args: any[]) => unknown; pushPasswordManagerStrategy?: "none" | "increase-width"; pasteTransformer?: (pasted: string) => string; containerClassName?: string; noScriptCSSFallback?: ...'.
+client/src/components/ui/input-otp.jsx(38,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/input-otp.jsx(53,6): error TS2339: Property 'index' does not exist on type '{}'.
+client/src/components/ui/input-otp.jsx(53,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/input.jsx(14,3): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/input.jsx(15,3): error TS2339: Property 'type' does not exist on type '{}'.
+client/src/components/ui/input.jsx(22,11): error TS2345: Argument of type 'string' is not assignable to parameter of type 'ClassValue[]'.
+client/src/components/ui/label.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/label.jsx(11,7): error TS2502: 'labelVariants' is referenced directly or indirectly in its own type annotation.
+client/src/components/ui/label.jsx(23,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(63,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(87,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(113,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(113,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(113,31): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(141,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(169,7): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(170,7): error TS2339: Property 'align' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(171,7): error TS2339: Property 'alignOffset' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(172,7): error TS2339: Property 'sideOffset' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(205,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(205,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(232,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(232,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(232,34): error TS2339: Property 'checked' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(265,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(265,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(267,8): error TS2741: Property 'value' is missing in type '{ children: any[]; ref: ForwardedRef<any>; className: string; }' but required in type 'Omit<MenuRadioItemProps & RefAttributes<HTMLDivElement>, "ref">'.
+client/src/components/ui/menubar.jsx(297,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(297,24): error TS2339: Property 'inset' does not exist on type '{}'.
+client/src/components/ui/menubar.jsx(322,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/navigation-menu.jsx(17,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(17,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(41,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(62,11): error TS2314: Generic type 'VariantProps' requires 1 type argument(s).
+client/src/components/ui/navigation-menu.jsx(77,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(77,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(101,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(128,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/navigation-menu.jsx(152,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/pagination.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/pagination.jsx(5,32): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+client/src/components/ui/pagination.jsx(31,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/pagination.jsx(49,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/pagination.jsx(58,22): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+client/src/components/ui/pagination.jsx(66,19): error TS2307: Cannot find module '@/components/ui/button' or its corresponding type declarations.
+client/src/components/ui/pagination.jsx(99,4): error TS2322: Type '{ children: Element[]; "aria-label": string; size: string; className: any; }' is not assignable to type 'IntrinsicAttributes & { className?: string; isActive?: boolean; size?: any; }'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & { className?: string; isActive?: boolean; size?: any; }'.
+client/src/components/ui/pagination.jsx(121,4): error TS2322: Type '{ children: Element[]; "aria-label": string; size: string; className: any; }' is not assignable to type 'IntrinsicAttributes & { className?: string; isActive?: boolean; size?: any; }'.
+  Property 'children' does not exist on type 'IntrinsicAttributes & { className?: string; isActive?: boolean; size?: any; }'.
+client/src/components/ui/popover.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/popover.jsx(26,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/popover.jsx(26,17): error TS2339: Property 'align' does not exist on type '{}'.
+client/src/components/ui/popover.jsx(26,35): error TS2339: Property 'sideOffset' does not exist on type '{}'.
+client/src/components/ui/progress.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/progress.jsx(17,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/progress.jsx(17,17): error TS2339: Property 'value' does not exist on type '{}'.
+client/src/components/ui/radio-group.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/radio-group.jsx(15,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/radio-group.jsx(35,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/radio-group.jsx(37,8): error TS2741: Property 'value' is missing in type '{ children: Element; ref: ForwardedRef<any>; className: any; }' but required in type 'RadioGroupItemProps'.
+client/src/components/ui/resizable.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/resizable.jsx(18,4): error TS2741: Property 'direction' is missing in type '{ className: any; }' but required in type '{ autoSaveId?: string; className?: string; direction: Direction; id?: string; keyboardResizeBy?: number; onLayout?: PanelGroupOnLayout; storage?: PanelGroupStorage; style?: CSSProperties; tagName?: keyof HTMLElementTagNameMap; dir?: "auto" | ... 1 more ... | "rtl"; }'.
+client/src/components/ui/scroll-area.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/scroll-area.jsx(15,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/scroll-area.jsx(15,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/scroll-area.jsx(40,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/scroll-area.jsx(40,17): error TS2339: Property 'orientation' does not exist on type '{}'.
+client/src/components/ui/select.jsx(34,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/select.jsx(34,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/select.jsx(63,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/select.jsx(89,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/select.jsx(117,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/select.jsx(117,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/select.jsx(117,34): error TS2339: Property 'position' does not exist on type '{}'.
+client/src/components/ui/select.jsx(159,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/select.jsx(159,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/select.jsx(184,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/select.jsx(184,24): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/select.jsx(186,8): error TS2741: Property 'value' is missing in type '{ children: Element[]; ref: ForwardedRef<any>; className: string; }' but required in type 'SelectItemProps'.
+client/src/components/ui/select.jsx(216,13): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/separator.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/separator.jsx(17,7): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/separator.jsx(17,18): error TS2339: Property 'orientation' does not exist on type '{}'.
+client/src/components/ui/separator.jsx(17,46): error TS2339: Property 'decorative' does not exist on type '{}'.
+client/src/components/ui/sheet.jsx(8,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/sheet.jsx(42,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/sheet.jsx(57,11): error TS2314: Generic type 'VariantProps' requires 1 type argument(s).
+client/src/components/ui/sheet.jsx(88,6): error TS2339: Property 'side' does not exist on type '{}'.
+client/src/components/ui/sheet.jsx(88,22): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/sheet.jsx(88,33): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/sheet.jsx(89,6): error TS2559: Type '{ children: Element[]; }' has no properties in common with type 'IntrinsicAttributes'.
+client/src/components/ui/sheet.jsx(155,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/sheet.jsx(173,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/sidebar.jsx(57,5): error TS2339: Property 'defaultOpen' does not exist on type '{}'.
+client/src/components/ui/sidebar.jsx(58,5): error TS2339: Property 'open' does not exist on type '{}'.
+client/src/components/ui/sidebar.jsx(59,5): error TS2339: Property 'onOpenChange' does not exist on type '{}'.
+client/src/components/ui/sidebar.jsx(60,5): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/sidebar.jsx(61,5): error TS2339: Property 'style' does not exist on type '{}'.
+client/src/components/ui/sidebar.jsx(62,5): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/skeleton.jsx(1,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/slider.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/slider.jsx(14,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/switch.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/switch.jsx(14,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(3,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/table.jsx(13,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(33,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(47,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(65,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(86,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(107,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(128,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/table.jsx(146,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/tabs.jsx(4,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/tabs.jsx(19,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/tabs.jsx(40,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/tabs.jsx(41,6): error TS2741: Property 'value' is missing in type '{ ref: ForwardedRef<any>; className: any; }' but required in type 'TabsTriggerProps'.
+client/src/components/ui/tabs.jsx(61,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/tabs.jsx(62,6): error TS2741: Property 'value' is missing in type '{ ref: ForwardedRef<any>; className: any; }' but required in type 'TabsContentProps'.
+client/src/components/ui/textarea.jsx(3,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/textarea.jsx(13,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/toast.jsx(21,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(38,7): error TS2502: 'toastVariants' is referenced directly or indirectly in its own type annotation.
+client/src/components/ui/toast.jsx(63,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(63,17): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(83,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(84,6): error TS2741: Property 'altText' is missing in type '{ ref: ForwardedRef<any>; className: any; }' but required in type 'ToastActionProps'.
+client/src/components/ui/toast.jsx(104,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(128,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toast.jsx(146,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toaster.jsx(1,26): error TS2307: Cannot find module '@/hooks/use-toast' or its corresponding type declarations.
+client/src/components/ui/toaster.jsx(9,8): error TS2307: Cannot find module '@/components/ui/toast' or its corresponding type declarations.
+client/src/components/ui/toggle-group.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/toggle-group.jsx(7,32): error TS2307: Cannot find module '@/components/ui/toggle' or its corresponding type declarations.
+client/src/components/ui/toggle-group.jsx(29,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(29,17): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(29,26): error TS2339: Property 'size' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(29,32): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(30,6): error TS2322: Type '{ children: Element; ref: ForwardedRef<any>; className: any; }' is not assignable to type 'IntrinsicAttributes & ((ToggleGroupSingleProps | ToggleGroupMultipleProps) & RefAttributes<HTMLDivElement>)'.
+  Property 'type' is missing in type '{ children: Element; ref: ForwardedRef<any>; className: any; }' but required in type 'ToggleGroupMultipleProps'.
+client/src/components/ui/toggle-group.jsx(55,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(55,17): error TS2339: Property 'children' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(55,27): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(55,36): error TS2339: Property 'size' does not exist on type '{}'.
+client/src/components/ui/toggle-group.jsx(59,8): error TS2741: Property 'value' is missing in type '{ children: any; ref: ForwardedRef<any>; className: any; }' but required in type 'Omit<ToggleGroupItemImplProps, "pressed">'.
+client/src/components/ui/toggle.jsx(5,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/toggle.jsx(43,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/toggle.jsx(43,17): error TS2339: Property 'variant' does not exist on type '{}'.
+client/src/components/ui/toggle.jsx(43,26): error TS2339: Property 'size' does not exist on type '{}'.
+client/src/components/ui/tooltip.jsx(6,20): error TS2307: Cannot find module '@/lib/utils' or its corresponding type declarations.
+client/src/components/ui/tooltip.jsx(32,6): error TS2339: Property 'className' does not exist on type '{}'.
+client/src/components/ui/tooltip.jsx(32,17): error TS2339: Property 'sideOffset' does not exist on type '{}'.
+client/src/lib/config.js(26,19): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+client/src/lib/config.js(28,31): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+client/src/lib/config.js(40,22): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+client/src/lib/config.js(49,32): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+client/src/lib/queryClient.jsx(118,7): error TS2322: Type 'Function' is not assignable to type 'unique symbol | QueryFunction<unknown, QueryKey, never>'.
+client/src/lib/utils/logger.js(22,22): error TS2339: Property 'env' does not exist on type 'ImportMeta'.
+client/src/lib/utils/logger.js(22,54): error TS2339: Property 'env' does not exist on type 'ImportMeta'.

@@ -1,0 +1,109 @@
+~/workspace$ npx tsc --noEmit
+client/src/components/AnimatedNeuralLogo.jsx:2:24 - error TS2307: Cannot find module '../assets/neural-logo.png' or its corresponding type declarations.
+
+2 import neuralLogo from '../assets/neural-logo.png';
+                         ~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+client/src/components/AnimatedNeuralLogo.jsx:48:7 - error TS2322: Type '{ width: string; height: string; position: string; animation: string; transformOrigin: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'position' are incompatible.
+    Type 'string' is not assignable to type 'Position'.
+
+48       style={containerStyle}
+         ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:52:9 - error TS2322: Type '{ border: string; animation: "continuousRipples 3s ease-out infinite"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+52         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:61:9 - error TS2322: Type '{ border: string; animation: "continuousRipples 3s ease-out infinite 1s"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+61         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:70:9 - error TS2322: Type '{ border: string; animation: "rippleLayer1 3s ease-out infinite 0.5s"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+70         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:79:9 - error TS2322: Type '{ border: string; animation: "rippleLayer2 3s ease-out infinite 2s"; position: string; top: string; left: string; width: string; height: string; borderRadius: string; transform: string; pointerEvents: string; }' is not assignable to type 'CSSProperties'.
+  Types of property 'pointerEvents' are incompatible.
+    Type 'string' is not assignable to type 'PointerEvents'.
+
+79         style={{
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<HTMLAttributes<HTMLDivElement>, HTMLDivElement>'
+
+client/src/components/AnimatedNeuralLogo.jsx:93:9 - error TS2322: Type '{ width: string; height: string; objectFit: string; filter: string; position: string; zIndex: number; }' is not assignable to type 'CSSProperties'.
+  Types of property 'objectFit' are incompatible.
+    Type 'string' is not assignable to type 'ObjectFit'.
+
+93         style={logoStyle}
+           ~~~~~
+
+  node_modules/@types/react/index.d.ts:2916:9
+    2916         style?: CSSProperties | undefined;
+                 ~~~~~
+    The expected type comes from property 'style' which is declared here on type 'DetailedHTMLProps<ImgHTMLAttributes<HTMLImageElement>, HTMLImageElement>'
+
+client/src/pages/ChatPage.jsx:708:14 - error TS2741: Property 'alt' is missing in type '{ size: number; className: string; }' but required in type '{ size: number; className: string; alt: string; }'.
+
+708             <AnimatedNeuralLogo
+                 ~~~~~~~~~~~~~~~~~~
+
+  client/src/components/AnimatedNeuralLogo.jsx:9:4
+     9  * @param {string} props.alt - Alt text for accessibility
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    10  * @returns {JSX.Element}
+       ~~~
+    'alt' is declared here.
+
+client/src/pages/LoginPage.jsx:273:14 - error TS2741: Property 'alt' is missing in type '{ size: number; className: string; }' but required in type '{ size: number; className: string; alt: string; }'.
+
+273             <AnimatedNeuralLogo
+                 ~~~~~~~~~~~~~~~~~~
+
+  client/src/components/AnimatedNeuralLogo.jsx:9:4
+     9  * @param {string} props.alt - Alt text for accessibility
+          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    10  * @returns {JSX.Element}
+       ~~~
+    'alt' is declared here.
+
+
+Found 9 errors in 3 files.
+
+Errors  Files
+     7  client/src/components/AnimatedNeuralLogo.jsx:2
+     1  client/src/pages/ChatPage.jsx:708
+     1  client/src/pages/LoginPage.jsx:273

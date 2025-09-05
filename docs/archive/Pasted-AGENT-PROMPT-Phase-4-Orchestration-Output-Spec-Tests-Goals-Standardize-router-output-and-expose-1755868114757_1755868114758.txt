@@ -1,0 +1,306 @@
+AGENT PROMPT — Phase 4 Orchestration, Output Spec, Tests
+Goals
+
+Standardize router output and expose a single, stable shape for the frontend.
+
+Add typed interfaces (JSDoc) and a validator/normalizer to guarantee stability.
+
+Instrument per‑stage timings (parse → triage → enhance) and total latency.
+
+Ship router test suite for happy paths, edge cases, and fallback/error handling.
+
+Preserve existing behavior; no PHI in logs.
+
+➕ ADD — client/src/lib/utils/perf.js
+
+Small helper for monotonic timing + stage timers.
+
+/**
+ * Monotonic clock usable in browser/Node.
+ * @returns {number} milliseconds
+ */
+export function now() {
+  const p = typeof globalThis !== "undefined" ? globalThis.performance : undefined;
+  return p && typeof p.now === "function" ? p.now() : Date.now();
+}
+
+/**
+ * Simple stage timer.
+ */
+export class StageTimer {
+  constructor() { this._marks = Object.create(null); }
+  /** @param {string} key @returns {void} */
+  start(key) { this._marks[key] = { t0: now(), dt: undefined }; }
+  /** @param {string} key @returns {number|undefined} */
+  stop(key) {
+    const m = this._marks[key];
+    if (!m || m.dt != null) return m?.dt;
+    m.dt = Math.max(0, Math.round(now() - m.t0));
+    return m.dt;
+  }
+  /** @returns {Record<string, number>} */
+  toJSON() {
+    /** @type {Record<string, number>} */
+    const out = {};
+    for (const [k, v] of Object.entries(this._marks)) {
+      if (typeof v.dt === "number") out[k] = v.dt;
+    }
+    return out;
+  }
+}
+
+➕ ADD — client/src/lib/output-spec.js
+
+Defines the typed response shape and a tiny validator/normalizer.
+
+/**
+ * @typedef {Object} LayeredMetadata
+ * @property {number} processingTime
+ * @property {number} [intentConfidence]
+ * @property {"emergency"|"urgent"|"non_urgent"} [triageLevel]
+ * @property {string} [bodySystem]
+ * @property {Record<string, number>} [stageTimings]
+ */
+
+/**
+ * @typedef {Object} LayeredResponse
+ * @property {string} userInput
+ * @property {string} enhancedPrompt
+ * @property {boolean} isHighRisk
+ * @property {string[]} disclaimers
+ * @property {string[]} suggestions
+ * @property {LayeredMetadata} metadata
+ * @property {string[]} [atd]
+ */
+
+/**
+ * Normalize and validate a tentative router output.
+ * Ensures arrays/strings/booleans are present and properly typed.
+ *
+ * @param {Partial<LayeredResponse>} v
+ * @returns {{ ok: boolean, errors: string[], result: LayeredResponse }}
+ */
+export function normalizeRouterResult(v) {
+  /** @type {string[]} */
+  const errors = [];
+  const str = (x) => (typeof x === "string" ? x : String(x ?? ""));
+  const arr = (x) => (Array.isArray(x) ? x.filter(Boolean).map(String) : []);
+  const bool = (x) => !!x;
+
+  /** @type {LayeredMetadata} */
+  const meta = {
+    processingTime: typeof v?.metadata?.processingTime === "number" ? v.metadata.processingTime : 0,
+    intentConfidence: typeof v?.metadata?.intentConfidence === "number" ? v.metadata.intentConfidence : undefined,
+    triageLevel:
+      v?.metadata?.triageLevel === "emergency" || v?.metadata?.triageLevel === "urgent" || v?.metadata?.triageLevel === "non_urgent"
+        ? v.metadata.triageLevel
+        : undefined,
+    bodySystem: typeof v?.metadata?.bodySystem === "string" ? v.metadata.bodySystem : undefined,
+    stageTimings: (v?.metadata?.stageTimings && typeof v.metadata.stageTimings === "object") ? v.metadata.stageTimings : undefined
+  };
+
+  if (!meta.processingTime || meta.processingTime < 0) errors.push("metadata.processingTime invalid");
+
+  /** @type {LayeredResponse} */
+  const result = {
+    userInput: str(v?.userInput),
+    enhancedPrompt: str(v?.enhancedPrompt || "System fallback: Provide general, low‑risk educational guidance."),
+    isHighRisk: bool(v?.isHighRisk),
+    disclaimers: arr(v?.disclaimers),
+    suggestions: arr(v?.suggestions),
+    metadata: meta,
+    atd: v?.atd ? arr(v.atd) : undefined
+  };
+
+  if (!result.userInput) errors.push("userInput required");
+  if (!result.enhancedPrompt) errors.push("enhancedPrompt required");
+  if (!Array.isArray(result.disclaimers)) errors.push("disclaimers must be array");
+  if (!Array.isArray(result.suggestions)) errors.push("suggestions must be array");
+
+  return { ok: errors.length === 0, errors, result };
+}
+
+✏️ UPDATE — client/src/lib/router.js
+
+Wire in per‑stage timings, final normalization, and output shape. (Keep your existing imports; only replace body as needed.)
+
+import { createLogger } from "./utils/logger.js";
+import { createLayerContext, updateLayerContext, validateLayerContext } from "./layer-context.js";
+import { parseIntent } from "./intent-parser.js";
+import { performTriage } from "./triage-checker.js";
+import { enhancePrompt } from "./prompt-enhancer.js";
+import { StageTimer, now } from "./utils/perf.js";
+import { normalizeRouterResult } from "./output-spec.js";
+
+const log = createLogger("layer:router");
+
+/**
+ * Orchestrate the Interpretation Layer for a single user query.
+ * Always returns standardized output; on error, falls back safely.
+ *
+ * @param {string} userInput
+ * @returns {Promise<import("./output-spec.js").LayeredResponse>}
+ */
+export async function routeMedicalQuery(userInput) {
+  const t0 = now();
+  const t = new StageTimer();
+  const ctx = createLayerContext(userInput);
+
+  try {
+    const v0 = validateLayerContext(ctx, { strict: false });
+    if (!v0.ok) {
+      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
+      throw new Error("Invalid input");
+    }
+
+    t.start("parseIntent");
+    const { intent, symptoms } = parseIntent(ctx.userInput);
+    t.stop("parseIntent");
+    updateLayerContext(ctx, { intent, symptoms });
+
+    t.start("triage");
+    const triage = performTriage(ctx);
+    t.stop("triage");
+    updateLayerContext(ctx, { triage });
+
+    t.start("enhancePrompt");
+    const { systemPrompt, enhancedPrompt, atdNotices, disclaimers } = enhancePrompt(ctx);
+    t.stop("enhancePrompt");
+    updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
+
+    const processingTime = Math.max(0, Math.round(now() - t0));
+    const normalized = normalizeRouterResult({
+      userInput: ctx.userInput,
+      enhancedPrompt,
+      isHighRisk: !!ctx.triage?.isHighRisk,
+      disclaimers,
+      atd: atdNotices && atdNotices.length ? atdNotices : undefined,
+      suggestions: ctx.triage?.isHighRisk
+        ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
+        : ["Can you share duration, severity, and associated symptoms?", "Any triggers or relieving factors?"],
+      metadata: {
+        processingTime,
+        intentConfidence: intent?.confidence,
+        triageLevel: ctx.triage?.level,
+        stageTimings: t.toJSON()
+      }
+    });
+
+    if (!normalized.ok) {
+      log.warn("router:normalize_warn", { errors: normalized.errors, safe: true });
+    }
+    return normalized.result;
+  } catch (err) {
+    const processingTime = Math.max(0, Math.round(now() - t0));
+    log.error("router_failed", { message: String(err?.message || err), safe: true });
+
+    const fallback = normalizeRouterResult({
+      userInput: String(userInput || ""),
+      enhancedPrompt: "System fallback: Provide general, low‑risk educational guidance and suggest appropriate next steps. Include red‑flag checklist and advise contacting a clinician if concerned.",
+      isHighRisk: false,
+      disclaimers: ["The enhanced AI layer encountered an issue. This is a general response and not a diagnosis."],
+      suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
+      metadata: { processingTime, stageTimings: t.toJSON() }
+    });
+
+    if (!fallback.ok) {
+      log.warn("router:fallback_normalize_warn", { errors: fallback.errors, safe: true });
+    }
+    return fallback.result;
+  }
+}
+
+➕ ADD — client/src/tests/layer-tests/router.test.js
+
+Router test suite: happy path, non‑urgent, and fallback.
+
+import { strict as assert } from "assert";
+import { routeMedicalQuery } from "../../lib/router.js";
+
+describe("router: standardized output", () => {
+  it("emergency path: chest pain", async () => {
+    const out = await routeMedicalQuery("I have chest pain for 20 minutes");
+    assert.equal(typeof out.userInput, "string");
+    assert.equal(typeof out.enhancedPrompt, "string");
+    assert.equal(out.isHighRisk, true);
+    assert.ok(Array.isArray(out.disclaimers) && out.disclaimers.length > 0);
+    assert.ok(Array.isArray(out.suggestions) && out.suggestions.length > 0);
+    assert.equal(out.metadata.triageLevel, "emergency");
+    assert.ok(typeof out.metadata.processingTime === "number" && out.metadata.processingTime >= 0);
+    assert.ok(out.metadata.stageTimings && typeof out.metadata.stageTimings === "object");
+    if (out.atd) assert.ok(Array.isArray(out.atd));
+  });
+
+  it("non-urgent path: mild symptom", async () => {
+    const out = await routeMedicalQuery("I have a mild headache since yesterday");
+    assert.equal(out.metadata.triageLevel === "non_urgent" || out.metadata.triageLevel === undefined, true);
+    assert.equal(out.isHighRisk, false);
+    assert.ok(Array.isArray(out.disclaimers));
+    assert.ok(Array.isArray(out.suggestions));
+  });
+
+  it("fallback path: invalid input handled safely", async () => {
+    // Intentionally pass something odd; router should still standardize output
+    // @ts-expect-error
+    const out = await routeMedicalQuery(null);
+    assert.equal(typeof out.userInput, "string");
+    assert.equal(typeof out.enhancedPrompt, "string");
+    assert.equal(typeof out.isHighRisk, "boolean");
+    assert.ok(Array.isArray(out.disclaimers));
+    assert.ok(Array.isArray(out.suggestions));
+    assert.ok(typeof out.metadata.processingTime === "number");
+  });
+});
+
+📑 Frontend contract (document this in your MD if you like)
+
+Standard Router Output (LayeredResponse)
+
+userInput: string — Canonicalized raw input.
+
+enhancedPrompt: string — Safe, context‑rich prompt for the model.
+
+isHighRisk: boolean — High‑risk flag from triage.
+
+disclaimers: string[] — Ordered disclaimers to display.
+
+suggestions: string[] — Follow‑up questions for UX.
+
+atd?: string[] — Optional ATD notices when urgent/emergency.
+
+metadata: {
+
+processingTime: number (ms),
+
+intentConfidence?: number (0..1),
+
+triageLevel?: "emergency"|"urgent"|"non_urgent",
+
+bodySystem?: string,
+
+stageTimings?: { parseIntent_ms?: number, triage_ms?: number, enhancePrompt_ms?: number }
+}
+
+Consumption Guidance (UI):
+
+Always render disclaimers and prepend ATD if present.
+
+If isHighRisk === true, elevate the message styling (red/amber banner).
+
+Use suggestions to render quick‑reply chips.
+
+Use metadata.stageTimings for developer diagnostics only.
+
+✅ Acceptance Criteria
+
+Router always returns the standardized LayeredResponse shape (even on failure).
+
+Stage timings captured in metadata.stageTimings + total processingTime.
+
+Tests cover emergency, non‑urgent, and fallback.
+
+ESLint/JSDoc clean; no unused symbols; no PHI in logs.
+
+🧪 Commands
+npx eslint client/ --ext .js,.jsx
+npm test   # or: npx vitest run

@@ -1,0 +1,118 @@
+✅ REPLIT AGENT PROMPT — Phase 6: Quality Assurance & Continuous Improvement
+
+Begin Phase 6 of the Anamnesis Medical AI system:
+Quality Assurance & Continuous Improvement
+
+Focus on building a metrics framework for performance validation, integrating user feedback, and evaluating model behavior against clinical benchmarks.
+
+📁 Target Directories:
+client/src/qa/
+├── metrics-evaluator.js           // Precision/recall, disclaimer ratio, triage accuracy
+├── feedback-handler.js            // User feedback capture + JSONL logging
+├── improvement-suggester.js       // Auto-analysis of feedback patterns
+├── benchmarks/                    // Static JSON/TS files for medical benchmarks
+│   └── triage-standards.json      // Category: condition → expected triage
+└── version-tracker.js             // Medical logic change tracker with metadata
+
+admin/
+└── evaluator-dashboard/           // Visual UI (to be added in /admin later)
+
+📊 METRICS & EVALUATION
+🧩 metrics-evaluator.js
+
+Track:
+
+Triage accuracy (actual vs. expected)
+
+False positive/negative count
+
+High-risk detection precision/recall
+
+Disclaimer usage ratio (based on risk level)
+
+Read from test cases or logged dataset
+
+🧩 benchmarks/triage-standards.json
+
+Format:
+
+{
+  "chest pain": "emergency",
+  "mild cough": "non_urgent",
+  "mental health crisis": "emergency",
+  "headache": "urgent"
+}
+
+🧪 Evaluation Example:
+evaluateAccuracy("chest pain", "urgent") // returns false negative
+
+🗣 FEEDBACK INTEGRATION
+🧩 feedback-handler.js
+
+Accepts user feedback JSON object:
+
+{
+  "query": "I feel dizzy",
+  "perceivedAccuracy": "low",
+  "feedbackText": "Felt too generic",
+  "userType": "doctor" | "patient",
+  "timestamp": "ISO8601"
+}
+
+
+Writes to training-dataset/feedback.jsonl
+
+🧩 improvement-suggester.js
+
+Analyzes:
+
+Repeated triage disagreements
+
+Frequent fallback triggers
+
+Low feedback scores
+
+Outputs: List of improvement suggestions per query pattern
+
+🕹 VERSION CONTROL
+🧩 version-tracker.js
+
+Log:
+
+{
+  version: "v6.1.0",
+  author: "Anamnesis Core",
+  changeType: "Prompt update",
+  reason: "Improved mental health triage accuracy",
+  date: "2025-08-24T12:00:00Z"
+}
+
+
+Append changes to a changelog file: layer-change-log.jsonl
+
+🎛 EVALUATION DASHBOARD
+🔜 /admin/evaluator-dashboard
+
+UI component (to be implemented in admin repo)
+
+Loads metrics from JSON logs
+
+Visualizes:
+
+Triage accuracy
+
+Feedback trends
+
+Disclaimer coverage
+
+✅ OBJECTIVES
+
+Implement metrics + feedback logging
+
+Verify correctness with test cases
+
+Enable trend-based improvement analysis
+
+Track all changes to core logic
+
+Prepare for dashboard integration

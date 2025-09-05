@@ -1,0 +1,92 @@
+✅ Agent Directive Prompt – Begin Phase 3: AI Chat Interface
+Context Update:
+
+Phase 2.5 has been completed ✅ (97% milestone reached).
+
+Supabase authentication, registration, message API, and lead tracking are fully implemented.
+
+Proceed to Phase 3, the core of the MVP: the AI Chat Interface.
+
+🎯 Phase 3 – AI Chat Interface Development
+Objective:
+Build a fully functional, clean, and intelligent medical chat interface. Focus on simplicity, responsiveness, and smart backend integration to support future LLM upgrades.
+
+📌 Core Tasks
+Create ChatPage.jsx
+
+Displays full chat layout with header and message stream
+
+Integrate with authentication context (only accessible to logged-in users)
+
+Include useEffect for scroll anchoring and initial data fetch
+
+Implement MessageBubble.jsx
+
+Render messages with clear user/AI distinction
+
+Use minimalistic medical-friendly styling
+
+Support timestamps and possible future metadata
+
+Message Input Box
+
+Input field with Enter submission and optional Send button
+
+Basic validation (non-empty message)
+
+Auto-focus and clean UX
+
+Message Handling Logic
+
+Store messages locally in useState
+
+Add useEffect to scroll to newest message
+
+Connect to the existing DeepSeek LLM API route (/api/chat)
+
+Include async message sending, error handling, and loading states
+
+Styling & Branding
+
+Apply consistent Anamnesis brand styles (dark blue, white, light gray)
+
+Make mobile-friendly and visually lightweight
+
+🧠 Future-Proofing Considerations (for later phases)
+✅ Include llm-api.js in message flow (already integrated)
+
+🚫 Do not yet implement:
+
+Voice-to-text
+
+Streaming responses
+
+LLM switching
+
+Dynamic tool calling
+
+Medical knowledge graph
+
+These will be handled in Phase 6+ or Post-MVP.
+
+📄 Documentation & Code Standards
+All components and functions must include complete JSDoc annotations
+
+ESLint must pass with 0 errors, 0 warnings
+
+Avoid all suppression directives and unused code
+
+Maintain clean JSX with no layout shift
+
+✅ Completion Criteria
+Chat interface displays messages properly
+
+Users can type and send messages to the LLM
+
+Response is rendered from the LLM API
+
+UI is responsive and branded
+
+All logic has JSDoc and no ESLint violations
+
+📌 Once this phase is implemented, we will validate it live and proceed to Phase 4: AI Behavior Enhancements.

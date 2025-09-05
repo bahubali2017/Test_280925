@@ -1,0 +1,54 @@
+# AGENT PROMPT — SUPABASE CONNECTIVITY & KEYS CHECK
+
+GOAL  
+Verify that the Supabase project is active, reachable, and properly configured in Replit. Confirm that all credentials (anon key, service key, VITE_* keys) are valid and aligned. Ensure health checks pass and the app will recover automatically.
+
+==================================================
+TASKS
+
+1. **Connectivity Tests (Replit shell)**
+   - Run:
+     ```bash
+     nslookup $SUPABASE_URL_HOST
+     curl -sSf $SUPABASE_URL/auth/v1/health
+     curl -sS -H "apikey: $SUPABASE_ANON_KEY" $SUPABASE_URL/rest/v1/ | head -n 5
+     ```
+   - Replace `$SUPABASE_URL_HOST` with the hostname from `SUPABASE_URL` (e.g. `ppwaeyekzpyqqlddfmeb.supabase.co`).
+   - Report results clearly: DNS resolution, HTTP health, REST auth response.
+
+2. **Environment Key Validation**
+   - Check `Replit Secrets` for:
+     - `SUPABASE_URL` = exact https URL (no trailing slash).
+     - `SUPABASE_SERVICE_KEY` = present and matches Supabase dashboard.
+     - `SUPABASE_ANON_KEY` = present and matches Supabase dashboard.
+     - `VITE_SUPABASE_URL` and `VITE_SUPABASE_ANON_KEY` exist for frontend.
+   - Report if any keys are missing or outdated.
+
+3. **Supabase Project Status**
+   - Confirm Supabase project is re-activated (not paused).
+   - Verify dashboard shows status “Running”.
+   - Note any recent key rotations (regenerate keys if mismatch found).
+
+4. **Server Behavior**
+   - Update `server/test-connection.js` to probe `/auth/v1/health` endpoint every 60s and log state changes.
+   - Expose `/api/health` to report:
+     ```json
+     { "ok": true, "supabase": "up|down", "time": "<ISO>" }
+     ```
+
+5. **Final Confirmation**
+   - Confirm `npm run dev` logs show:
+     - 🚀 server started
+     - `Supabase connection OK` (or reason if down).
+   - Confirm React UI shows yellow banner only when Supabase is truly down, clears automatically once up.
+
+==================================================
+OUTPUT FORMAT
+- ✅ / ❌ for each check (DNS, HTTP, REST, Keys, Project status).
+- Clear summary: “Supabase connectivity verified and healthy” OR “Supabase keys outdated, please update from dashboard”.
+
+==================================================
+CONSTRAINTS
+- No suppression directives allowed.
+- Must test both server and client env vars.
+- Keep logs concise but complete.

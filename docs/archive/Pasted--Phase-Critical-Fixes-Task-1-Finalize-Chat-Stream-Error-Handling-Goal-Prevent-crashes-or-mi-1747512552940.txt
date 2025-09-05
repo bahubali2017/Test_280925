@@ -1,0 +1,53 @@
+🔥 Phase: Critical Fixes
+✅ Task 1: Finalize Chat Stream Error Handling
+Goal: Prevent crashes or misleading states when stream fails mid-response
+Subtasks:
+Wrap stream logic in try/catch with granular error feedback.
+Add fallback message.status = 'failed' if no 'done' event is received.
+Ensure timeout logic (e.g. 30s) cleans up stale state.
+Log detailed stream metadata (requestTime, retryCount, isCancelled).
+
+✅ Task 2: Implement Retry Mechanism
+Goal: Auto-retry failed chat requests once (without flooding)
+Detect stream.abort() or network drop → retry after small delay.
+Show visual indicator: “Reconnecting...” or similar.
+Disable retry on manual cancel or high-risk triage.
+
+✅ Task 3: Finish Session Persistence for Auth
+Store session token in localStorage securely.
+Auto-login if valid session exists on reload.
+Add session expiration logic or refresh if Supabase supports it.
+
+⚙️ Phase: Performance Optimizations
+✅ Task 4: Prevent Unnecessary Re-renders on ChatPage
+Memoize message list using useMemo()
+Use React.memo() for MessageBubble
+Debounce input typing if stream triggers on each character
+
+✅ Task 5: Add Loading Skeletons
+Use tailwind’s animate-pulse for loading chat bubbles
+Placeholder for delayed AI response
+
+✅ Task 6: UseMemo for Heavy Components
+ThemeToggle, Suggestions, Toasts
+
+📘 Phase: Code Quality
+✅ Task 7: Complete JSDoc for Remaining Components
+Target MessageBubble.jsx, ThemeToggle.jsx, ToastProvider.jsx
+
+✅ Task 8: Standardize Error Handling
+Single utility: handleError({ message, error, source })
+Unified structure in lib/error-utils.js
+
+✅ Task 9: Logging System
+Setup Winston-based logger for backend
+Replace all console.log in frontend with logger.debug/info/error wrapper
+
+🧱 Phase: Component Cleanup (Low Priority)
+✅ Task 10: Folder Structure Refactor
+Group all ui/* into components/ui/
+Pages → pages/
+Auth → hooks/useAuth.js, lib/supabase.js
+
+✅ Task 11: Create index.js for Each Component Group
+Simplify imports: import { Button } from '@/components/ui'

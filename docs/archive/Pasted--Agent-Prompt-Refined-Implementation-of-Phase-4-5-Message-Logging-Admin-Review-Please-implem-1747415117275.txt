@@ -1,0 +1,92 @@
+🛠️ Agent Prompt: Refined Implementation of Phase 4.5 – Message Logging & Admin Review
+Please implement a lightweight and modular version of Phase 4.5 designed for MVP-level functionality while ensuring that all logging and review infrastructure is easily transferable to the future centralized admin dashboard.
+
+✅ Adjusted Phase Objectives:
+Focus on robust backend message logging with secure storage
+
+Deprioritize building a full admin UI; instead, implement admin API endpoints and optionally a developer-only JSON viewer
+
+Ensure user privacy compliance and export capabilities for preliminary QA/testing
+
+All admin features must be modular and removable once connected to the main dashboard
+
+🔐 Tasks: Logging & Storage (Required for MVP)
+Create messages table in the database with:
+
+id: UUID or auto-increment
+
+user_id: FK to users table (can be mock/demo ID for MVP)
+
+user_input: TEXT
+
+ai_response: TEXT
+
+timestamp: default now()
+
+metadata: JSON (nullable; to store triage info, risk flags, etc.)
+
+Implement logging in chat API pipeline:
+
+Store each interaction when a response is completed
+
+Include user_id, input text, final response, and metadata
+
+Create helper module: lib/utils/message-logger.js
+
+Exports logMessage({ userId, input, output, metadata })
+
+Handles DB insert with retry logic and logging
+
+🧑‍💻 Admin Interface (Optional but Recommended for Testing)
+Create developer-only review endpoint (NO public UI):
+
+/admin/messages: returns recent messages as JSON
+
+Accepts query params: ?user=, ?limit=, ?riskOnly=true
+
+Secured via simple token-based auth (e.g. process.env.ADMIN_KEY)
+
+Export utility:
+
+/admin/messages/export: returns CSV or JSONL for analysis
+
+Only accessible by admin key
+
+Includes headers like timestamp, user input, response, intent, triage level
+
+🧾 Privacy Controls (Post-MVP Optional)
+Basic opt-out support (optional):
+
+POST /api/settings/privacy endpoint to toggle logging preference
+
+Logged in-memory or in user profile object (if available)
+
+Manual message deletion (optional):
+
+DELETE /api/messages/:userId to clear message history on request
+
+🧠 Suggestions / Adjustments
+❗ Do NOT build a full admin dashboard UI here. Just create basic data access via secure endpoints.
+
+✅ Keep storage and export modular so the main admin dashboard can later consume this via API or DB layer.
+
+🚫 No need to build full analytics or charts in MVP; simply log and allow developer inspection.
+
+📄 Make sure logging includes AI version/model used, processing time, and flags (e.g. isHighRisk) for QA.
+
+📁 Required File Changes
+server/storage/messages.js – CRUD functions for message logs
+
+lib/utils/message-logger.js – Helper for logging
+
+server/routes/admin-messages.js – Developer-only admin routes
+
+db/schema.sql or equivalent schema migration
+
+After implementing, update the following files:
+
+DEVELOPMENT_PLAN.md → mark logging completed
+
+PHASE4_PROGRESS.md → mark Phase 4.5 subtasks
+
+LAYER_PROGRESS.md → ensure message-level metadata is logged

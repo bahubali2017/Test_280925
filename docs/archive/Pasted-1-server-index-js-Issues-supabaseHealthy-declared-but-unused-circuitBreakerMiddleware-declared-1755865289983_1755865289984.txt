@@ -1,0 +1,133 @@
+1) server/index.js
+
+Issues:
+
+supabaseHealthy declared but unused.
+
+circuitBreakerMiddleware declared but unused.
+
+Fix: Store health on app.locals (so it’s “used”) and actually mount the circuit‑breaker middleware. If you don’t need the middleware yet, remove it; below shows how to use it.
+
+ import express from 'express';
+-import { probeSupabaseHealth } from './test-connection.js';
++import { probeSupabaseHealth } from './test-connection.js';
++import { circuitBreakerMiddleware } from './supabase-watchdog.js'; // if you export it there
+
+ const app = express();
+-let supabaseHealthy = false;
++app.locals.supabaseHealthy = false;
+
+ async function refreshHealth() {
+   const res = await probeSupabaseHealth();
+-  supabaseHealthy = !!res.ok;
++  app.locals.supabaseHealthy = !!res.ok;
+   if (!res.ok) console.warn('Supabase health:', res.reason);
+ }
+ 
+ // initial + periodic
+ await refreshHealth();
+ setInterval(refreshHealth, 60_000); // every 60s
+ 
++// Mount the circuit breaker globally (or mount only on auth/message routes)
++app.use(circuitBreakerMiddleware);
++
+ app.get('/api/health', (_req, res) => {
+   res.json({
+     ok: true,
+-    supabase: supabaseHealthy ? 'up' : 'down',
++    supabase: app.locals.supabaseHealthy ? 'up' : 'down',
+     time: new Date().toISOString(),
+   });
+ });
+ 
+ const port = process.env.PORT || 5000;
+ app.listen(port, () => console.log(`🚀 Server successfully started on port ${port}`));
+
+
+If you don’t want to mount the middleware globally, delete the import and app.use(circuitBreakerMiddleware) lines instead. That will also fix the “assigned but never used” error.
+
+2) server/routes.js
+
+Issue: Missing JSDoc @returns.
+
+Add a return tag to the router factory (or whichever function ESLint flagged):
+
+ /**
+  * Build API routes.
+  * @param {import('express').Express} app
++ * @returns {void}
+  */
+ export function registerRoutes(app) {
+   // … your routes here
+ }
+
+3) server/supabase-watchdog.js
+
+Issues: setInterval, clearInterval, setTimeout, clearTimeout, AbortController flagged as no-undef; one unused variable error.
+
+Fix: Use globalThis.* (Node-safe), and remove the unused variable.
+
+-const intervalId = setInterval(tick, 60_000);
++const intervalId = globalThis.setInterval(tick, 60_000);
+
+- clearInterval(intervalId);
++ globalThis.clearInterval(intervalId);
+
+- const ac = new AbortController();
+- const t = setTimeout(() => ac.abort(), 2000);
++ const ac = new globalThis.AbortController();
++ const t = globalThis.setTimeout(() => ac.abort(), 2000);
+
+- clearTimeout(t);
++ globalThis.clearTimeout(t);
+
+- catch (error) {
+-   // handle
+- }
++ catch (e) {
++   // handle (keep logs PHI-free)
++ }
+
+
+Apply the same globalThis.AbortController, globalThis.setTimeout, and globalThis.clearTimeout substitutions everywhere in this file (your lint list shows two places).
+
+4) server/test-connection.js
+
+Issues: setTimeout / setInterval flagged as no-undef; healthErr unused; missing @returns.
+
+Fix: Use globalThis.*, remove the unused variable, and add a return tag.
+
+ function withTimeout(promise, ms = 2000) {
+   return Promise.race([
+     promise,
+-    new Promise((_, rej) => setTimeout(() => rej(new Error('timeout')), ms)),
++    new Promise((_, rej) => globalThis.setTimeout(() => rej(new Error('timeout')), ms)),
+   ]);
+ }
+
+ export async function probeSupabaseHealth() {
+   try {
+     // ...
+   } catch (e) {
+-    const healthErr = e; // unused
+-    return { ok: false, reason: String(healthErr?.message || healthErr) };
++    return { ok: false, reason: String(e?.message || e) };
+   }
+ }
+
+- setInterval(refreshHealth, 60_000);
++ globalThis.setInterval(refreshHealth, 60_000);
+
++/**
++ * Initialize periodic Supabase health checks.
++ * @returns {void}
++ */
+ export function startSupabaseHealthMonitor() {
+   // your start logic…
+ }
+
+
+If you don’t actually have startSupabaseHealthMonitor, add @returns to whichever exported function ESLint flagged at line 112.
+
+Re-run checks
+npx eslint server/ --ext .js,.jsx --fix

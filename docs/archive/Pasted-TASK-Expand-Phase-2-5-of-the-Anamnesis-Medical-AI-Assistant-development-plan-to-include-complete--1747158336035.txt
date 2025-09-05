@@ -1,0 +1,68 @@
+TASK: Expand Phase 2.5 of the Anamnesis – Medical AI Assistant development plan to include complete backend integration for production-grade authentication and data persistence.
+
+🎯 Goal:
+Revise and enhance **Phase 2.5 – Backend Integration & Real Authentication** in `DEVELOPMENT_PLAN.md` to support a real, scalable MVP deployment.
+
+📦 Tech Stack Target:
+- Backend: Supabase (preferred) or Firebase
+- Authentication: Email/password + Social (Google, Microsoft, Apple)
+- Database: Supabase tables with schema validation
+- Language: JavaScript (ESM), `.tsx` files, JSDoc, ESLint enforced
+
+---
+
+📋 Add these new sections to Phase 2.5:
+
+### 🔐 Backend Setup & Security
+- Implement secure storage of API keys via environment variables
+- Set up Supabase or Firebase project
+- Configure authentication providers (email/password, social)
+- Store keys using `.env` and access them securely in code
+
+### 🧱 Database Schema
+- Create the following tables:
+  - `users` — `id`, `email`, `name`, `created_at`
+  - `sessions` — `id`, `user_id`, `created_at`, `expires_at`
+  - `messages` — `id`, `user_id`, `content`, `is_user`, `timestamp`
+- Add schema rules and default timestamps
+- Enforce foreign keys between sessions and users
+
+### ⚙️ Code & API Integration
+- Create `db.js` module to manage DB interactions
+- Add full JSDoc annotations for:
+  - Schema models
+  - Database functions
+  - Auth methods
+
+### 🔄 Authentication Logic (in `useAuth.tsx`)
+- Replace mock login with Supabase/Firebase real auth
+- Add user registration (`signup(email, password)`)
+- Add password reset support (`resetPassword(email)`)
+- Add optional email verification
+- Implement OAuth logins (Google, Microsoft, Apple)
+- Update `logout()` to terminate Supabase/Firebase session
+
+### 🧑‍💻 Login Page Enhancements (`LoginPage.tsx`)
+- Add toggle for `Sign In / Register`
+- Add registration form with confirm password + password strength indicator
+- Add legal disclaimer text under the form
+- Add form error handling for common auth issues
+- Connect social login buttons to real auth providers
+
+### 📊 Lead Tracking & Analytics
+- Track successful registrations to DB or analytics service
+- Optionally store `lead_source` (e.g. from query params)
+- Log basic analytics events (login, signup, logout)
+
+---
+
+✅ Completion Criteria:
+- Users can register and log in with email + password
+- OAuth logins work for Google, Microsoft, and Apple
+- Sessions persist on reload
+- Auth failure errors are shown to user
+- Auth state is secured in context/localStorage
+- Supabase DB schema is correctly configured
+- All new files use JSDoc annotations
+- ESLint passes with zero errors
+- Legal disclaimers are visible during registration

@@ -1,0 +1,64 @@
+✅ AGENT TASK DIRECTIVE — TypeScript Error Triage Baseline
+OBJECTIVE:
+You are instructed to analyze the full TypeScript error log located at ts-error-initial-full.log and generate a new triage summary file titled TS_ERROR_TRIAGE_SUMMARY.md.
+
+📂 INPUT FILE
+Use the file: ts-error-initial-full.log
+This is located in the project root and contains all current TypeScript errors.
+
+📌 OUTPUT FILE
+Create: TS_ERROR_TRIAGE_SUMMARY.md
+
+Place it in the root directory
+
+This will serve as the authoritative checklist for all remaining TypeScript errors before final cleanup and stabilization.
+
+📋 OUTPUT STRUCTURE
+For each file in the log, follow this format:
+
+## [relative/file/path.jsx]
+
+**Error Count:** X  
+**Error Codes:** [TSxxxx, TSyyyy, …]  
+**Common Issues:**  
+- ⛔ Missing type annotations  
+- ⚠️ Implicit any / unknown  
+- ❌ Props not destructured  
+- 🧩 Import path issues (`@/lib/utils` not resolved)  
+- 🔁 Invalid ref forwarding  
+- 🧠 JSX children or context type mismatches  
+- 🗃️ Misaligned Context.Provider typing
+
+**Triage Category:**  
+- [ ] ✅ UI Component (convert props + add JSDoc)
+- [ ] 🔄 Convert to bridge wrapper (complex ref/context mismatch)
+- [ ] 🧼 Simple Type Fixes (missing className/type/any)
+- [ ] 🪛 JSX Root Element Typing (React.FC vs Element return)
+- [ ] 🚨 Critical blocker (invalid module structure or missing file)
+
+🔁 GROUPING & SUMMARY
+At the bottom of the file, include:
+
+# 🔢 Error Code Frequency Summary
+- TS2339: 117 errors → Missing property on object
+- TS7006: 42 errors → Implicit 'any' parameter
+- TS2307: 18 errors → Cannot find module
+- TS2322: 15 errors → Type mismatch
+...
+
+# 📊 Triage Category Count
+- ✅ UI Component Fixes: 31 files
+- 🔄 Bridge Conversion: 8 files
+- 🧼 Minor Typing: 14 files
+- 🚨 Blockers: 3 files
+
+⛔ RESTRICTIONS
+Do not attempt to fix errors in this task.
+Do not skip any files.
+Do not summarize or collapse errors — this must be exhaustive and file-specific.
+Every file listed in the log must have a triage entry in TS_ERROR_TRIAGE_SUMMARY.md.
+
+✅ GOAL
+Once this file is created, it will be used to launch Final Phase: Targeted TypeScript Fixing — cleaning all remaining files with structured prompts.
+
+Begin parsing ts-error-initial-full.log and create TS_ERROR_TRIAGE_SUMMARY.md now.

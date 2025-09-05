@@ -1,0 +1,373 @@
+~/workspace$ npx eslint client/src --ext .js,.jsx,.ts,.tsx
+
+/home/runner/workspace/client/src/App.jsx
+  18:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/Button.jsx
+  54:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/Input.jsx
+  17:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/MessageBubble.jsx
+  13:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ProtectedRoute.jsx
+  28:28  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/SocialLoginButton.jsx
+  20:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/accordion.tsx
+  10:51  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/alert-dialog.tsx
+  14:56  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/alert.tsx
+  2:20  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/aspect-ratio.tsx
+  5:1  warning  Missing JSDoc comment  jsdoc/require-jsdoc
+
+/home/runner/workspace/client/src/components/ui/avatar.tsx
+  9:48  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/badge.jsx
+  44:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/breadcrumb.tsx
+  9:3  error  Parsing error: Identifier 'React' has already been declared
+
+/home/runner/workspace/client/src/components/ui/button.jsx
+  59:7  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/calendar.tsx
+  8:8  error  Parsing error: Unexpected token type
+
+/home/runner/workspace/client/src/components/ui/card.tsx
+  7:3  error  Parsing error: Identifier 'React' has already been declared
+
+/home/runner/workspace/client/src/components/ui/carousel.tsx
+  3:8  error  Parsing error: Unexpected token UseEmblaCarouselType
+
+/home/runner/workspace/client/src/components/ui/chart.tsx
+  9:45  error  Parsing error: Unexpected token as
+
+/home/runner/workspace/client/src/components/ui/checkbox.tsx
+  8:50  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/collapsible.tsx
+  11:1  warning  Missing JSDoc comment  jsdoc/require-jsdoc
+
+/home/runner/workspace/client/src/components/ui/command.tsx
+  2:15  error  Parsing error: Unexpected token DialogProps
+
+/home/runner/workspace/client/src/components/ui/context-menu.tsx
+  20:59  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/dialog.tsx
+  18:51  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/drawer.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/dropdown-menu.tsx
+  20:60  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/form.tsx
+  10:8  error  Parsing error: Unexpected token ControllerProps
+
+/home/runner/workspace/client/src/components/ui/hover-card.tsx
+  13:54  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/input-otp.tsx
+  8:36  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/input.jsx
+  16:7  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/label.tsx
+  3:20  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/menubar.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/navigation-menu.tsx
+  9:56  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/pagination.tsx
+  7:44  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/popover.tsx
+  11:52  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/progress.tsx
+  9:50  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/radio-group.tsx
+  8:52  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/resizable.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/scroll-area.tsx
+  7:52  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/select.tsx
+  16:51  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/separator.tsx
+  7:51  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/sheet.tsx
+  5:20  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/sidebar.tsx
+  33:6  error  Parsing error: Unexpected token SidebarContextProps
+
+/home/runner/workspace/client/src/components/ui/skeleton.tsx
+  6:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/slider.tsx
+  7:48  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/switch.tsx
+  7:49  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/table.tsx
+  7:3  error  Parsing error: Identifier 'React' has already been declared
+
+/home/runner/workspace/client/src/components/ui/tabs.tsx
+  9:46  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/textarea.tsx
+  7:3  error  Parsing error: Identifier 'React' has already been declared
+
+/home/runner/workspace/client/src/components/ui/toast.tsx
+  3:20  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/toaster.tsx
+  15:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/toggle-group.tsx
+  5:15  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/toggle.tsx
+  3:20  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/tooltip.tsx
+  15:52  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/hooks/useAuth.jsx
+  99:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/lib/types.js
+   2:1  warning  Invalid JSDoc tag (preference). Replace "fileoverview" JSDoc tag with "file"  jsdoc/check-tag-names
+   6:1  warning  Invalid JSDoc @typedef "User" type "Object"; prefer: "object"                 jsdoc/check-types
+  11:1  warning  Invalid JSDoc @typedef "Message" type "Object"; prefer: "object"              jsdoc/check-types
+  19:1  warning  Invalid JSDoc @typedef "AuthContextType" type "Object"; prefer: "object"      jsdoc/check-types
+  27:1  warning  Invalid JSDoc @typedef "DeepSeekConfig" type "Object"; prefer: "object"       jsdoc/check-types
+  34:1  warning  Missing JSDoc comment                                                         jsdoc/require-jsdoc
+
+/home/runner/workspace/client/src/main.jsx
+  11:3  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/pages/ChatPage.jsx
+  96:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/pages/LoginPage.jsx
+  91:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/pages/not-found.jsx
+  9:5  error  Parsing error: Unexpected token <
+
+✖ 64 problems (56 errors, 8 warnings)
+  0 errors and 8 warnings potentially fixable with the `--fix` option.
+
+~/workspace$ npx eslint client/src --ext .js,.jsx,.ts,.tsx
+
+/home/runner/workspace/client/src/App.jsx
+  18:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/Button.jsx
+  54:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/Input.jsx
+  17:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/MessageBubble.jsx
+  13:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ProtectedRoute.jsx
+  28:28  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/SocialLoginButton.jsx
+  20:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/accordion.tsx
+  10:51  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/alert-dialog.jsx
+  31:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/alert.jsx
+  36:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/aspect-ratio.jsx
+  9:1  warning  Missing JSDoc comment  jsdoc/require-jsdoc
+
+/home/runner/workspace/client/src/components/ui/avatar.jsx
+  17:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/badge.jsx
+  44:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/breadcrumb.jsx
+  15:26  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/button.jsx
+  59:7  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/calendar.tsx
+  8:8  error  Parsing error: Unexpected token type
+
+/home/runner/workspace/client/src/components/ui/card.jsx
+  14:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/carousel.tsx
+  3:8  error  Parsing error: Unexpected token UseEmblaCarouselType
+
+/home/runner/workspace/client/src/components/ui/chart.tsx
+  9:45  error  Parsing error: Unexpected token as
+
+/home/runner/workspace/client/src/components/ui/checkbox.jsx
+  16:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/collapsible.tsx
+  11:1  warning  Missing JSDoc comment  jsdoc/require-jsdoc
+
+/home/runner/workspace/client/src/components/ui/command.tsx
+  2:15  error  Parsing error: Unexpected token DialogProps
+
+/home/runner/workspace/client/src/components/ui/context-menu.tsx
+  20:59  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/dialog.jsx
+  38:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/drawer.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/dropdown-menu.tsx
+  20:60  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/form.jsx
+  38:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/hover-card.tsx
+  13:54  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/input-otp.tsx
+  8:36  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/input.jsx
+  16:7  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/label.jsx
+  24:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/menubar.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/navigation-menu.tsx
+  9:56  error  Parsing error: Unexpected token ,
+
+/home/runner/workspace/client/src/components/ui/pagination.tsx
+  7:44  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/popover.jsx
+  27:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/progress.jsx
+  18:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/radio-group.jsx
+  17:7  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/resizable.tsx
+  11:2  error  Parsing error: Unexpected token :
+
+/home/runner/workspace/client/src/components/ui/scroll-area.jsx
+  16:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/select.jsx
+  34:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/separator.jsx
+  20:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/sheet.tsx
+  5:20  error  Parsing error: Unexpected token VariantProps
+
+/home/runner/workspace/client/src/components/ui/sidebar.tsx
+  33:6  error  Parsing error: Unexpected token SidebarContextProps
+
+/home/runner/workspace/client/src/components/ui/skeleton.jsx
+  14:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/slider.jsx
+  15:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/switch.jsx
+  15:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/table.tsx
+  7:3  error  Parsing error: Identifier 'React' has already been declared
+
+/home/runner/workspace/client/src/components/ui/tabs.jsx
+  20:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/textarea.jsx
+  15:7  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/toast.jsx
+  22:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/toaster.jsx
+  19:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/toggle-group.jsx
+  30:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/toggle.jsx
+  44:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/components/ui/tooltip.jsx
+  33:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/hooks/useAuth.jsx
+  99:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/lib/types.js
+   2:1  warning  Invalid JSDoc tag (preference). Replace "fileoverview" JSDoc tag with "file"  jsdoc/check-tag-names
+   6:1  warning  Invalid JSDoc @typedef "User" type "Object"; prefer: "object"                 jsdoc/check-types
+  11:1  warning  Invalid JSDoc @typedef "Message" type "Object"; prefer: "object"              jsdoc/check-types
+  19:1  warning  Invalid JSDoc @typedef "AuthContextType" type "Object"; prefer: "object"      jsdoc/check-types
+  27:1  warning  Invalid JSDoc @typedef "DeepSeekConfig" type "Object"; prefer: "object"       jsdoc/check-types
+  34:1  warning  Missing JSDoc comment                                                         jsdoc/require-jsdoc
+
+/home/runner/workspace/client/src/main.jsx
+  11:3  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/pages/ChatPage.jsx
+  96:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/pages/LoginPage.jsx
+  91:5  error  Parsing error: Unexpected token <
+
+/home/runner/workspace/client/src/pages/not-found.jsx
+  9:5  error  Parsing error: Unexpected token <
+
+✖ 64 problems (56 errors, 8 warnings)
+  0 errors and 8 warnings potentially fixable with the `--fix` option.

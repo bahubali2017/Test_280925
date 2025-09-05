@@ -1,0 +1,56 @@
+✅ Directive Agent Prompt for UI Batch TypeScript Cleanup
+Prompt for the agent:
+
+Task: Fix TypeScript errors in the UI batch files listed below from client/src/components/ui/. Use strict typing, avoid any any types, and do not use @ts-ignore or similar suppression directives. Follow Anamnesis project conventions:
+
+Use JSDoc annotations for all props and function signatures.
+
+Explicitly define prop types for each UI component (use @typedef or inline JSDoc).
+
+Use safe access for all properties (?. or guards).
+
+Fix all TS2339, TS2307, and TS7053 errors without shortcuts.
+
+Use import ... from '@/lib/utils' correctly after verifying alias resolution.
+
+Files to process (UI batch):
+
+client/src/components/ui/accordion.jsx
+client/src/components/ui/alert.jsx
+client/src/components/ui/avatar.jsx
+client/src/components/ui/badge.jsx
+client/src/components/ui/breadcrumb.jsx
+client/src/components/ui/button.jsx
+client/src/components/ui/calendar.jsx
+client/src/components/ui/card.jsx
+client/src/components/ui/carousel.jsx
+client/src/components/ui/checkbox.jsx
+client/src/components/ui/collapsible.jsx
+client/src/components/ui/command.jsx
+client/src/components/ui/context-menu.jsx
+client/src/components/ui/dialog.jsx
+client/src/components/ui/drawer.jsx
+client/src/components/ui/dropdown-menu.jsx
+client/src/components/ui/hover-card.jsx
+client/src/components/ui/input-otp.jsx
+client/src/components/ui/input.jsx
+client/src/components/ui/menubar.jsx
+client/src/components/ui/pagination.jsx
+client/src/components/ui/popover.jsx
+client/src/components/ui/progress.jsx
+client/src/components/ui/radio-group.jsx
+client/src/components/ui/resizable.jsx
+client/src/components/ui/scroll-area.jsx
+client/src/components/ui/select.jsx
+client/src/components/ui/separator.jsx
+client/src/components/ui/sidebar.jsx
+client/src/components/ui/skeleton.jsx
+client/src/components/ui/slider.jsx
+client/src/components/ui/switch.jsx
+client/src/components/ui/tabs.jsx
+client/src/components/ui/textarea.jsx
+client/src/components/ui/toaster.jsx
+client/src/components/ui/toggle.jsx
+client/src/components/ui/tooltip.jsx
+Checklist:
+After processing each file, mark its status in TS_ERROR_TRIAGE_SUMMARY.md and append any renamed types or shared definitions in types/ui-component-types.jsdoc.

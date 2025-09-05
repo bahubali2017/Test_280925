@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+    <title>Anamnesis Medical AI Assistant - Intelligent Healthcare Support</title>
+    <meta name="description" content="Professional medical AI assistant providing intelligent healthcare guidance, symptom analysis, and personalized medical information with advanced AI technology for healthcare professionals and patients." />
+    <meta name="keywords" content="medical AI, healthcare assistant, symptom checker, medical advice, AI doctor, health consultation, medical guidance, intelligent healthcare, medical assistant, telemedicine" />
+    <meta name="author" content="Anamnesis Medical AI Team" />
+    <meta name="robots" content="index, follow" />
+    <meta name="language" content="English" />
+    <meta name="theme-color" content="#06b6d4" />
+    <meta name="msapplication-TileColor" content="#06b6d4" />
+    <meta name="msapplication-config" content="/browserconfig.xml" />
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="/manifest.json?v=2.1.0" />
+    
+    <!-- Large, visible favicon without background -->
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2.1.0" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2.1.0" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2.1.0" />
+    <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png?v=2.1.0" />
+    
+    <!-- PWA iOS Support -->
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Anamnesis" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2.1.0" />
+    
+    <!-- Essential PWA Icons -->
+    <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
+    <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
+    
+    <!-- Enhanced Open Graph / Social Media SEO -->
+    <meta property="og:title" content="Anamnesis Medical AI Assistant - Intelligent Healthcare Support" />
+    <meta property="og:description" content="Professional medical AI assistant providing intelligent healthcare guidance, symptom analysis, and personalized medical information with advanced AI technology." />
+    <meta property="og:type" content="website" />
+    <meta property="og:image" content="/icons/icon-512x512.png" />
+    <meta property="og:image:width" content="512" />
+    <meta property="og:image:height" content="512" />
+    <meta property="og:site_name" content="Anamnesis Medical AI" />
+    <meta property="og:locale" content="en_US" />
+    
+    <!-- Twitter Card SEO -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Anamnesis Medical AI Assistant - Intelligent Healthcare Support" />
+    <meta name="twitter:description" content="Professional medical AI assistant providing intelligent healthcare guidance with advanced AI technology." />
+    <meta name="twitter:image" content="/icons/icon-512x512.png" />
+    
+    <!-- Additional SEO Meta Tags -->
+    <meta name="application-name" content="Anamnesis Medical AI" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="Anamnesis Medical AI" />
+    
+    <!-- Canonical URL -->
+    <link rel="canonical" href="https://anamnesis-medical-ai.replit.app/" />
+    
+    <!-- Structured Data for SEO -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Anamnesis Medical AI Assistant",
+      "description": "Professional medical AI assistant providing intelligent healthcare guidance, symptom analysis, and personalized medical information with advanced AI technology.",
+      "applicationCategory": "HealthApplication",
+      "operatingSystem": "Web",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      },
+      "aggregateRating": {
+        "@type": "AggregateRating",
+        "ratingValue": "4.8",
+        "reviewCount": "127"
+      },
+      "provider": {
+        "@type": "Organization",
+        "name": "Anamnesis Medical AI Team"
+      },
+      "featureList": [
+        "Intelligent symptom analysis and assessment",
+        "Personalized medical guidance and recommendations",
+        "Real-time AI-powered chat support",
+        "Progressive Web App for cross-platform access",
+        "Secure and confidential healthcare consultations",
+        "Evidence-based medical information delivery"
+      ]
+    }
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.jsx"></script>
+    
+    <!-- PWA Service Worker Registration -->
+    <script>
+      // Force cache refresh for favicon and manifest  
+      function forceRefreshAssets() {
+        // Clear all favicon sizes
+        const favicons = document.querySelectorAll('link[rel*="icon"]');
+        favicons.forEach(favicon => {
+          const href = favicon.href;
+          favicon.href = '';
+          setTimeout(() => { favicon.href = href + '?t=' + Date.now(); }, 50);
+        });
+        
+        // Clear manifest cache
+        const manifest = document.querySelector('link[rel="manifest"]');
+        if (manifest) {
+          const href = manifest.href;
+          manifest.href = '';
+          setTimeout(() => { manifest.href = href + '&t=' + Date.now(); }, 50);
+        }
+        
+        // Force browser to reload favicon
+        const head = document.head;
+        const newFavicon = document.createElement('link');
+        newFavicon.rel = 'icon';
+        newFavicon.type = 'image/x-icon';
+        newFavicon.href = '/favicon.ico?v=2.1.0&t=' + Date.now();
+        head.appendChild(newFavicon);
+      }
+
+      if ('serviceWorker' in navigator) {
+        // Simple service worker registration without forced reloads
+        window.addEventListener('load', async () => {
+          try {
+            // Only register service worker if not already registered
+            const existingRegistration = await navigator.serviceWorker.getRegistration('/');
+            if (existingRegistration) {
+              console.log('✅ Service Worker already registered');
+              return;
+            }
+            
+            // Register new service worker
+            const registration = await navigator.serviceWorker.register('/sw.js', {
+              scope: '/'
+            });
+            console.log('✅ Service Worker registered successfully:', registration.scope);
+            
+            // Check for updates
+            registration.addEventListener('updatefound', () => {
+              const newWorker = registration.installing;
+              if (newWorker) {
+                newWorker.addEventListener('statechange', () => {
+                  if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                    console.log('🔄 New version available! Refresh to update.');
+                  }
+                });
+              }
+            });
+          } catch (error) {
+            console.error('❌ Service Worker registration failed:', error);
+            console.log('📱 App will still work without PWA features');
+          }
+        });
+      } else {
+        console.log('Service Worker not supported in this browser');
+      }
+    </script>
+    
+    <!-- This is a replit script which adds a banner on the top of the page when opened in development mode outside the replit environment -->
+    <script type="text/javascript" src="https://replit.com/public/js/replit-dev-banner.js"></script>
+  </body>
+</html>

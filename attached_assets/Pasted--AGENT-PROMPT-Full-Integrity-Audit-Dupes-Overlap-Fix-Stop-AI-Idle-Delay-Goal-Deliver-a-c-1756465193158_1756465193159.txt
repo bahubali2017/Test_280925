@@ -1,0 +1,139 @@
+🛠️ AGENT PROMPT — Full Integrity Audit (Dupes/Overlap) + Fix “Stop AI” Idle Delay
+Goal
+
+Deliver a clean, single-source-of-truth MVP with zero duplicate logic, no overlapping routes, and instant (<1s) Stop AI behavior — without changing business flow.
+
+Scope
+
+Server: /server (routes, SSE, watchdog, auth, logging)
+
+Client: /client/src/lib, /pages, /components (streaming, stop, router pipeline)
+
+AI Layer: router.js, triage/prompt modules, ATD rules
+
+PWA/Service Worker: ensure it doesn’t interfere with SSE
+
+Deliverables
+
+docs/AUDIT_DUPLICATES.md — All duplicates/overlaps found + exact resolutions.
+
+docs/IDLE_LATENCY_RCA.md — Root cause analysis for 15–22s stop delay + targeted fix.
+
+docs/ARCHITECTURE_HEALTH.md — Final map of authoritative modules (“single owner” per concern), open risks, and guardrails.
+
+One PR with only surgical changes behind feature flags (no behavior drift).
+
+Method (do in order)
+0) Safety Net
+
+Snapshot repo (git tag pre-audit), confirm dev server starts.
+
+1) Duplicate & Overlap Audit (codebase-wide)
+
+Search these authority keys and list every definition/import:
+
+Server routes: /api/chat, /api/chat/stream, /api/ai/*, /api/system/*.
+
+Client API: sendMessage, stopStreaming, retryApiRequest, getSafeTimeoutFunctions.
+
+AI Layer: routeMedicalQuery, triage, prompt-enhancer, ATD.
+
+Flag any duplicates in files, exports, or route paths.
+Include code snippets + file paths in AUDIT_DUPLICATES.md.
+
+2) Single-Source Enforcement
+
+Keep only one implementation per concern:
+
+/api/chat + /api/chat/stream only in server/routes.js.
+
+Client uses one module: client/src/lib/llm-api.jsx (no llm-api-enhanced.jsx).
+
+One AI pipeline entry: lib/router.js.
+
+Replace imports project-wide to point to the chosen file.
+Remove dead files; update exports if needed.
+
+3) “Stop AI” Idle Delay — RCA
+
+Instrument minimally (feature-flagged SSE_DIAG=1, no noisy logs):
+
+Server routes.js (/api/chat/stream):
+
+Log T-stamps for: STREAM_STARTED, CLIENT_ABORT, STOP_SENT, RES_END, SOCKET_DESTROYED.
+
+Confirm headers:
+Content-Type: text/event-stream,
+Cache-Control: no-cache, no-transform,
+Connection: keep-alive.
+
+Ensure no compression on this route.
+
+Verify node timeouts: server.requestTimeout=10s, headersTimeout=12s, keepAliveTimeout=5s (document actual values).
+
+Client llm-api.jsx:
+
+Confirm single AbortController per stream.
+
+On Stop: clear any error timeout, call controller.abort('user_cancelled'), update UI immediately.
+
+Ensure no await on upstream cleanup; avoid lingering promises.
+
+Service Worker check (frequent hidden culprit):
+
+Verify it doesn’t intercept /api/chat/*.
+If it does, add bypass rule; note in RCA.
+
+Write IDLE_LATENCY_RCA.md with timings (client abort → server RES_END), and the exact point causing the 15–22s wait (e.g., SW intercept, proxy buffering, double listeners, leftover setTimeout, server keep-alive, reader.cancel awaiting provider, etc.).
+
+4) Surgical Fix (only what RCA proves)
+
+Apply smallest change that makes Stop → Network (canceled) ≤1s while preserving normal streaming.
+
+Keep upstream cleanup fire-and-forget.
+
+Guard any new logs with SSE_DIAG.
+
+5) Integrity & ATD Validation
+
+Run acceptance checks; record in ARCHITECTURE_HEALTH.md:
+
+No duplicates remain (list removed paths).
+
+Streaming happy path works; Stop AI cancels in ≤1s (DevTools shows (canceled)).
+
+AI Layer pipeline order unchanged; ATD rules still applied.
+
+No console red errors; no white screens; service worker not intercepting SSE.
+
+Acceptance Criteria
+
+Stop AI end-to-end delay ≤1s (three consecutive trials).
+
+Zero duplicate routes/modules for keys listed above.
+
+App renders; streaming works; no business logic regressions.
+
+All changes documented; diagnostics off by default.
+
+Constraints
+
+Do not change feature behavior or UX text.
+
+No extra libraries.
+
+No permanent verbose logs. Use SSE_DIAG flag only.
+
+Nice-to-Have (if trivial)
+
+Add /api/ops/sse-health returning last 20 stream events (when SSE_DIAG=1).
+
+Unit smoke test for stopStreaming() (asserts immediate abort path).
+
+Output Summary (post-run)
+
+Reply with:
+
+Links to the three docs, list of removed/merged files, diff of routes.js and llm-api.jsx.
+
+One-line statement of the root cause and single-line fix that solved the idle delay.

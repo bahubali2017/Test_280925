@@ -1,0 +1,511 @@
+AGENT PROMPT — Phase 2 & 3 Implementation Sprint
+Goal
+
+Add tailored disclaimer selection logic driven by triage level + symptom signals (incl. mental health).
+
+Create severity‑based prompt templates and modify the prompt enhancer to select them automatically, inject medical context, and add graduated safety guidance and ATD notices.
+
+Ship a triage test suite that covers edge cases and standard examples.
+
+Keep everything ESLint/JSDoc clean with no PHI in logs and robust fallbacks.
+
+Files to ADD
+lib/disclaimers.js
+/**
+ * Tailored disclaimers and ATD (Advice To Doctor) utilities.
+ * JSDoc types align with LayerContext.
+ */
+
+/**
+ * @typedef {"emergency"|"urgent"|"non_urgent"} TriageLevel
+ */
+
+/**
+ * @typedef {Object} DisclaimerPack
+ * @property {string[]} disclaimers
+ * @property {string[]} atdNotices
+ */
+
+/**
+ * @param {TriageLevel} level
+ * @param {string[]} [symptomNames]  // lowercased names e.g. ["chest pain","headache"]
+ * @returns {DisclaimerPack}
+ */
+export function selectDisclaimers(level, symptomNames = []) {
+  const s = new Set(symptomNames.map((x) => String(x).toLowerCase()));
+
+  /** @type {DisclaimerPack} */
+  const base = {
+    disclaimers: [
+      "This assistant is informational and not a diagnostic tool.",
+      "Responses may include general medical information and should not replace a professional evaluation."
+    ],
+    atdNotices: []
+  };
+
+  if (level === "emergency") {
+    return {
+      disclaimers: [
+        "This may be a medical emergency. Do not delay seeking professional help.",
+        ...base.disclaimers
+      ],
+      atdNotices: [
+        "ATD: Call emergency services immediately.",
+        "If you are alone, consider contacting a neighbor or family member for assistance."
+      ]
+    };
+  }
+
+  if (level === "urgent") {
+    const notices = ["ATD: Seek urgent in‑person medical evaluation as soon as possible."];
+    // Add targeted notes for common high‑risk symptoms
+    if (s.has("chest pain")) notices.push("Chest pain can indicate serious heart or lung issues.");
+    if (s.has("shortness of breath")) notices.push("Shortness of breath can indicate cardiopulmonary compromise.");
+    return {
+      disclaimers: [
+        "Potentially concerning symptoms reported.",
+        ...base.disclaimers
+      ],
+      atdNotices: notices
+    };
+  }
+
+  // non_urgent
+  const nonUrgent = {
+    disclaimers: [
+      "Symptoms described appear non‑urgent based on limited information.",
+      ...base.disclaimers
+    ],
+    atdNotices: []
+  };
+
+  // Mental health specialized handling (graduated)
+  if (s.has("suicidal ideation") || s.has("self harm") || s.has("homicidal ideation")) {
+    return {
+      disclaimers: [
+        "Possible mental health crisis identified.",
+        ...base.disclaimers
+      ],
+      atdNotices: [
+        "ATD: If you are in immediate danger, contact emergency services now.",
+        "Consider calling a crisis hotline or contacting a trusted person for immediate support."
+      ]
+    };
+  }
+
+  return nonUrgent;
+}
+
+templates/mild-template.txt
+SYSTEM POLICY:
+- Educational, cautious guidance.
+- Avoid definitive diagnoses; use "possible", "may", "consider".
+- Include: (1) Summary, (2) Common causes, (3) Self‑care, (4) When to seek care, (5) Sources tier.
+
+CONTEXT:
+{{CONTEXT}}
+
+INSTRUCTION:
+Provide concise, clear, low‑risk guidance and ask 2–3 follow‑up questions if useful.
+
+templates/moderate-template.txt
+SYSTEM POLICY:
+- Conservative medical guidance for non‑urgent but notable issues.
+- Avoid definitive diagnoses; use "possible", "may", "consider".
+- Include: (1) Summary, (2) Differential considerations, (3) Precautions, (4) When to seek care soon, (5) Sources tier.
+
+CONTEXT:
+{{CONTEXT}}
+
+INSTRUCTION:
+Provide structured advice, note red flags to monitor, and propose next steps.
+
+templates/severe-template.txt
+SYSTEM POLICY:
+- Prioritize safety; potential high‑risk scenario.
+- Start with ATD (Advice to Doctor) and urgency level.
+- Avoid definitive diagnoses; use "possible", "may", "consider".
+- Include: (1) Summary, (2) Risk flags, (3) Immediate actions, (4) Urgent next steps, (5) Sources tier.
+
+CONTEXT:
+{{CONTEXT}}
+
+INSTRUCTION:
+Be concise and directive. State urgent actions first, then brief rationale.
+
+
+If your runtime cannot import .txt directly, we will embed safe fallbacks inside prompt-enhancer.js.
+
+Files to UPDATE
+lib/triage-checker.js (add richer flags + return symptomNames for disclaimers)
+import atd from "../rules/atd-conditions.json" with { type: "json" };
+
+/**
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {import("./layer-context.js").Triage & { symptomNames: string[] }}
+ */
+export function performTriage(ctx) {
+  const text = ctx.userInput.toLowerCase();
+  const reasons = [];
+
+  /** @type {import("./layer-context.js").Triage["level"]} */
+  let level = "non_urgent";
+
+  // Collect normalized symptom names (from parser if available)
+  const symptomNames = Array.isArray(ctx.symptoms) && ctx.symptoms.length
+    ? ctx.symptoms.map(s => String(s.name || "").toLowerCase()).filter(Boolean)
+    : [];
+
+  for (const rf of atd.red_flags) {
+    if (text.includes(rf.pattern)) {
+      if (rf.triage === "emergency") {
+        level = "emergency";
+        reasons.push(rf.reason);
+        break;
+      }
+      if (rf.triage === "urgent" && level !== "emergency") {
+        level = "urgent";
+        reasons.push(rf.reason);
+      }
+    }
+  }
+
+  // Additional combinations
+  if (text.includes("severe headache") && text.includes("vision")) {
+    if (level !== "emergency") {
+      level = "urgent";
+      reasons.push("Severe headache with vision changes can indicate a neurologic emergency.");
+    }
+  }
+
+  // Duration heuristic (very naive, expand later)
+  if (/over\s+(?:2|two)\s+weeks/.test(text) && level === "non_urgent") {
+    reasons.push("Persistent symptoms over 2 weeks may warrant evaluation.");
+  }
+
+  const isHighRisk = level !== "non_urgent";
+  return { level, isHighRisk, reasons, symptomNames };
+}
+
+lib/prompt-enhancer.js (template selection + context injection + disclaimers/ATD)
+import { selectDisclaimers } from "./disclaimers.js";
+
+/** Inline fallbacks if templates cannot be loaded from disk */
+const FALLBACK_TEMPLATES = {
+  mild: `SYSTEM POLICY:
+- Educational, cautious guidance.
+- Avoid definitive diagnoses; use "possible", "may", "consider".
+- Include: (1) Summary, (2) Common causes, (3) Self‑care, (4) When to seek care, (5) Sources tier.
+
+CONTEXT:
+{{CONTEXT}}
+
+INSTRUCTION:
+Provide concise, clear, low‑risk guidance and ask 2–3 follow‑up questions if useful.`,
+  moderate: `SYSTEM POLICY:
+- Conservative medical guidance for non‑urgent but notable issues.
+- Avoid definitive diagnoses; use "possible", "may", "consider".
+- Include: (1) Summary, (2) Differential considerations, (3) Precautions, (4) When to seek care soon, (5) Sources tier.
+
+CONTEXT:
+{{CONTEXT}}
+
+INSTRUCTION:
+Provide structured advice, note red flags to monitor, and propose next steps.`,
+  severe: `SYSTEM POLICY:
+- Prioritize safety; potential high‑risk scenario.
+- Start with ATD (Advice to Doctor) and urgency level.
+- Avoid definitive diagnoses; use "possible", "may", "consider".
+- Include: (1) Summary, (2) Risk flags, (3) Immediate actions, (4) Urgent next steps, (5) Sources tier.
+
+CONTEXT:
+{{CONTEXT}}
+
+INSTRUCTION:
+Be concise and directive. State urgent actions first, then brief rationale.`
+};
+
+/**
+ * Template chooser: triage + severity → mild/moderate/severe
+ * @param {"emergency"|"urgent"|"non_urgent"} triage
+ * @param {Array<import("./layer-context.js").Symptom>} symptoms
+ * @returns {"mild"|"moderate"|"severe"}
+ */
+function chooseTemplateKey(triage, symptoms = []) {
+  if (triage === "emergency") return "severe";
+  if (triage === "urgent") return "moderate";
+
+  // check any explicit severe symptom severity
+  const hasSevere = symptoms.some(s => s.severity === "SEVERE" || s.severity === "SHARP");
+  if (hasSevere) return "moderate";
+
+  return "mild";
+}
+
+/**
+ * Build CONTEXT block from LayerContext safely.
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {string}
+ */
+function buildContextBlock(ctx) {
+  const lines = [];
+
+  lines.push(`User input: ${ctx.userInput}`);
+
+  if (Array.isArray(ctx.symptoms) && ctx.symptoms.length) {
+    const parts = ctx.symptoms.map(s => {
+      const bits = [s.name];
+      if (s.location) bits.push(`@${s.location.toLowerCase()}`);
+      if (s.severity) bits.push(`[${s.severity.toLowerCase()}]`);
+      if (s.duration && (s.duration.unit || s.duration.raw)) {
+        bits.push(`~${s.duration.raw || `${s.duration.value ?? ""} ${s.duration.unit}`}`.trim());
+      }
+      if (s.negated) bits.push("(negated)");
+      return bits.filter(Boolean).join(" ");
+    });
+    lines.push(`Symptoms: ${parts.join("; ")}`);
+  } else {
+    lines.push("Symptoms: unspecified");
+  }
+
+  if (ctx.triage) {
+    lines.push(`Triage: ${ctx.triage.level}${ctx.triage.reasons?.length ? ` (${ctx.triage.reasons.join("; ")})` : ""}`);
+  } else {
+    lines.push("Triage: pending");
+  }
+
+  // Room for body system inference later
+  if (ctx.metadata?.bodySystem) {
+    lines.push(`Body system: ${ctx.metadata.bodySystem}`);
+  }
+
+  return lines.join("\n");
+}
+
+/**
+ * Render the selected template with {{CONTEXT}} injected.
+ * @param {"mild"|"moderate"|"severe"} key
+ * @param {string} contextBlock
+ * @returns {string}
+ */
+function renderTemplate(key, contextBlock) {
+  const tpl = FALLBACK_TEMPLATES[key] || FALLBACK_TEMPLATES.mild;
+  return tpl.replace("{{CONTEXT}}", contextBlock);
+}
+
+/**
+ * Main enhancer: selects template, injects context, and prefixes disclaimers/ATD for high risk.
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[] }}
+ */
+export function enhancePrompt(ctx) {
+  const triageLevel = ctx.triage?.level || "non_urgent";
+  const templateKey = chooseTemplateKey(triageLevel, ctx.symptoms || []);
+  const contextBlock = buildContextBlock(ctx);
+
+  const { disclaimers, atdNotices } = selectDisclaimers(
+    /** @type {"emergency"|"urgent"|"non_urgent"} */ (triageLevel),
+    (ctx.triage && "symptomNames" in ctx.triage) ? /** @type {any} */(ctx.triage).symptomNames : (ctx.symptoms || []).map(s => s.name)
+  );
+
+  const systemPrompt = renderTemplate(templateKey, contextBlock);
+
+  // Prefix severe with ATD block
+  const header = (triageLevel === "emergency" || triageLevel === "urgent")
+    ? `IMPORTANT:\n${atdNotices.join("\n")}\n\n`
+    : "";
+
+  const enhancedPrompt = `${header}${contextBlock}\n\nPlease analyze and respond within the policy above.`;
+
+  return { systemPrompt, enhancedPrompt, atdNotices, disclaimers };
+}
+
+lib/router.js (wire in richer outputs from enhancer)
+import { createLogger } from "./utils/logger.js";
+import { createLayerContext, updateLayerContext, validateLayerContext } from "./layer-context.js";
+import { parseIntent } from "./intent-parser.js";
+import { performTriage } from "./triage-checker.js";
+import { enhancePrompt } from "./prompt-enhancer.js";
+
+const log = createLogger("layer:router");
+
+/** Safe time helper */
+function now() {
+  const perf = typeof globalThis !== "undefined" ? globalThis.performance : undefined;
+  return (perf && typeof perf.now === "function") ? perf.now() : Date.now();
+}
+
+/**
+ * @param {string} userInput
+ * @returns {Promise<{
+ *   userInput: string,
+ *   enhancedPrompt: string,
+ *   isHighRisk: boolean,
+ *   disclaimers: string[],
+ *   suggestions: string[],
+ *   metadata: { processingTime: number, intentConfidence?: number, triageLevel?: string, bodySystem?: string },
+ *   atd?: string[]
+ * }>}
+ */
+export async function routeMedicalQuery(userInput) {
+  const t0 = now();
+  const ctx = createLayerContext(userInput);
+
+  try {
+    const v0 = validateLayerContext(ctx, { strict: false });
+    if (!v0.ok) {
+      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
+      throw new Error("Invalid input");
+    }
+
+    const { intent, symptoms } = parseIntent(ctx.userInput);
+    updateLayerContext(ctx, { intent, symptoms });
+
+    const triage = performTriage(ctx);
+    updateLayerContext(ctx, { triage });
+
+    const { systemPrompt, enhancedPrompt, atdNotices, disclaimers } = enhancePrompt(ctx);
+    updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
+
+    const processingTime = Math.round(now() - t0);
+
+    return {
+      userInput: ctx.userInput,
+      enhancedPrompt,
+      isHighRisk: !!ctx.triage?.isHighRisk,
+      disclaimers,
+      atd: atdNotices.length ? atdNotices : undefined,
+      suggestions: ctx.triage?.isHighRisk
+        ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
+        : ["Can you share duration, severity, and associated symptoms?", "Any triggers or relieving factors?"],
+      metadata: {
+        processingTime,
+        intentConfidence: intent?.confidence,
+        triageLevel: ctx.triage?.level
+      }
+    };
+  } catch (err) {
+    const processingTime = Math.round(now() - t0);
+    log.error("router_failed", { message: String(err?.message || err), safe: true });
+    return {
+      userInput: String(userInput || ""),
+      enhancedPrompt: "System fallback: Provide general, low‑risk educational guidance and suggest appropriate next steps. Include red‑flag checklist and advise contacting a clinician if concerned.",
+      isHighRisk: false,
+      disclaimers: ["The enhanced AI layer encountered an issue. This is a general response and not a diagnosis."],
+      suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
+      metadata: { processingTime }
+    };
+  }
+}
+
+Tests to ADD
+tests/triage-checker.test.js
+import { strict as assert } from "assert";
+import { createLayerContext } from "../../src/lib/layer-context.js";
+import { performTriage } from "../../src/lib/triage-checker.js";
+
+function ctx(text, symptoms = []) {
+  const c = createLayerContext(text);
+  c.symptoms = symptoms;
+  return c;
+}
+
+describe("triage-checker: red flags & combos", () => {
+  it("flags chest pain as emergency", () => {
+    const t = performTriage(ctx("I have chest pain for 20 minutes"));
+    assert.equal(t.level, "emergency");
+    assert.equal(t.isHighRisk, true);
+    assert.ok(t.reasons.length >= 1);
+  });
+
+  it("flags SOB as urgent when not emergency", () => {
+    const t = performTriage(ctx("I feel shortness of breath walking upstairs"));
+    assert.equal(t.level, "urgent");
+    assert.equal(t.isHighRisk, true);
+  });
+
+  it("headache + vision changes → urgent", () => {
+    const t = performTriage(ctx("Severe headache with blurred vision"));
+    assert.equal(t.level, "urgent");
+    assert.equal(t.isHighRisk, true);
+  });
+
+  it("persistent symptoms over 2 weeks -> note, but non_urgent", () => {
+    const t = performTriage(ctx("I have cough over 2 weeks"));
+    assert.equal(t.level, "non_urgent");
+    assert.equal(t.isHighRisk, false);
+  });
+});
+
+tests/prompt-enhancer-selection.test.js
+import { strict as assert } from "assert";
+import { enhancePrompt } from "../../src/lib/prompt-enhancer.js";
+
+const baseCtx = {
+  userInput: "My chest hurts",
+  symptoms: [{ name: "chest pain", location: "CHEST", severity: "SEVERE" }],
+  triage: { level: "emergency", isHighRisk: true, reasons: ["test reason"], symptomNames: ["chest pain"] },
+  metadata: {}
+};
+
+describe("prompt-enhancer: template selection & disclaimers", () => {
+  it("uses severe template for emergency and prefixes ATD", () => {
+    const out = enhancePrompt(baseCtx);
+    assert.ok(out.systemPrompt.includes("Prioritize safety"), "severe template not selected");
+    assert.ok(out.enhancedPrompt.startsWith("IMPORTANT:"), "ATD header missing");
+    assert.ok(Array.isArray(out.disclaimers) && out.disclaimers.length > 0, "disclaimers missing");
+  });
+
+  it("uses moderate for urgent", () => {
+    const ctx = { ...baseCtx, triage: { ...baseCtx.triage, level: "urgent", isHighRisk: true } };
+    const out = enhancePrompt(ctx);
+    assert.ok(out.systemPrompt.includes("non‑urgent but notable"), "moderate template not selected");
+  });
+
+  it("uses mild for non_urgent", () => {
+    const ctx = { ...baseCtx, triage: { level: "non_urgent", isHighRisk: false } };
+    const out = enhancePrompt(ctx);
+    assert.ok(out.systemPrompt.includes("low‑risk guidance"), "mild template not selected");
+  });
+});
+
+Commands
+
+Lint
+
+npx eslint client/ --ext .js,.jsx
+npx eslint server/ --ext .js,.jsx
+
+
+Tests
+
+npm test
+# or: npx vitest run
+
+Acceptance Criteria
+
+Phase 2
+
+Disclaimers vary by triage: emergency → strong ATD; urgent → urgent ATD; non_urgent → mild advisory.
+
+Mental‑health crises produce specialized ATD notices.
+
+Triage tests pass for chest pain, SOB, neuro combo, and long duration.
+
+Phase 3
+
+prompt-enhancer selects mild | moderate | severe templates.
+
+Context block includes user input, normalized symptoms, triage, and optional body system.
+
+High‑risk paths include ATD header before the prompt.
+
+Tests verify template selection and disclaimer presence.
+
+Quality
+
+No PHI in logs.
+
+ESLint/JSDoc clean.
+
+Router output includes atd array when relevant.

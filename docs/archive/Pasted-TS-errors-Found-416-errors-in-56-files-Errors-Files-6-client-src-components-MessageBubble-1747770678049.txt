@@ -1,0 +1,123 @@
+TS errors:
+Found 416 errors in 56 files. 
+
+Errors  Files
+     6  client/src/components/MessageBubble.jsx:62
+     1  client/src/components/ProtectedRoute.jsx:19
+     1  client/src/components/SocialLoginButton.jsx:29
+     7  client/src/components/ui/accordion.jsx:5
+     8  client/src/components/ui/alert-dialog.jsx:4
+     5  client/src/components/ui/alert.jsx:4
+     4  client/src/components/ui/avatar.jsx:6
+     2  client/src/components/ui/badge.jsx:4
+     5  client/src/components/ui/breadcrumb.jsx:6
+     5  client/src/components/ui/button.jsx:11
+     2  client/src/components/ui/calendar.jsx:5
+     7  client/src/components/ui/card.jsx:3
+    16  client/src/components/ui/carousel.jsx:5
+    24  client/src/components/ui/chart.jsx:6
+     3  client/src/components/ui/checkbox.jsx:15
+     9  client/src/components/ui/command.jsx:5
+    17  client/src/components/ui/context-menu.jsx:5
+     6  client/src/components/ui/dialog.jsx:7
+     6  client/src/components/ui/drawer.jsx:6
+    18  client/src/components/ui/dropdown-menu.jsx:5
+     9  client/src/components/ui/form.jsx:12
+     4  client/src/components/ui/hover-card.jsx:6
+     7  client/src/components/ui/input-otp.jsx:5
+     3  client/src/components/ui/input.jsx:14
+     3  client/src/components/ui/label.jsx:5
+    22  client/src/components/ui/menubar.jsx:7
+    10  client/src/components/ui/navigation-menu.jsx:6
+     8  client/src/components/ui/pagination.jsx:4
+     4  client/src/components/ui/popover.jsx:4
+     3  client/src/components/ui/progress.jsx:6
+     4  client/src/components/ui/radio-group.jsx:5
+     2  client/src/components/ui/resizable.jsx:6
+     5  client/src/components/ui/scroll-area.jsx:4
+    13  client/src/components/ui/select.jsx:7
+     4  client/src/components/ui/separator.jsx:4
+     9  client/src/components/ui/sheet.jsx:8
+    46  client/src/components/ui/sidebar.jsx:6
+     1  client/src/components/ui/skeleton.jsx:1
+     2  client/src/components/ui/slider.jsx:4
+     2  client/src/components/ui/switch.jsx:4
+     9  client/src/components/ui/table.jsx:3
+     6  client/src/components/ui/tabs.jsx:4
+     2  client/src/components/ui/textarea.jsx:3
+    10  client/src/components/ui/toast.jsx:6
+     2  client/src/components/ui/toaster.jsx:1
+    12  client/src/components/ui/toggle-group.jsx:6
+     4  client/src/components/ui/toggle.jsx:5
+     3  client/src/components/ui/tooltip.jsx:6
+     1  client/src/hooks/useAuth.jsx:16
+     4  client/src/lib/config.js:26
+    11  client/src/lib/llm-api.jsx:326
+     1  client/src/lib/queryClient.jsx:118
+     2  client/src/lib/supabase.js:9
+     2  client/src/lib/utils/logger.js:22
+    19  client/src/pages/ChatPage.jsx:10
+    15  client/src/pages/LoginPage.jsx:13
+
+ESlinst Errors 
+
+~/workspace$ npx eslint server/ --ext .js,.jsx
+
+/home/runner/workspace/server/routes.js
+  637:13  error  'isConnected' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u  no-unused-vars
+  766:39  error  'startTime' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              no-undef
+
+
+✖ 2 problems (2 errors, 0 warnings 
+
+~/workspace$ npx eslint client/ --ext .js,.jsx
+
+/home/runner/workspace/client/src/components/MessageBubble.jsx
+  110:1  warning  Missing JSDoc @returns declaration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      jsdoc/require-returns
+  166:9  error    'bubbleStyle' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u  no-unused-vars
+
+/home/runner/workspace/client/src/components/ProtectedRoute.jsx
+   5:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  16:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  30:25  error    'setTimeout' is not defined         no-undef
+  35:28  error    'clearTimeout' is not defined       no-undef
+
+/home/runner/workspace/client/src/hooks/use-toast.jsx
+   31:1  warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  101:1  warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  135:1  warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+
+/home/runner/workspace/client/src/hooks/useAuth.jsx
+   13:1   warning  Missing JSDoc @returns declaration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               jsdoc/require-returns
+   78:15  error    'data' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u  no-unused-vars
+  152:1   warning  Missing JSDoc @returns declaration                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               jsdoc/require-returns
+
+/home/runner/workspace/client/src/lib/llm-api.jsx
+  1001:33  error  'AbortController' is not defined  no-undef
+  1147:17  error  'clearTimeout' is not defined     no-undef
+  1166:19  error  'clearTimeout' is not defined     no-undef
+  1267:25  error  'abortSignal' is not defined      no-undef
+  1267:40  error  'abortSignal' is not defined      no-undef
+  1268:26  error  'abortSignal' is not defined      no-undef
+  1326:25  error  'abortSignal' is not defined      no-undef
+
+/home/runner/workspace/client/src/lib/supabase.js
+   23:61  error    'URL' is not defined                no-undef
+   38:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+   88:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  102:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  111:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  126:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  133:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+  140:1   warning  Missing JSDoc @returns declaration  jsdoc/require-returns
+
+/home/runner/workspace/client/src/pages/ChatPage.jsx
+  237:11  error  'setTimeout' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-undef
+  265:17  error  'isDelivered' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u  no-unused-vars
+  266:17  error  'isTimeout' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u    no-unused-vars
+  455:11  error  'setTimeout' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-undef
+  485:17  error  'isDelivered' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u  no-unused-vars
+  486:17  error  'isTimeout' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp/u    no-unused-vars
+  611:7   error  'setTimeout' is not defined                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             no-undef
+
+✖ 34 problems (19 errors, 15 warnings)

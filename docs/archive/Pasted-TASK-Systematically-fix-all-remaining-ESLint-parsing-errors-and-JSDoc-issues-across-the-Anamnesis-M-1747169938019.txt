@@ -1,0 +1,56 @@
+TASK: Systematically fix all remaining ESLint parsing errors and JSDoc issues across the Anamnesis Medical AI Assistant frontend codebase. Complete any missing mock components or imports. Do not leave any TypeScript syntax or error suppressions.
+
+🎯 Objective:
+Ensure the entire `client/src/` directory is 100% free of:
+- TypeScript syntax
+- Parsing errors (e.g. Unexpected token `<`, `:`)
+- Incomplete JSX element definitions
+- Missing component/function documentation
+- ESLint rule suppressions (`eslint-disable`, `@ts-ignore`)
+
+---
+
+📦 File Scope:
+Use the latest ESLint output provided by the user. Focus on the 64 files reporting:
+- JSX parsing failures (`<` in improper scope or broken fragments)
+- Residual `.tsx` files or `.jsx` files still containing TypeScript types
+- Invalid imports, `interface`, `type`, `as`, and other TS-only syntax
+
+---
+
+🔧 For Each File:
+
+1. ✅ Rename `.tsx` → `.jsx` or `.ts` → `.js` if not done
+2. ✅ Strip all TypeScript syntax:
+   - Remove `interface`, `type`, `: JSX.Element`, `ControllerProps`, etc.
+   - Replace `as` casts with safe logic or dynamic types
+3. ✅ Ensure JSX syntax is valid (wrap fragments, close tags)
+4. ✅ Add full JSDoc annotations:
+   - `@param` for props and function arguments
+   - `@returns {JSX.Element}` for all component exports
+   - `@typedef` objects where needed
+5. ✅ Create placeholder/mock implementations if any imported modules/components are undefined
+6. ✅ Run ESLint on each file after fix to confirm **zero errors**
+7. ✅ Do not use `eslint-disable` or `@ts-ignore`
+
+---
+
+📘 Notes:
+- Use functional React components (`function Component()`) unless otherwise specified
+- Maintain style and structure used in the MVP (e.g. Tailwind + shadcn/ui)
+- Fix JSDoc `@typedef {Object}` warnings by converting to lowercase `object`
+- Leave detailed JSDoc comments where logic is non-trivial
+
+---
+
+✅ Completion Criteria:
+- All 64 flagged files are migrated and repaired
+- ESLint reports **0 errors, 0 warnings**
+- No TypeScript syntax remains
+- All components have complete JSDoc
+- App renders without runtime crashes or placeholder gaps
+- `migration-tracker.md` is updated with ✔️ status and notes per file
+
+🚦 Execution should proceed sequentially or batched by priority
+- Start with high-error files (e.g. UI components, ChatPage, App.jsx)
+- Mark each file as completed in tracker before moving on

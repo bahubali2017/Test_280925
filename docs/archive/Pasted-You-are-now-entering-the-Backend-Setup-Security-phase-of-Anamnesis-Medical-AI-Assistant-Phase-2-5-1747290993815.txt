@@ -1,0 +1,74 @@
+You are now entering the Backend Setup & Security phase of Anamnesis Medical AI Assistant (Phase 2.5).
+
+🚨 STRICT RULES:
+- NO ESLint suppressions or disable comments
+- NO code duplication or unused variables
+- All new files must be fully JSDoc-annotated
+- ESLint must pass with zero errors
+- Backend must stay compatible with frontend logic and Replit env
+
+---
+
+🔐 1. Supabase Project Setup
+- Create a Supabase project if not yet created
+- Enable and configure:
+  - Email/password authentication
+  - OAuth: Google, Microsoft, Apple
+- Generate the following credentials:
+  - Supabase Project URL
+  - Supabase Anon Key
+  - (Optional) Service Role Key for admin operations
+- Record all necessary endpoint URLs for later use
+
+---
+
+🔐 2. Secure Environment Configuration
+- Create a `.env` file (not committed to git)
+  - Add:
+    - `VITE_SUPABASE_URL=...`
+    - `VITE_SUPABASE_ANON_KEY=...`
+- Create a `.env.example` file with placeholder values
+- Ensure `.env` is listed in `.gitignore`
+
+- In Replit, configure the equivalent secrets using the Secrets tab
+  - `VITE_SUPABASE_URL`
+  - `VITE_SUPABASE_ANON_KEY`
+
+---
+
+🔐 3. Auth Provider Configuration (Supabase Dashboard)
+- Enable and test:
+  - Email/Password Auth
+  - Google OAuth (requires Google Developer Console setup)
+  - Microsoft OAuth (requires Azure app registration)
+  - Apple OAuth (requires Apple Developer account)
+
+---
+
+🔐 4. Create `config.js` Utility
+- Add module: `client/src/lib/config.js`
+- Load Supabase credentials from `import.meta.env`
+- Add fallback logic and console warnings if values are missing
+- Annotate all config fields using proper JSDoc
+  - e.g. `@typedef {string} SupabaseURL` etc.
+
+---
+
+🔐 5. Connect Supabase Client to Config
+- Update `supabase.js` to import config values from `config.js`
+- Ensure Supabase client is initialized securely with Anon key
+- Export the Supabase client instance cleanly
+- ESLint must pass with zero warnings
+- No duplicate or hardcoded values
+
+---
+
+📦 Final Deliverables:
+- ✅ .env and .env.example configured
+- ✅ config.js with full JSDoc and validation
+- ✅ supabase.js correctly wired to config
+- ✅ Supabase project with providers active
+- ✅ OAuth providers tested in dev
+- ✅ ESLint = 0 errors/warnings
+- ✅ Document all changes in `PHASE_2.5_STATUS.md`
+

@@ -1,0 +1,117 @@
+✅ AGENT PROMPT — BEGIN PHASE 7: UI Integration & Real-Time Implementation
+
+You are now entering Phase 7 of the Layer Development Pipeline for the Anamnesis Medical AI System. The goal of this phase is to fully integrate the layer engine into the live chat interface, add real-time enhancements, and implement robust visual debugging and UX improvements.
+
+🧾 PRIMARY OBJECTIVE
+
+Integrate the medical triage layer (routeMedicalQuery) into the main chat flow (inside llm-api.js → sendMessageClientSide()), build UI support for all new metadata fields (triage level, symptoms, disclaimers), and implement real-time streaming, debugging tools, and resilient fallback handling.
+
+📌 TRACKING & OUTPUT REQUIREMENTS
+
+All work must be logged line-by-line in LAYER_DEVELOPMENT_PLAN.md, under a new section titled:
+
+## Phase 7: UI Integration & Real-Time Implementation
+
+
+Each task should be formatted as:
+
+- [x] TASK DESCRIPTION — STATUS — File Modified: path/to/file.js — Commit Ref: <hash or short description>
+
+✅ TASK LIST
+🧩 Chat System Integration
+
+ Inject routeMedicalQuery() into sendMessageClientSide() inside llm-api.js
+
+ Parse triage, symptomNames, hasATD, and disclaimer fields from layer response
+
+ Update message normalization to merge AI and layer metadata
+
+ Add frontend caching for recent metadata to minimize layer reprocessing
+
+ Implement 4-second timeout fallback to raw LLM if layer fails or hangs
+
+🧪 Visual Trace Debugging
+
+ Create a new route /admin/debug/:sessionId (Express or REST endpoint)
+
+ Display: parsed intent → layer triage output → generated prompt → raw LLM output
+
+ Load session data from either training-dataset/ folder or active cache
+
+ Implement a basic HTML + JSON viewer to render trace steps with collapsible detail
+
+ Add link to this trace in the Admin Dashboard chat sessions
+
+ Use color codes to distinguish processing stages (intent = blue, triage = red, LLM = green)
+
+⚡ Real-Time Enhancements
+
+ Enable progressive streaming in response layer (use Server-Sent Events or WebSockets)
+
+ Add live-disclaimer injection logic — append/replace warning as streaming progresses
+
+ Implement a typing indicator with dynamic processing time estimation
+
+ Add “Cancel” button to interrupt layer processing for long queries (>5s)
+
+🎨 UX Improvements
+
+ Add visual tag or badge for triage level (e.g., 🚨 Emergency, ⚠️ Urgent, ✅ Stable)
+
+ Display ATD warning as a styled disclaimer box (with icons/colors)
+
+ Show extracted symptoms under the user's message for transparency
+
+ Create contextual follow-up UI suggestions (e.g., “Would you like advice on...”)
+
+ Implement a feedback module for each AI response (e.g., 👍 / 👎 + "Was this helpful?")
+
+🛡️ Error Handling & Fault Tolerance
+
+ Add fallback mechanism: if routeMedicalQuery() fails, revert to generateLLMResponse()
+
+ Gracefully handle network or layer errors (show "Fallback Activated" message)
+
+ Retry mechanism with exponential backoff for 500/timeout errors
+
+ Ensure all new UI features are fully WCAG-accessible (ARIA tags, keyboard nav, etc.)
+
+ Conduct compatibility testing across Chrome, Firefox, Safari, Edge
+
+📁 DOCUMENTS TO UPDATE
+
+All changes must be reflected in the following documentation:
+
+LAYER_DEVELOPMENT_PLAN.md → primary task log
+
+LAYER_TEST_PLAN.md → Add new real-time streaming and UI interaction tests
+
+UI_ENHANCEMENT_PLAN.md → List and describe all new UI elements introduced in Phase 7
+
+admin/debug/README.md (if applicable) → Describe how to use the new debug trace interface
+
+🧠 DESIGN PRINCIPLES TO FOLLOW
+
+Progressive Enhancement: New features must enhance functionality without breaking existing features.
+
+Fail-Safe Design: Always return a fallback LLM response if the layer fails.
+
+Latency Control: Ensure added processing time is <100ms under normal load.
+
+Visual Clarity: Medical risk warnings must be clearly highlighted using colors/icons.
+
+Accessibility: All new UI features must be compliant with WCAG 2.1 AA standards.
+
+📌 FINAL GOAL
+
+Deliver a fully functional, production-ready, real-time medical AI chat system with:
+
+ Layer-to-chat integration
+
+ Traceable debug interface
+
+ Streaming + typing UX
+
+ Safety-driven design
+
+ Clean, documented code

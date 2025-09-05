@@ -1,0 +1,104 @@
+✅ 1. Task Verification: message-api.js for Chat Operations
+
+How to check:
+Path: /server/api/message-api.js (or wherever your API routes live)
+
+Expectations:
+
+Contains at least two Express routes:
+
+POST /api/messages    → saves message to DB
+GET /api/messages     → fetches user's message history
+Uses Supabase or a shared db.js function.
+
+Validates input (userId, content).
+
+Proper error handling with res.status(...).json({ error }).
+
+If not implemented:
+👉 Add it using this stub:
+
+// server/api/message-api.js
+import express from 'express'
+import { saveMessage, getMessagesForUser } from '../db.js'
+
+const router = express.Router()
+
+// Save a message
+router.post('/', async (req, res) => {
+  const { userId, content, isUser = true, metadata = {} } = req.body
+  if (!userId || !content) return res.status(400).json({ error: 'Missing userId or content' })
+  try {
+    const saved = await saveMessage(userId, content, isUser, metadata)
+    res.status(201).json({ success: true, data: saved })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to save message' })
+  }
+})
+
+// Get messages for user
+router.get('/:userId', async (req, res) => {
+  const { userId } = req.params
+  try {
+    const messages = await getMessagesForUser(userId)
+    res.json({ success: true, data: messages })
+  } catch (err) {
+    res.status(500).json({ error: 'Failed to fetch messages' })
+  }
+})
+
+export default router
+✅ 2. Task Verification: Backend Unit Tests
+Look for files like:
+/tests/db.test.js
+
+/tests/message-api.test.js
+
+/tests/auth-api.test.js
+
+Minimum checklist:
+Test database operations:
+✅ Connect to Supabase (mocked or dev instance)
+
+✅ Test saveMessage, getMessagesForUser, getUserByEmail returns
+
+Test mock authentication flow:
+✅ Register → Login → Fetch profile
+
+✅ Logout clears session
+
+Error edge cases:
+✅ Missing fields in POST
+
+✅ Supabase throws error (simulate)
+
+If missing, start here:
+
+// tests/message-api.test.js
+import request from 'supertest'
+import app from '../server/index.js'
+
+describe('Message API', () => {
+  it('should reject missing content', async () => {
+    const res = await request(app).post('/api/messages').send({ userId: 'abc' })
+    expect(res.status).toBe(400)
+  })
+
+  it('should fetch messages', async () => {
+    const res = await request(app).get('/api/messages/abc')
+    expect(res.status).toBe(200)
+    expect(Array.isArray(res.body.data)).toBe(true)
+  })
+})
+✅ Make sure ESLint is clean and JSDoc is used for each test file.
+
+🔍 Next Step
+If you confirm these 3 areas are completed:
+
+message-api.js exists and is functional
+
+Backend unit tests are in place
+
+ESLint = ✅
+
+→ We can check off all tasks under Code & API Integration and move to Database Schema implementation and testing (Phase 2.5 continued).

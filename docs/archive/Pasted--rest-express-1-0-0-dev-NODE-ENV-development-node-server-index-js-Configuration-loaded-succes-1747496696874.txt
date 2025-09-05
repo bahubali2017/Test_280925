@@ -1,0 +1,66 @@
+> rest-express@1.0.0 dev
+> NODE_ENV=development node server/index.js
+
+Configuration loaded successfully {
+  url: 'https://ppwaeyekzpyqqlddfmeb.supabase.co',
+  hasAnonKey: true,
+  hasServiceKey: true,
+  environment: 'development'
+}
+Testing Supabase connection...
+Configuration loaded successfully {
+  url: 'https://ppwaeyekzpyqqlddfmeb.supabase.co',
+  hasAnonKey: true,
+  hasServiceKey: true,
+  environment: 'development'
+}
+Configuration loaded successfully {
+  url: 'https://ppwaeyekzpyqqlddfmeb.supabase.co',
+  hasAnonKey: true,
+  hasServiceKey: true,
+  environment: 'development'
+Supabase connection successful!
+Retrieved 0 users
+No users found in development environment. You can create a test user by:
+1. Using the registration form in the app
+2. Using the Supabase dashboard
+🚀 Server successfully started on port 5000
+3:44:16 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 7 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+3:44:18 PM [vite] Pre-transform error: Transform failed with 2 errors:
+/home/runner/workspace/client/src/pages/ChatPage.jsx:317:8: ERROR: The symbol "isStoppingAI" has already been declared
+/home/runner/workspace/client/src/pages/ChatPage.jsx:317:8: ERROR: The symbol "setIsStoppingAI" has already been declared
+3:44:19 PM [vite] Internal server error: Transform failed with 2 errors:
+/home/runner/workspace/client/src/pages/ChatPage.jsx:317:8: ERROR: The symbol "isStoppingAI" has already been declared
+/home/runner/workspace/client/src/pages/ChatPage.jsx:317:8: ERROR: The symbol "setIsStoppingAI" has already been declared
+  Plugin: vite:esbuild
+  File: /home/runner/workspace/client/src/pages/ChatPage.jsx:317:8
+  
+  The symbol "isStoppingAI" has already been declared
+  315|    };
+  316|  
+  317|    const [isStoppingAI, setIsStoppingAI] = useState(false);
+     |          ^
+  318|  
+  319|    /**
+  
+  The symbol "setIsStoppingAI" has already been declared
+  315|    };
+  316|  
+  317|    const [isStoppingAI, setIsStoppingAI] = useState(false);
+     |          ^
+  318|  
+  319|    /**
+  
+      at failureErrorWithLog (/home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:1472:15)
+      at /home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:755:50
+      at responseCallbacks.<computed> (/home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:622:9)
+      at handleIncomingPacket (/home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:677:12)
+      at Socket.readFromStdout (/home/runner/workspace/node_modules/vite/node_modules/esbuild/lib/main.js:600:7)
+      at Socket.emit (node:events:518:28)
+      at addChunk (node:internal/streams/readable:561:12)
+      at readableAddChunkPushByteMode (node:internal/streams/readable:512:3)
+      at Readable.push (node:internal/streams/readable:392:5)
+      at Pipe.onStreamRead (node:internal/stream_base_commons:191:23)

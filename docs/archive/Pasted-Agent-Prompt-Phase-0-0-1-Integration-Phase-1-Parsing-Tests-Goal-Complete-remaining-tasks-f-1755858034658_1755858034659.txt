@@ -1,0 +1,240 @@
+Agent Prompt — “Phase 0/0.1 Integration + Phase 1 Parsing & Tests”
+
+Goal: Complete remaining tasks for Phase 0 & 0.1 integration; implement Phase 1 intent/symptom enhancements; add tests; run validation; then update docs/LAYER_DEVELOPMENT_PLAN.md with statuses and dates.
+
+Scope & Style
+
+Use ESM (.js) with JSDoc types (no TS).
+
+Keep core logic server-side. No PHI in logs.
+
+Insert an empty line between sections in any updated Markdown for readability.
+
+1) Phase 0 Integration (Wire-up)
+
+Integrate with LLM API
+
+File: client/src/llm-api.js[x] (use actual filename)
+
+Before sending to the model, call:
+
+import { routeMedicalQuery } from "./lib/router.js";
+const layer = await routeMedicalQuery(userInput);
+// persist layer.enhancedPrompt + metadata into your request path
+
+
+Ensure the downstream model uses layer.prompt?.enhancedPrompt || layer.enhancedPrompt.
+
+Integrate constants
+
+Export ENUMS from lib/layer-context.js and surface them where needed:
+
+export { ENUMS } from "./layer-context.js";
+
+
+Replace hard-coded strings in UI or API with ENUMS.TRIAGE_FLAGS, etc., where applicable.
+
+Acceptance Criteria
+
+Manual call path works end-to-end (no runtime errors).
+
+routeMedicalQuery() output is persisted/visible in logs or dev console without PHI.
+
+2) Phase 0.1 Testing & Validation
+
+Schema Validator Unit Tests
+
+Add: tests/layer-tests/schema-validator.test.js
+
+Cases:
+
+✅ userInput required and trimmed
+
+✅ strict=false allows partial ctx
+
+✅ strict=true requires intent.type, symptoms[], triage.level
+
+✅ Aggregates multiple errors with paths
+
+Integration Tests for LayerContext
+
+Add: tests/layer-tests/context-integration.test.js
+
+Cases:
+
+Create → Update → Validate flow
+
+Validation hooks at key steps (pre-intent, post-intent, post-triage)
+
+Validation Hooks
+
+In lib/router.js, add validation checkpoints after each phase with strict=false, but one final strict check before returning.
+
+Acceptance Criteria
+
+npm test (or vitest/jest) green.
+
+On validation failure, router returns safe fallback and logs scoped, non-PHI error.
+
+3) Phase 1: Intent & Symptom Recognition Enhancements
+
+Duration Parsing
+
+File: lib/intent-parser.js
+
+Add lightweight extractor supporting common forms:
+
+“for 3 days”, “since last week”, “2 weeks”, “x hours”
+
+Normalize to a string field duration on symptom objects.
+
+Condition Types
+
+Map obvious lexical cues to CONDITION_TYPES:
+
+“anxiety, depression” → MENTAL
+
+“sprain, cut, acute pain” → ACUTE
+
+“asthma, diabetes, chronic” → CHRONIC
+
+default to PHYSICAL or UNSPECIFIED
+
+Regex + Keyword + Synonyms
+
+Implement a dual-pass engine:
+
+Regex for structured patterns (e.g., /(?:for|x)\s+\d+\s+(?:days?|weeks?|hours?)/i)
+
+Keyword sets with synonyms (e.g., “SOB, dyspnea” → shortness of breath).
+
+Fallback NLP Handler
+
+If regex/keywords fail, return a generic symptom_check intent with UNSPECIFIED fields (ensures robustness).
+
+Contextual Correction
+
+Disambiguate examples:
+
+“cold feet” → limb discomfort, not “common cold”.
+
+“chest/breast” → prefer CHEST when pain + cardiopulmonary terms appear.
+
+Implement with neighborhood windows (few words before/after) to set location and meaning.
+
+Acceptance Criteria
+
+Parser returns at least one structured symptom for common inputs.
+
+duration, location, conditionType, and negated fields are set when inferable.
+
+4) Phase 1 Test Suite
+
+Intent Parser Tests (tests/intent-parser.test.js)
+
+Edge terms & ambiguities:
+
+“cold feet” vs “common cold”
+
+“chest pain” vs “breast tenderness”
+
+Duration:
+
+“for 3 days”, “since last week”, “2 weeks”
+
+Condition types:
+
+“I have anxiety”, “I’ve had diabetes for years”, “I sprained my ankle today”
+
+Negation patterns:
+
+“No fever”
+
+“I’m not diabetic”
+
+“Never had chest pain”
+
+Synonyms:
+
+“SOB”, “dyspnea”, “short of breath” → normalize to shortness of breath
+
+Router E2E Tests (tests/layer-tests/router.test.js)
+
+Happy path: returns structured payload with disclaimers
+
+High-risk path: chest pain triggers urgent/emergency
+
+Fallback path: injected error forces safe generic response
+
+Acceptance Criteria
+
+All tests pass; coverage includes negation, duration, ambiguity, and risk triggers.
+
+5) Commands to Run
+
+Lint & type docs:
+
+npx eslint client/ --ext .js,.jsx
+
+
+Tests:
+
+npm test
+# or: npx vitest run
+
+
+Quick manual check (optional dev route):
+
+GET /api/layer/preview?input=I have chest pain for 3 days → returns urgent/emergency, duration detected.
+
+6) Docs Update (once tests pass)
+
+Update docs/LAYER_DEVELOPMENT_PLAN.md
+
+Mark:
+
+Phase 0: “Test and integrate with existing llm-api.jsx system” → COMPLETED (Aug 22, 2025)
+
+“Integrate constants with existing system” → COMPLETED (Aug 22, 2025)
+
+Phase 0.1 testing items → COMPLETED (Aug 22, 2025)
+
+Phase 1 items implemented → PARTIALLY COMPLETED (Aug 22, 2025) (list exactly what’s done)
+
+Add a Progress Summary section with bullet points, each on its own line, with empty lines between sections.
+
+Changelog Snippet (append to docs/LAYER_PROGRESS.md)
+
+Date, files changed, tests added, and a one-line risk note.
+
+Acceptance Criteria
+
+Markdown renders cleanly with empty lines separating paragraphs/sections.
+
+Status boxes reflect accurate completion with dates.
+
+7) Commit Plan
+
+Commit 1: feat(layer): wire Interpretation Layer into llm-api and export ENUMS
+
+Commit 2: test(schema): add schema validator + context integration tests
+
+Commit 3: feat(parser): add duration, condition types, synonyms, fallback NLP, contextual correction
+
+Commit 4: test(parser+router): add comprehensive Phase 1 and E2E tests
+
+Commit 5: docs(layer): update LAYER_DEVELOPMENT_PLAN.md and LAYER_PROGRESS.md
+
+8) Non‑Functional Guardrails
+
+Keep validation lightweight in prod; enable strict=true only in tests.
+
+No PHI in logs; redact user text when logging.
+
+Ensure router always returns a stable payload, even on failures.
+
+Output Required:
+
+All tests green.
+
+A short summary (10–12 lines), followed by the updated docs/LAYER_DEVELOPMENT_PLAN.md diff block (sections updated), respecting the empty line between sections rule.

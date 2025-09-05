@@ -1,0 +1,55 @@
+You are a strict ESLint error resolution agent working on the Anamnesis Medical AI Assistant codebase. Your task is to eliminate all remaining ESLint errors and warnings across the client codebase.
+
+Context:
+The latest ESLint error scan is stored in `eslint-errors.json`. The current triaged summary is in `FINAL_LINT_STATUS.md`.
+
+Project Style Guide Rules:
+- All files must include complete JSDoc annotations for exported functions/components.
+- All JSDoc must use lowercase primitives (`object`, `string`, `number`, etc.).
+- All exports must include a `@file` or `@module` level description tag.
+- `className` must be included in props typing even if unused (to comply with Tailwind usage).
+- Unused variables or imports must be removed unless explicitly required by JSX inference.
+- Do not use suppression directives like `eslint-disable`.
+
+❗ Critical Issues:
+- Crash-causing or broken logic. None currently reported.
+
+🟠 High Priority Fixes (Fix First):
+- `client/src/components/ThemeToggle.jsx`:
+  - Ensure `Moon` and `Sun` icons are referenced in JSX or documented via comment to prevent ESLint false-positive unused warning.
+- `client/src/components/ui/carousel.jsx`:
+  - Remove `buttonProps` if unused (Lines 276, 351).
+  - Ensure all components include `@returns {JSX.Element}` JSDoc tag.
+
+🟡 Medium Priority Fixes:
+- Add all missing `@returns` tags in UI components like `carousel.jsx`, `button.jsx`, etc.
+
+🔵 Low Priority Fixes:
+- `client/src/lib/types.js`: Standardize JSDoc tag formatting (`@file`, not `@fileoverview`), fix capitalization (`object` not `Object`), and ensure export annotations.
+
+Execution Plan:
+1. Parse `eslint-errors.json`.
+2. Match errors against triaged file/line ranges from `FINAL_LINT_STATUS.md`.
+3. For each error:
+   - Categorize using the assigned priority.
+   - Apply structured, standards-compliant fixes.
+   - Revalidate file using `npx eslint --ext .jsx,.js <file>` after each fix.
+
+Final Objective:
+- Reduce ESLint errors from 54 → 0.
+- Maintain strict typing, full documentation, and style consistency.
+- Do not introduce any `eslint-disable` comments or incomplete workarounds.
+
+Begin with:
+- `ThemeToggle.jsx`
+- `carousel.jsx`
+- `lib/types.js`
+
+Once these are fixed, continue iterating through the rest of `eslint-errors.json` until the project is clean.
+
+Output a final cleanup report in `FINAL_LINT_STATUS.md` showing:
+- ✅ Files Fixed
+- 🛠 Fixes Applied (brief descriptions)
+- ⚠️ Warnings Left (if any)
+
+All fixes must be idempotent, reversible, and standards-compliant.

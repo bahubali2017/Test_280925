@@ -1,0 +1,87 @@
+🛠️ OBJECTIVE:
+Prepare the MVP AI module for secure integration with the external Admin Dashboard. Implement all backend infrastructure needed for status reporting, real-time monitoring, and future administrative observability.
+
+🎯 KEY GOALS:
+- Expose system health and AI session stats via `/api/system/status`
+- Secure all admin endpoints with token-based auth middleware
+- Enable WebSocket for real-time flagged session monitoring
+- Support future diagnostics, metrics, and logging access
+- Enforce CORS, logging, and rate-limiting policies for admin access
+
+✅ TASKS TO EXECUTE:
+
+1. ✅ Create GET `/api/system/status`
+   - Responds with JSON: `{ status, version, uptime, ai_active_sessions, flagged_sessions, latency_ms, timestamp }`
+   - Calculates uptime using process start time
+   - Adds latency ping check to internal AI logic
+   - Include system build/version from environment or static string
+
+2. ✅ Create GET `/api/admin/ai-metrics` (optional for future use)
+   - Responds with session analytics:
+     ```json
+     {
+       "total_sessions": 2134,
+       "avg_session_duration": 94,
+       "success_rate": 98.4,
+       "error_rate": 1.6,
+       "flagged": 12
+     }
+     ```
+   - Reads from internal AI session log/cache
+
+3. ✅ Create shared auth middleware: `adminAuthMiddleware.ts`
+   - Validates `Authorization: Bearer <ADMIN_TOKEN>` or a signed JWT
+   - Rejects requests with missing or invalid credentials (401 Unauthorized)
+   - Apply to `/api/system/status`, `/api/admin/*`, and WebSocket admin stream
+
+4. ✅ Create WebSocket server `/ws/admin`
+   - Authenticated via initial token in query or headers
+   - Broadcasts:
+     - `session_started`
+     - `session_flagged`
+     - `session_ended`
+     - `error_occurred`
+   - Heartbeat message every 30s for keepalive
+   - Graceful disconnection handling + reconnection logic in client
+
+5. ✅ Enable CORS for Admin Dashboard
+   - Whitelist: `https://admin.anamnesis.health`
+   - Allow only GET/POST/OPTIONS
+   - Set `Access-Control-Allow-Headers` for Authorization
+
+6. ✅ Add IP rate limiter for `/api/system/status` and `/api/admin/*`
+   - Prevent abuse from open dashboard tabs or bots
+   - E.g., 10 req/min per IP (configurable)
+
+7. ✅ Add logging for admin accesses
+   - Log all calls to `/api/system/status`, `/api/admin/*`, and `/ws/admin`
+   - Include: timestamp, path, result status, admin token or hashed IP
+
+8. ✅ Document endpoints and WebSocket events in `/docs/admin-monitoring.md`
+   - Include JSON examples, auth method, and expected response
+   - Describe how the Admin Dashboard will consume the endpoints and events
+
+🧪 FINAL VALIDATION:
+- Test access with correct and incorrect tokens
+- Simulate a flagged session and ensure it's pushed to `/ws/admin`
+- Check `/api/system/status` returns proper uptime/stats
+- Confirm CORS and rate-limiting policies behave correctly
+- Lint all new files (no ESLint errors or any types)
+
+🔐 SECURITY NOTE:
+No endpoints should expose internal stack traces or data if the token is invalid.
+Ensure WebSocket connections close with code 4001 for unauthorized clients.
+
+🌐 DEPLOYMENT NOTE:
+Allow endpoint access over Replit HTTPS preview or custom domains for external testing.
+Expose `/api/system/status` for validation by the Admin Dashboard once deployed.
+
+📁 FILES TO CREATE / MODIFY:
+- `routes/system-status.ts` ✅
+- `routes/admin-metrics.ts` ✅
+- `middleware/adminAuthMiddleware.ts` ✅
+- `websocket/adminMonitoring.ts` ✅
+- `docs/admin-monitoring.md` ✅
+- `utils/uptimeTracker.ts` ✅
+- Update `server/index.ts` to register routes and WebSocket
+

@@ -1,0 +1,457 @@
+Agent Prompt — “Phase 0 + 0.1 Implementation Sprint”
+
+Implement the Layered Interpretation System foundation with progressive validation and runnable stubs.
+
+Create the files exactly as below (ESM imports with .js extensions).
+
+Ensure routeMedicalQuery() returns a stable, standardized object even if deeper phases are stubbed.
+
+Enforce progressive schema validation (strict=false default; strict=true for tests).
+
+No PHI in logs. Use logger with scoped categories.
+
+Add a minimal Express route example (commented) to exercise the pipeline.
+
+All files must be ESLint‑clean and fully JSDoc‑typed.
+
+Files to add
+lib/constants.js
+/** Core enums/constants used across the Interpretation Layer. */
+
+export const TRIAGE_FLAGS = Object.freeze({
+  EMERGENCY: "emergency",
+  URGENT: "urgent",
+  NON_URGENT: "non_urgent",
+});
+
+export const SEVERITY_TAGS = Object.freeze({
+  MILD: "mild",
+  MODERATE: "moderate",
+  SEVERE: "severe",
+  UNSPECIFIED: "unspecified",
+});
+
+export const CONDITION_TYPES = Object.freeze({
+  ACUTE: "acute",
+  CHRONIC: "chronic",
+  MENTAL: "mental",
+  PHYSICAL: "physical",
+  UNSPECIFIED: "unspecified",
+});
+
+export const BODY_LOCATIONS = Object.freeze({
+  CHEST: "chest",
+  HEAD: "head",
+  ABDOMEN: "abdomen",
+  LIMB: "limb",
+  GENERAL: "general",
+  UNSPECIFIED: "unspecified",
+});
+
+lib/utils/logger.js
+/**
+ * Environment-aware logger with scoped categories.
+ * Never log PHI or raw user text at info/warn/error levels.
+ */
+
+/**
+ * @typedef {"debug"|"info"|"warn"|"error"} LogLevel
+ */
+
+/**
+ * @param {string} scope
+ */
+export function createLogger(scope = "layer") {
+  const level = (process.env.LOG_LEVEL || "info").toLowerCase();
+
+  /** @param {LogLevel} lvl @param {any[]} args */
+  function log(lvl, ...args) {
+    const order = ["debug", "info", "warn", "error"];
+    if (order.indexOf(lvl) < order.indexOf(level)) return;
+    const ts = new Date().toISOString();
+    // eslint-disable-next-line no-console
+    console[lvl === "debug" ? "log" : lvl](`[${ts}] [${scope}] [${lvl}]`, ...args);
+  }
+
+  return {
+    debug: (...a) => log("debug", ...a),
+    info:  (...a) => log("info", ...a),
+    warn:  (...a) => log("warn", ...a),
+    error: (...a) => log("error", ...a),
+    child(childScope) { return createLogger(`${scope}:${childScope}`); },
+  };
+}
+
+export const adminAccessLogger = createLogger("admin-remote-access");
+
+lib/utils/schema-validator.js
+/**
+ * Lightweight schema validator for progressive checks.
+ */
+
+export class ValidationError extends Error {
+  /**
+   * @param {string} message
+   * @param {{path?: string, code?: string}} [meta]
+   */
+  constructor(message, meta = {}) {
+    super(message);
+    this.name = "ValidationError";
+    this.path = meta.path || "";
+    this.code = meta.code || "VALIDATION_ERROR";
+  }
+}
+
+/**
+ * @param {unknown} v
+ * @returns {v is string}
+ */
+export function isNonEmptyString(v) {
+  return typeof v === "string" && v.trim().length > 0;
+}
+
+/**
+ * @param {unknown} v
+ * @returns {v is number}
+ */
+export function isFiniteNumber(v) {
+  return typeof v === "number" && Number.isFinite(v);
+}
+
+/**
+ * @template T
+ * @param {unknown} v
+ * @param {(x:any)=>x is T} predicate
+ * @returns {v is T[]}
+ */
+export function isArrayOf(v, predicate) {
+  return Array.isArray(v) && v.every(predicate);
+}
+
+/**
+ * Progressive validator.
+ * @param {any} ctx
+ * @param {{strict?: boolean}} [opts]
+ * @returns {{ok: true} | {ok: false, errors: ValidationError[]}}
+ */
+export function validateLayerSchema(ctx, opts = {}) {
+  const strict = !!opts.strict;
+  /** @type {ValidationError[]} */
+  const errors = [];
+
+  if (!isNonEmptyString(ctx?.userInput)) {
+    errors.push(new ValidationError("userInput must be a non-empty string", { path: "userInput" }));
+  }
+
+  if (strict) {
+    if (!ctx?.intent || !isNonEmptyString(ctx.intent.type)) {
+      errors.push(new ValidationError("intent.type must be a non-empty string", { path: "intent.type" }));
+    }
+    if (!Array.isArray(ctx?.symptoms)) {
+      errors.push(new ValidationError("symptoms must be an array", { path: "symptoms" }));
+    }
+    if (!ctx?.triage || !isNonEmptyString(ctx.triage.level)) {
+      errors.push(new ValidationError("triage.level must be a non-empty string", { path: "triage.level" }));
+    }
+  }
+
+  return errors.length ? { ok: false, errors } : { ok: true };
+}
+
+lib/layer-context.js
+import { validateLayerSchema } from "./utils/schema-validator.js";
+import { TRIAGE_FLAGS, SEVERITY_TAGS, CONDITION_TYPES, BODY_LOCATIONS } from "./constants.js";
+
+/**
+ * @typedef {Object} Symptom
+ * @property {string} name
+ * @property {keyof typeof BODY_LOCATIONS} [location]
+ * @property {keyof typeof SEVERITY_TAGS} [severity]
+ * @property {string} [duration] // normalized text e.g. "3 days", "2 weeks"
+ * @property {boolean} [negated] // true if user denies the symptom
+ */
+
+/**
+ * @typedef {Object} Intent
+ * @property {string} type // e.g., "symptom_check", "followup", "general_info"
+ * @property {number} [confidence] // 0..1
+ */
+
+/**
+ * @typedef {Object} Triage
+ * @property {keyof typeof TRIAGE_FLAGS} level
+ * @property {boolean} isHighRisk
+ * @property {string[]} [reasons]
+ */
+
+/**
+ * @typedef {Object} LayerContext
+ * @property {string} userInput
+ * @property {Intent} [intent]
+ * @property {Symptom[]} [symptoms]
+ * @property {Triage} [triage]
+ * @property {{ systemPrompt?: string, enhancedPrompt?: string }} [prompt]
+ * @property {{ processingTime?: number, intentConfidence?: number, bodySystem?: string }} [metadata]
+ */
+
+/** @returns {LayerContext} */
+export function createLayerContext(userInput) {
+  return {
+    userInput: String(userInput ?? "").trim(),
+    intent: undefined,
+    symptoms: [],
+    triage: undefined,
+    prompt: {},
+    metadata: {},
+  };
+}
+
+/**
+ * @param {LayerContext} ctx
+ * @param {Partial<LayerContext>} patch
+ * @returns {LayerContext}
+ */
+export function updateLayerContext(ctx, patch) {
+  return Object.assign(ctx, patch);
+}
+
+/**
+ * Validate context progressively.
+ * @param {LayerContext} ctx
+ * @param {{strict?: boolean}} [opts]
+ * @returns {{ok: true} | {ok: false, errors: import("./utils/schema-validator.js").ValidationError[]}}
+ */
+export function validateLayerContext(ctx, opts) {
+  return validateLayerSchema(ctx, opts);
+}
+
+export const ENUMS = { TRIAGE_FLAGS, SEVERITY_TAGS, CONDITION_TYPES, BODY_LOCATIONS };
+
+rules/atd-conditions.json
+{
+  "red_flags": [
+    {
+      "pattern": "chest pain",
+      "triage": "emergency",
+      "reason": "Possible acute coronary syndrome or other life-threatening causes",
+      "advice": "Call emergency services immediately. Seek urgent medical attention."
+    },
+    {
+      "pattern": "shortness of breath",
+      "triage": "urgent",
+      "reason": "Potential cardiopulmonary compromise",
+      "advice": "Seek urgent evaluation. If severe or sudden, treat as emergency."
+    },
+    {
+      "pattern": "severe headache with vision changes",
+      "triage": "urgent",
+      "reason": "Risk of neurologic emergency",
+      "advice": "Urgent in-person assessment recommended."
+    }
+  ],
+  "durations_of_concern": [
+    { "pattern": "over 2 weeks", "triage": "non_urgent", "note": "Consider evaluation for persistent symptoms." }
+  ]
+}
+
+lib/nlp/negation-detector.js (stub)
+/**
+ * Flag negations like "no fever", "not diabetic".
+ * @param {string} text
+ * @returns {(phrase: string)=>boolean} predicate to check if a phrase is negated in the text
+ */
+export function makeNegationPredicate(text) {
+  const t = ` ${String(text).toLowerCase()} `;
+  return (phrase) => {
+    const p = String(phrase).toLowerCase();
+    // naive window: look for "no/without/not" within 3 words before the phrase
+    const idx = t.indexOf(` ${p} `);
+    if (idx < 0) return false;
+    const window = t.slice(Math.max(0, idx - 40), idx); // ~3-5 words back
+    return /\b(no|not|without|never)\b/.test(window);
+  };
+}
+
+lib/intent-parser.js (stub)
+import { BODY_LOCATIONS, SEVERITY_TAGS, CONDITION_TYPES } from "./constants.js";
+import { makeNegationPredicate } from "./nlp/negation-detector.js";
+
+/**
+ * Very small starter parser to unblock Phase 0/0.1 end-to-end flow.
+ * @param {string} userInput
+ * @returns {{ intent: import("./layer-context.js").Intent, symptoms: import("./layer-context.js").Symptom[] }}
+ */
+export function parseIntent(userInput) {
+  const text = String(userInput || "").trim();
+  const neg = makeNegationPredicate(text);
+  /** @type {import("./layer-context.js").Symptom[]} */
+  const symptoms = [];
+
+  // naive examples — expand in Phase 1
+  if (/chest/i.test(text)) symptoms.push({ name: "chest pain", location: "CHEST", severity: SEVERITY_TAGS.UNSPECIFIED, negated: neg("chest pain") });
+  if (/headache/i.test(text)) symptoms.push({ name: "headache", location: "HEAD", severity: SEVERITY_TAGS.UNSPECIFIED, negated: neg("headache") });
+
+  /** @type {import("./layer-context.js").Intent} */
+  const intent = { type: "symptom_check", confidence: 0.6 };
+
+  // normalize locations to keys
+  symptoms.forEach(s => {
+    if (s.location && BODY_LOCATIONS[s.location]) return;
+    if (/chest/i.test(text)) s.location = "CHEST";
+    else if (/head/i.test(text)) s.location = "HEAD";
+    else s.location = "UNSPECIFIED";
+    if (!s.severity) s.severity = SEVERITY_TAGS.UNSPECIFIED;
+    if (!("negated" in s)) s.negated = false;
+  });
+
+  return { intent, symptoms };
+}
+
+lib/triage-checker.js (stub)
+import { TRIAGE_FLAGS } from "./constants.js";
+import atd from "../rules/atd-conditions.json" assert { type: "json" };
+
+/**
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {import("./layer-context.js").Triage}
+ */
+export function performTriage(ctx) {
+  const text = ctx.userInput.toLowerCase();
+  const reasons = [];
+
+  let level = TRIAGE_FLAGS.NON_URGENT;
+  for (const rf of atd.red_flags) {
+    if (text.includes(rf.pattern)) {
+      if (rf.triage === "emergency") { level = TRIAGE_FLAGS.EMERGENCY; reasons.push(rf.reason); break; }
+      if (rf.triage === "urgent" && level !== TRIAGE_FLAGS.EMERGENCY) { level = TRIAGE_FLAGS.URGENT; reasons.push(rf.reason); }
+    }
+  }
+
+  const isHighRisk = level !== TRIAGE_FLAGS.NON_URGENT;
+  return { level, isHighRisk, reasons };
+}
+
+lib/prompt-enhancer.js (stub)
+/**
+ * Build a safe, structured prompt bundle for the downstream LLM.
+ * @param {import("./layer-context.js").LayerContext} ctx
+ * @returns {{ systemPrompt: string, enhancedPrompt: string }}
+ */
+export function enhancePrompt(ctx) {
+  const redFlagHeader = ctx.triage?.isHighRisk
+    ? "IMPORTANT: Potential high-risk scenario detected. Prioritize safety and urgent guidance.\n\n"
+    : "";
+
+  const summary = [
+    `User input: ${ctx.userInput}`,
+    ctx.symptoms?.length ? `Symptoms: ${ctx.symptoms.map(s => s.name).join(", ")}` : "Symptoms: unspecified",
+    ctx.triage ? `Triage: ${ctx.triage.level}` : "Triage: pending",
+  ].join("\n");
+
+  const systemPrompt =
+`You are a cautious medical information assistant.
+- Provide evidence-aligned, educational guidance only.
+- Do NOT give definitive diagnoses; use "possible", "may", "consider".
+- Always include: (1) Summary, (2) Risk flags, (3) Next steps, (4) When to seek care, (5) Brief sources tier.
+- If high-risk, show ATD (Advice to Doctor) first with urgency level.`;
+
+  const enhancedPrompt = `${redFlagHeader}${summary}\n\nPlease analyze and respond within the above safety policy.`;
+
+  return { systemPrompt, enhancedPrompt };
+}
+
+lib/router.js
+import { createLogger } from "./utils/logger.js";
+import { createLayerContext, updateLayerContext, validateLayerContext } from "./layer-context.js";
+import { parseIntent } from "./intent-parser.js";
+import { performTriage } from "./triage-checker.js";
+import { enhancePrompt } from "./prompt-enhancer.js";
+
+const log = createLogger("layer:router");
+
+/**
+ * Orchestrate the Interpretation Layer for a single user query.
+ * Always returns a standardized payload; on error, falls back safely.
+ *
+ * @param {string} userInput
+ * @returns {Promise<{
+ *   userInput: string,
+ *   enhancedPrompt: string,
+ *   isHighRisk: boolean,
+ *   disclaimers: string[],
+ *   suggestions: string[],
+ *   metadata: { processingTime: number, intentConfidence?: number, triageLevel?: string, bodySystem?: string }
+ * }>}
+ */
+export async function routeMedicalQuery(userInput) {
+  const t0 = performance.now?.() ?? Date.now();
+  const ctx = createLayerContext(userInput);
+
+  try {
+    // Progressive validation (non-strict for Phase 0)
+    const v0 = validateLayerContext(ctx, { strict: false });
+    if (!v0.ok) {
+      log.warn("validation:phase0_failed", { errors: v0.errors.map(e => ({ path: e.path, code: e.code })) });
+      throw new Error("Invalid input");
+    }
+
+    // Phase 1 (stub): intent + symptoms
+    const { intent, symptoms } = parseIntent(ctx.userInput);
+    updateLayerContext(ctx, { intent, symptoms });
+
+    // Phase 2 (stub): triage
+    const triage = performTriage(ctx);
+    updateLayerContext(ctx, { triage });
+
+    // Phase 3 (stub): prompt enhancement
+    const { systemPrompt, enhancedPrompt } = enhancePrompt(ctx);
+    updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
+
+    const t1 = performance.now?.() ?? Date.now();
+    const processingTime = Math.round(t1 - t0);
+
+    return {
+      userInput: ctx.userInput,
+      enhancedPrompt,
+      isHighRisk: !!ctx.triage?.isHighRisk,
+      disclaimers: ctx.triage?.isHighRisk
+        ? ["This may warrant urgent medical attention. This assistant is informational and not a diagnostic tool."]
+        : ["This assistant is informational and not a diagnostic tool."],
+      suggestions: ctx.triage?.isHighRisk
+        ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
+        : ["Can you share duration, severity, and associated symptoms?", "Any triggers or relieving factors?"],
+      metadata: {
+        processingTime,
+        intentConfidence: intent?.confidence,
+        triageLevel: ctx.triage?.level,
+      },
+    };
+  } catch (err) {
+    const t1 = performance.now?.() ?? Date.now();
+    const processingTime = Math.round(t1 - t0);
+    log.error("router_failed", { message: String(err?.message || err), safe: true });
+
+    // Safe fallback payload
+    return {
+      userInput: String(userInput || ""),
+      enhancedPrompt: "System fallback: Provide general, low-risk educational guidance and suggest appropriate next steps. Include red-flag checklist and advise contacting a clinician if concerned.",
+      isHighRisk: false,
+      disclaimers: ["The enhanced AI layer encountered an issue. This is a general response and not a diagnosis."],
+      suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
+      metadata: { processingTime },
+    };
+  }
+}
+
+/* Optional Express route for quick manual testing:
+
+import express from "express";
+const app = express();
+app.use(express.json());
+app.get("/api/layer/preview", async (req, res) => {
+  const input = String(req.query.input || "");
+  const result = await routeMedicalQuery(input);
+  res.json(result);
+});
+app.listen(5055, () => console.log("Layer preview on :5055"));
+*/

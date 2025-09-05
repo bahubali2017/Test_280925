@@ -1,0 +1,66 @@
+🤖 AGENT PROMPT — SSE Abort Delay Fix (Minimal Surgical Update)
+
+🎯 Goal  
+Eliminate the remaining 15–17 second idle delay when clicking **Stop AI**, by ensuring **immediate upstream cancellation** and **socket destruction** without changing business logic.
+
+---
+
+🔧 Target Files
+- `server/llm/stream-model.js` (or wherever `streamModel()` lives)
+- `server/routes/sse.js` (or equivalent SSE handler)
+
+---
+
+✅ Required Fixes  
+
+1. **Hard Abort in `finally` block**
+   - After `reader.cancel()` and `resp.body.cancel()`, add:
+     ```js
+     try { resp.body?.pipe?.(new PassThrough()).destroy(); } catch {}
+     try { resp.body = null; } catch {}
+     ```
+   - This guarantees the HTTP body is destroyed even if provider ignores abort.
+
+2. **Socket Destroy on Close**
+   - Inside SSE route:
+     ```js
+     req.on("close", () => {
+       if (!closed) {
+         closed = true;
+         ac.abort();
+         res.end();
+         req.socket?.destroy();   // 💥 force kill socket
+       }
+     });
+     ```
+
+3. **Ensure No Double Writes**
+   - Before every `res.write()`, check `if (!closed)`.
+
+4. **Keep Business Logic Untouched**
+   - Do NOT modify prompt shaping, pipeline order, or message formatting.
+   - Only update lifecycle management of the stream.
+
+---
+
+📋 Expected Outcome  
+- Clicking **Stop AI** now terminates:
+  - ✅ Client UI immediately updates (already working)  
+  - ✅ Server aborts upstream fetch within <1s  
+  - ✅ No 15–17s idle wait  
+- SSE stays stable with no regressions to normal streaming.
+
+---
+
+⚠️ Validation Steps  
+1. Start a long-running query.  
+2. Click **Stop AI** mid-stream.  
+3. Confirm:  
+   - Network tab → request marked **(canceled)** instantly  
+   - Server logs show `[SSE-ABORTED]` within 1s  
+   - No further 15–17s delay  
+
+---
+
+📌 Deliverable  
+Return the **full updated implementation** of `streamModel()` and SSE route handler, with these safeguards applied, formatted as a drop-in replacement file.  

@@ -1,0 +1,61 @@
+INITIATION PROMPT – PHASE 2
+
+Begin **Phase 2** of the Anamnesis – Medical AI Assistant MVP project.
+
+🎯 Objective:
+Implement a complete mock authentication system using **JavaScript with JSDoc annotations**. The goal is to allow users to log in with **any email and password**, and restrict access to the chat route unless authenticated.
+
+🛑 Do NOT connect to any real database.  
+✅ Use `localStorage` to simulate session persistence.  
+✅ All code should be in **JavaScript** (in `.tsx` files for JSX compatibility).  
+✅ Use full **JSDoc annotations**.  
+✅ ESLint must pass with no disable comments or errors.
+
+---
+
+📁 Tasks:
+
+1. **Create `useAuth.tsx` hook**
+   - Manages auth state (`isAuthenticated`, `user`, `login()`, `logout()`)
+   - Uses `localStorage` to persist state
+   - Fully annotated with JSDoc
+
+2. **Create `AuthProvider.tsx`**
+   - React context provider for global auth state
+   - Wraps the entire app in `main.tsx`
+   - Redirects users based on auth status
+
+3. **Create `ProtectedRoute.tsx`**
+   - Custom route component
+   - Blocks access to `/chat` if not authenticated
+   - Redirects to `/login`
+
+4. **Update `LoginPage.tsx`**
+   - Replace placeholder with:
+     - Full login form (`email`, `password`)
+     - Submit button labeled **"Sign In"**
+     - Basic validation (non-empty inputs)
+     - Calls `login()` on submit and redirects to `/chat`
+   - Tailwind styling, center-aligned layout
+   - Add heading "Medical AI Assistant" and a `Sign In` subheading
+   - Display Anamnesis logo if available
+
+5. **Add Logout Logic**
+   - Optional logout button in `ChatPage.tsx` that calls `logout()` and redirects to `/login`
+
+---
+
+✅ Completion Criteria:
+
+- Users can "log in" with any email + password
+- Auth state is saved in `localStorage`
+- Protected routes redirect unauthenticated users to `/login`
+- `LoginPage.tsx` uses a clean Tailwind-styled form with:
+  - `email` input with proper `type="email"` and label
+  - `password` input with `type="password"`
+  - Submit button labeled **"Sign In"**
+- All components and functions have JSDoc annotations
+- ESLint passes with **zero errors or disable directives**
+- Entire phase implemented in `.tsx` files using JavaScript
+
+This phase should not expand scope — **no database, no real auth**, no profile pages.

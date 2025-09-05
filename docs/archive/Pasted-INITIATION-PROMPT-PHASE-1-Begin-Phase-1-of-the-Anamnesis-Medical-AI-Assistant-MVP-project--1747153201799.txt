@@ -1,0 +1,65 @@
+INITIATION PROMPT – PHASE 1
+
+Begin Phase 1 of the Anamnesis – Medical AI Assistant MVP project.
+
+The objective is to set up the full project structure using **modern JavaScript (ESM)**, with no TypeScript, and prepare the foundation for a clean, well-documented UI.
+
+🛑 Do not use TypeScript.  
+✅ Use JavaScript with **JSDoc annotations** where needed.  
+✅ Ensure the code is fully **ESLint compliant** from the start.
+
+---
+
+🎯 Phase 1 Objective:
+Set up the project structure and initialize the frontend for Anamnesis - Medical AI Assistant MVP with:
+
+- Vite + React (JavaScript)
+- Tailwind CSS (with custom theme)
+- ESLint (strict config, no disables)
+- Wouter (for routing)
+- Folder structure for components, pages, hooks, lib
+
+---
+
+📁 Folder Structure to Scaffold:
+- `/client/`
+  - `index.css` (global CSS, pasted below)
+  - `/components/`
+  - `/pages/` → with `LoginPage.js` and `ChatPage.js`
+  - `/hooks/`
+  - `/lib/`
+  - `/assets/`
+
+---
+
+🧩 Tailwind Setup:
+Use this exact Tailwind configuration and global CSS from the Anamnesis project to match styling and theme.
+
+✅ `tailwind.config.ts` and `index.css` are already provided and imported.
+
+🌀 Tailwind should include:
+- HSL-based token system
+- Animations (`accordion-up/down`)
+- Responsive container utilities (`container-md`, `container-lg`)
+- WCAG-compliant accessibility styles
+
+---
+
+🔧 Tasks:
+- Scaffold Vite React app in JavaScript (no TypeScript)
+- Configure Tailwind with provided config
+- Install and configure ESLint for JavaScript + React
+- Add Wouter and set up basic routing (`/login`, `/chat`)
+- Create empty `LoginPage.js` and `ChatPage.js`
+- Convert any existing TypeScript schemas to JSDoc typedefs in `lib/types.js`
+
+---
+
+✅ Completion Criteria:
+- Project structure is correctly set up
+- Tailwind config and CSS are working
+- ESLint passes with **no warnings or errors**
+- Routing works and pages render cleanly
+- All files are in **JavaScript with JSDoc**
+
+DO NOT implement logic yet — this phase is only for scaffold and environment setup.

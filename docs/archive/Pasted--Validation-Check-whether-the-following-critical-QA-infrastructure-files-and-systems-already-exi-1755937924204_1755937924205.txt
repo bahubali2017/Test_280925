@@ -1,0 +1,101 @@
+🔍 Validation:
+
+Check whether the following critical QA infrastructure files and systems already exist and are complete:
+
+docs/LAYER_TEST_PLAN.md
+
+Must include detailed test layer specifications for:
+
+Metrics Evaluator
+
+Feedback Handler
+
+Improvement Suggester
+
+Version Tracker
+
+Integration QA Test Flow
+
+Test Case Library
+
+Confirm the presence of a well-structured directory or file that includes diverse medical triage test cases for:
+
+Emergency
+
+Urgent
+
+Non-urgent
+
+Mental health
+
+Invalid/ambiguous entries
+
+Automated Testing Logic
+
+Check that all test cases have:
+
+Expected outcome assertions
+
+Simulated input scenarios
+
+Logging of failed cases with detailed error context
+
+Regression Test Suite
+
+Ensure there's a mechanism to re-run critical cases after each model or logic update.
+
+Must include detection for changes in triage behavior.
+
+✅ If Missing or Incomplete:
+
+Perform the following:
+
+📄 1. Create docs/LAYER_TEST_PLAN.md
+
+Structure:
+
+## QA Layer Test Plan
+
+### 1. Metrics Evaluator
+- Test: Accuracy calculation from triage logs
+- Input: [TP, TN, FP, FN sets]
+- Expected: Precision, recall, F1 scores
+
+### 2. Feedback Handler
+- Test: Feedback with all valid/invalid user fields
+- Input: JSON with query, accuracy, type
+- Expected: Validation and storage
+
+...
+
+🧪 2. Create Test Case Library
+
+File: client/src/tests/qa/test-cases.json or similar
+
+Include at least 10 real-world test cases covering emergency, urgent, non-urgent, and safety edge cases.
+
+⚙️ 3. Implement Automated Test Executor
+
+Add a test runner that:
+
+Loads test cases
+
+Feeds them into the QA pipeline
+
+Verifies output matches expected triage levels and responses
+
+Reports failures with meaningful logs
+
+♻️ 4. Add Regression Suite to QA Test Runner
+
+Ensure qa.test.js or a new test runner supports rerunning all historical test cases to detect unexpected changes.
+
+Output: pass/fail summary + diff in output if any behavior changes
+
+✅ Confirm completion of all the above and provide summary with:
+
+✅ Test file locations
+
+✅ docs/LAYER_TEST_PLAN.md preview
+
+✅ Pass rate from current test run

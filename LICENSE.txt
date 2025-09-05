@@ -1,0 +1,71 @@
+ANAMNESIS MEDICAL AI ASSISTANT - PROPRIETARY LICENSE
+================================================================
+
+Copyright (c) 2025 Anamnesis Health Technologies
+All Rights Reserved
+
+IMPORTANT: This software contains proprietary AI technology, medical algorithms, 
+and intellectual property. READ CAREFULLY BEFORE USE.
+
+LICENSE TERMS AND CONDITIONS
+============================
+
+1. GRANT OF LIMITED LICENSE
+   This license grants you a limited, non-exclusive, non-transferable right to 
+   use the Anamnesis Medical AI Assistant ("Software") for personal, 
+   non-commercial purposes only.
+
+2. RESTRICTIONS
+   You MAY NOT:
+   - Reverse engineer, decompile, disassemble, or attempt to derive source code
+   - Create derivative works, modifications, or improvements
+   - Distribute, sublicense, rent, lease, or sell the Software
+   - Use the Software for commercial purposes without explicit written consent
+   - Extract, copy, or reproduce AI training data or algorithms
+   - Use AI-generated outputs to train other AI systems or language models
+   - Remove or alter any proprietary notices, watermarks, or identification
+
+3. AI OUTPUT RESTRICTIONS
+   All AI-generated content contains cryptographic watermarks and is subject to:
+   - Prohibition on use for training machine learning models
+   - Requirement to maintain attribution to Anamnesis platform
+   - Restriction on commercial redistribution or resale
+   - Audit trail logging for compliance verification
+
+4. MEDICAL DISCLAIMER
+   This Software is NOT a substitute for professional medical advice, diagnosis, 
+   or treatment. Always seek advice from qualified healthcare providers.
+
+5. INTELLECTUAL PROPERTY
+   All algorithms, models, medical knowledge bases, and AI technologies remain 
+   the exclusive property of Anamnesis Health Technologies. Any unauthorized 
+   use constitutes intellectual property theft.
+
+6. MONITORING AND ENFORCEMENT
+   Usage is monitored via automated systems. Violations will result in:
+   - Immediate license termination
+   - Legal action for damages and injunctive relief
+   - Reporting to relevant authorities
+
+7. TERMINATION
+   This license terminates immediately upon violation of any terms. Upon 
+   termination, you must cease all use and destroy all copies.
+
+8. GOVERNING LAW
+   This license is governed by Czech Republic law and international 
+   intellectual property treaties. Legal disputes subject to Prague jurisdiction.
+
+9. NO WARRANTY
+   Software provided "AS IS" without warranty. Use at your own risk.
+
+10. CONTACT
+    For licensing inquiries: legal@anamnesis.health
+    For violations: security@anamnesis.health
+
+BY USING THIS SOFTWARE, YOU ACKNOWLEDGE THAT YOU HAVE READ AND AGREE 
+TO BE BOUND BY THESE TERMS.
+
+VIOLATION OF THIS LICENSE CONSTITUTES COPYRIGHT INFRINGEMENT AND 
+TRADE SECRET MISAPPROPRIATION SUBJECT TO CIVIL AND CRIMINAL PENALTIES.
+
+Last Updated: September 2025
