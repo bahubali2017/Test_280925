@@ -60,6 +60,20 @@ export async function setupVite(app) {
 export function serveStatic(app) {
   const clientDist = path.resolve(__dirname, "../dist/public");
   
+  // Add error handling for missing files
+  if (!fs.existsSync(clientDist)) {
+    console.error(`[ERROR] Static files directory does not exist: ${clientDist}`);
+    console.log(`[INFO] Current working directory: ${process.cwd()}`);
+    console.log(`[INFO] __dirname: ${__dirname}`);
+    console.log(`[INFO] Available directories:`);
+    try {
+      const dirs = fs.readdirSync(path.resolve(__dirname, "../"));
+      dirs.forEach(dir => console.log(`  - ${dir}`));
+    } catch (e) {
+      console.error(`[ERROR] Failed to list directories: ${e.message}`);
+    }
+  }
+  
   // Serve static files from the dist/public directory
   app.use(express.static(clientDist));
   
@@ -68,7 +82,19 @@ export function serveStatic(app) {
     // Skip API routes
     if (req.path.startsWith("/api")) return;
     
+    const indexPath = path.join(clientDist, "index.html");
+    
+    // Check if index.html exists before serving
+    if (!fs.existsSync(indexPath)) {
+      console.error(`[ERROR] index.html not found at: ${indexPath}`);
+      return res.status(404).send(`
+        <h1>Application Not Found</h1>
+        <p>The static files could not be located.</p>
+        <p>Expected path: ${indexPath}</p>
+      `);
+    }
+    
     // Serve index.html for all other routes
-    res.sendFile(path.join(clientDist, "index.html"));
+    res.sendFile(indexPath);
   });
 }

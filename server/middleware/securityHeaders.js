@@ -61,10 +61,9 @@ export function productionCorsMiddleware(req, res, next) {
   
   // Production domain whitelist
   const productionDomains = [
-    'https://mvp.anamnesis.health',
+    'https://mvp.anamnesis.mvp',
     'https://anamnesis.health',
-    'https://admin.anamnesis.health',
-    'https://dashboard.anamnesis.health'
+    'https://admin.anamnesis.health'
   ];
   
   // Development domains (only in development)
