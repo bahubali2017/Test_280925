@@ -65,11 +65,26 @@ app.use((req, res, next) => {
 app.use(securityLoggingMiddleware);
 app.use(productionCorsMiddleware);
 app.use(securityHeadersMiddleware);
-app.use(buildFingerprintMiddleware);
+
+// Apply buildFingerprintMiddleware only to HTML responses, not static assets
+app.use((req, res, next) => {
+  // Skip buildFingerprintMiddleware for static assets
+  if (req.path.startsWith('/assets/') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return next();
+  }
+  buildFingerprintMiddleware(req, res, next);
+});
+
 app.use(productionRateLimit);
 
-// Mount honeypot routes before other routes
-app.use(honeypotRoutes);
+// Mount honeypot routes before other routes (but skip for assets)
+app.use((req, res, next) => {
+  // Skip honeypot for static assets
+  if (req.path.startsWith('/assets/') || req.path.match(/\.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+    return next();
+  }
+  honeypotRoutes(req, res, next);
+});
 
 // Global error handler
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
@@ -115,37 +130,11 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   watchdog.start();
 })();
 
-// Mount chat routes at /api
-app.use("/api", chatRoutes);
-
-// Mount feedback routes at /api/feedback
-const feedbackRouter = createFeedbackRoutes();
-app.use("/api/feedback", feedbackRouter);
-
-// Mount admin routes with rate limiting
-app.use("/api/system", systemStatusRateLimit, systemStatusRoutes);
-app.use("/api/admin", adminEndpointRateLimit, adminMetricsRoutes);
-
-console.log("✅ Chat routes mounted at /api/chat, /api/chat/stream");
-console.log("✅ Feedback routes mounted at /api/feedback");
-console.log("✅ Admin routes mounted at /api/system, /api/admin");
-
 // Set up server with clean route mounting
 const httpServer = createServer(app);
 
 // Initialize admin WebSocket server
 adminWebSocketServer.initialize(httpServer);
-
-// Add debug routes directly to app for /admin paths  
-const debugRouter = express.Router();
-debugRouter.get('/debug/:sessionId', async (req, res) => {
-  res.json({ 
-    debug: true, 
-    sessionId: req.params.sessionId,
-    message: "Debug endpoint active" 
-  });
-});
-app.use("/admin", debugRouter);
 
 // Start server
 (() => {
@@ -154,7 +143,7 @@ app.use("/admin", debugRouter);
   
   console.log(`[BOOT] Server running in ${NODE_ENV} mode on port ${PORT}`);
   
-  // Then set up Vite in development (after API routes) or serve static files in production
+  // Set up Vite in development or serve static files in production FIRST
   if (NODE_ENV === "development") {
     setupVite(app)
       .then(() => {
@@ -182,22 +171,25 @@ app.use("/admin", debugRouter);
         process.exit(1);
       });
   } else {
-    // Serve static files in production
+    // Serve static files in production FIRST - before any API routes
     console.log(`[PRODUCTION] Serving static files from dist/public/`);
     
-    // Serve ALL static files from dist/public
-    app.use(express.static(path.resolve(__dirname, "../dist/public")));
+    // Serve ALL static files from dist/public - this must come BEFORE API routes
+    // When running from dist/index.js, __dirname is 'dist', so we need './public'
+    const staticPath = path.resolve(__dirname, "./public");
+    console.log(`[PRODUCTION] Static path resolved to: ${staticPath}`);
+    app.use(express.static(staticPath));
     
-    // Explicitly handle assets
-    app.get("/assets/*", (req, res) => {
-      res.sendFile(path.resolve(__dirname, "../dist/public", req.path));
-    });
-    
-    // Ensure index.html is always the fallback for SPA routing
-    app.get("*", (req, res) => {
-      // Skip API routes
-      if (req.path.startsWith("/api")) return;
-      res.sendFile(path.resolve(__dirname, "../dist/public/index.html"));
+    // Explicitly handle assets with proper error handling and correct path
+    app.get("/assets/*", (req, res, next) => {
+      const filePath = path.resolve(staticPath, req.path.substring(1)); // Remove leading slash
+      console.log(`[ASSETS] Serving ${req.path} from ${filePath}`);
+      res.sendFile(filePath, (err) => {
+        if (err) {
+          console.error(`Asset not found: ${filePath}`);
+          next(); // Let it fall through to catch-all
+        }
+      });
     });
 
     const startServer = (port: number) => {
@@ -222,6 +214,44 @@ app.use("/admin", debugRouter);
     };
 
     startServer(PORT);
+  }
+  
+  // Mount API routes AFTER static file serving is set up
+  // Mount chat routes at /api
+  app.use("/api", chatRoutes);
+
+  // Mount feedback routes at /api/feedback
+  const feedbackRouter = createFeedbackRoutes();
+  app.use("/api/feedback", feedbackRouter);
+
+  // Mount admin routes with rate limiting
+  app.use("/api/system", systemStatusRateLimit, systemStatusRoutes);
+  app.use("/api/admin", adminEndpointRateLimit, adminMetricsRoutes);
+
+  console.log("✅ Chat routes mounted at /api/chat, /api/chat/stream");
+  console.log("✅ Feedback routes mounted at /api/feedback");
+  console.log("✅ Admin routes mounted at /api/system, /api/admin");
+
+  // Add debug routes directly to app for /admin paths  
+  const debugRouter = express.Router();
+  debugRouter.get('/debug/:sessionId', async (req, res) => {
+    res.json({ 
+      debug: true, 
+      sessionId: req.params.sessionId,
+      message: "Debug endpoint active" 
+    });
+  });
+  app.use("/admin", debugRouter);
+  
+  // Add SPA fallback routing for production (MUST be last)
+  if (NODE_ENV === "production") {
+    app.get("*", (req, res, next) => {
+      // Skip API routes  
+      if (req.path.startsWith("/api") || req.path.startsWith("/admin")) {
+        return next();
+      }
+      res.sendFile(path.resolve(__dirname, "./public/index.html"));
+    });
   }
 })();
 
