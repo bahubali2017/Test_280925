@@ -178,7 +178,21 @@ app.use("/admin", debugRouter);
   } else {
     // Serve static files in production
     console.log(`[PRODUCTION] Serving static files from dist/public/`);
-    serveStatic(app);
+    
+    // Serve ALL static files from dist/public
+    app.use(express.static(path.resolve(__dirname, "../dist/public")));
+    
+    // Explicitly handle assets
+    app.get("/assets/*", (req, res) => {
+      res.sendFile(path.resolve(__dirname, "../dist/public", req.path));
+    });
+    
+    // Ensure index.html is always the fallback for SPA routing
+    app.get("*", (req, res) => {
+      // Skip API routes
+      if (req.path.startsWith("/api")) return;
+      res.sendFile(path.resolve(__dirname, "../dist/public/index.html"));
+    });
 
     const startServer = (port: number) => {
       try {
