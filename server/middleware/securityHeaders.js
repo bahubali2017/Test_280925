@@ -15,21 +15,22 @@ export function securityHeadersMiddleware(req, res, next) {
     res.header('Strict-Transport-Security', 'max-age=31536000; includeSubDomains; preload');
   }
   
-  // Temporarily disable CSP for debugging white screen issue
-  // Content Security Policy (CSP)
-  // const cspPolicy = [
-  //   "default-src 'self'",
-  //   "script-src 'self' 'unsafe-inline' 'unsafe-eval'", // Relaxed for React development
-  //   "style-src 'self' 'unsafe-inline'",
-  //   "img-src 'self' data: https:",
-  //   "font-src 'self' data:",
-  //   "connect-src 'self' https://api.deepseek.com https://*.supabase.co wss:",
-  //   "frame-ancestors 'none'",
-  //   "base-uri 'self'",
-  //   "form-action 'self'"
-  // ].join('; ');
-  
-  // res.header('Content-Security-Policy', cspPolicy);
+  // Content Security Policy (CSP) - Replit-compatible
+  if (isProduction) {
+    const cspPolicy = [
+      "default-src 'self'",
+      "script-src 'self' 'unsafe-inline' https://replit.com", // Allow Replit scripts
+      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+      "img-src 'self' data: https:",
+      "font-src 'self' data: https://fonts.gstatic.com",
+      "connect-src 'self' https://api.deepseek.com https://*.supabase.co wss: ws:",
+      "frame-ancestors 'none'",
+      "base-uri 'self'",
+      "form-action 'self'"
+    ].join('; ');
+    
+    res.header('Content-Security-Policy', cspPolicy);
+  }
   
   // Prevent clickjacking
   res.header('X-Frame-Options', 'DENY');
