@@ -11,6 +11,13 @@ deploymentTarget = "autoscale"
 build = ["npm", "run", "build"]
 run = ["npm", "run", "start"]
 
+[deployment.env]
+NODE_ENV = "production"
+REPLIT_DEPLOYMENT = "1"
+
+[[deployment.responseHeaders]]
+"Content-Security-Policy" = "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; connect-src 'self' https://api.deepseek.com https://*.supabase.co wss: ws:; frame-ancestors 'none'; base-uri 'self'; form-action 'self'"
+
 [[ports]]
 localPort = 5000
 externalPort = 80
