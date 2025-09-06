@@ -79,13 +79,23 @@ export function productionCorsMiddleware(req, res, next) {
   let allowedOrigins = [];
   
   if (isProduction) {
-    // In production, allow the current origin if it's from a Replit deployment OR custom domain
-    if (origin && (origin.includes('.replit.dev') || origin.includes('.replit.app') || origin.includes('anamnesis.health'))) {
+    // In production, allow Replit domains, custom domain, AND localhost for webview
+    const allowedDomains = [
+      '.replit.dev',
+      '.replit.app', 
+      'anamnesis.health',
+      'mvp.anamnesis.health',
+      'localhost',
+      '127.0.0.1'
+    ];
+    
+    if (origin && allowedDomains.some(domain => origin.includes(domain))) {
       allowedOrigins = [origin];
       console.log(`[SECURITY] Production CORS: Allowing authorized origin: ${origin}`);
     } else {
-      allowedOrigins = [];
-      console.log(`[SECURITY] Production CORS: Strict mode - only authorized domains allowed`);
+      // Still allow requests without origin (like direct server requests)
+      allowedOrigins = origin ? [] : ['*'];
+      console.log(`[SECURITY] Production CORS: ${origin ? `Blocked unauthorized origin: ${origin}` : 'Allowing server requests'}`);
     }
   } else {
     allowedOrigins = [...productionDomains, ...developmentDomains];
@@ -103,8 +113,8 @@ export function productionCorsMiddleware(req, res, next) {
   }
   
   // Set CORS headers for allowed origins
-  if (!isProduction || allowedOrigins.includes(origin)) {
-    res.header('Access-Control-Allow-Origin', isProduction ? origin : '*');
+  if (!isProduction || allowedOrigins.includes(origin) || allowedOrigins.includes('*')) {
+    res.header('Access-Control-Allow-Origin', isProduction ? (origin || '*') : '*');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
     res.header('Access-Control-Allow-Headers', 
       'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Role, X-Session-ID'
