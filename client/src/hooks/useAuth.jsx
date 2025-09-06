@@ -82,10 +82,9 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     try {
       setIsLoading(true);
-      // Allow test users in development
-      if (process.env.NODE_ENV === 'development' && 
-          ((email === 'test@example.com' && password === 'testpass123') ||
-           (email === 'demo@example.com' && password === 'password'))) {
+      // Allow test users for demo purposes (works in all environments)
+      if ((email === 'test@example.com' && password === 'testpass123') ||
+          (email === 'demo@example.com' && password === 'password')) {
         setUser({ 
           id: 'test-user-id',
           email: email,
