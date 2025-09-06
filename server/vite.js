@@ -33,7 +33,7 @@ export async function setupVite(app) {
     throw new Error(`Vite root directory does not exist: ${root}`);
   }
   
-  // Create Vite server
+  // Create Vite server with proper custom domain support
   const vite = await createServer({
     root,
     server: {
@@ -41,13 +41,18 @@ export async function setupVite(app) {
       hmr: {
         server: app
       },
-      // Using true for allowedHosts to accept all hosts including custom domains
+      // Allow all hosts for custom domains
       allowedHosts: true,
-      // Explicitly allow custom domains and Replit domains
       host: '0.0.0.0',
-      origin: 'http://localhost:5000'
+      // Remove origin restriction to allow custom domains
+      cors: {
+        origin: true,
+        credentials: true
+      }
     },
-    appType: "spa"
+    appType: "spa",
+    // Ensure proper base path handling
+    base: '/'
   });
   
   // Use Vite middleware
