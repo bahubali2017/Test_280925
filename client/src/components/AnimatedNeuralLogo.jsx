@@ -1,6 +1,7 @@
 // @ts-nocheck
 import React from 'react';
-import neuralLogo from '../assets/neural-logo.png';
+// Use public path for logo to ensure it loads in all environments
+const neuralLogo = '/neural-logo.png';
 
 /**
  * Animated Neural Logo component with water ripple effects
