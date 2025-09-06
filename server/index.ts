@@ -6,6 +6,11 @@ import express from "express";
 import dotenv from "dotenv";
 import { createServer } from "http";
 import path from "path";
+import { fileURLToPath } from "url";
+
+// ES module dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 import chatRoutes from "./routes.js";
 import { createFeedbackRoutes } from "./feedback-routes.js";
 import { log, setupVite, serveStatic } from "./vite.js";
