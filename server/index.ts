@@ -152,7 +152,6 @@ app.use("/admin", debugRouter);
   if (NODE_ENV === "development") {
     setupVite(app)
       .then(() => {
-
         const startServer = (port: number) => {
           try {
             httpServer.listen(port, '0.0.0.0', () => {
