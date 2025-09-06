@@ -171,34 +171,11 @@ adminWebSocketServer.initialize(httpServer);
     const staticPath = path.resolve(process.cwd(), "dist/public");
     console.log(`[PRODUCTION] Serving static files from: ${staticPath}`);
 
-    // ✅ CRITICAL: Explicit MIME type enforcement for assets
-    app.use(express.static(staticPath, {
-      setHeaders: (res, path) => {
-        if (path.endsWith('.js')) {
-          res.setHeader('Content-Type', 'application/javascript');
-        } else if (path.endsWith('.css')) {
-          res.setHeader('Content-Type', 'text/css');
-        } else if (path.endsWith('.png')) {
-          res.setHeader('Content-Type', 'image/png');
-        } else if (path.endsWith('.html')) {
-          res.setHeader('Content-Type', 'text/html');
-        }
-      }
-    }));
+    app.use(express.static(staticPath));
 
-    // Explicit asset handler with correct MIME types
+    // Explicit asset handler
     app.get("/assets/*", (req, res, next) => {
       const filePath = path.resolve(staticPath, req.path.substring(1));
-      
-      // Set correct MIME type based on file extension
-      if (req.path.endsWith('.js')) {
-        res.setHeader('Content-Type', 'application/javascript');
-      } else if (req.path.endsWith('.css')) {
-        res.setHeader('Content-Type', 'text/css');
-      } else if (req.path.endsWith('.png')) {
-        res.setHeader('Content-Type', 'image/png');
-      }
-      
       res.sendFile(filePath, (err) => {
         if (err) {
           console.error(`Asset not found: ${filePath}`);

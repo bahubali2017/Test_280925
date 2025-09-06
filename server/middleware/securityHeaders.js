@@ -79,13 +79,13 @@ export function productionCorsMiddleware(req, res, next) {
   let allowedOrigins = [];
   
   if (isProduction) {
-    // In production, allow the current origin if it's from a Replit deployment
-    if (origin && (origin.includes('.replit.dev') || origin.includes('.replit.app'))) {
+    // In production, allow the current origin if it's from a Replit deployment OR custom domain
+    if (origin && (origin.includes('.replit.dev') || origin.includes('.replit.app') || origin.includes('anamnesis.health'))) {
       allowedOrigins = [origin];
-      console.log(`[SECURITY] Production CORS: Allowing Replit deployment origin: ${origin}`);
+      console.log(`[SECURITY] Production CORS: Allowing authorized origin: ${origin}`);
     } else {
       allowedOrigins = [];
-      console.log(`[SECURITY] Production CORS: Strict mode - only Replit deployments allowed`);
+      console.log(`[SECURITY] Production CORS: Strict mode - only authorized domains allowed`);
     }
   } else {
     allowedOrigins = [...productionDomains, ...developmentDomains];
