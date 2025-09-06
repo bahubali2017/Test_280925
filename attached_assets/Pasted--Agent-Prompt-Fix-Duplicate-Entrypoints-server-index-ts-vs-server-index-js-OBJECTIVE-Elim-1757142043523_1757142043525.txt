@@ -1,0 +1,95 @@
+📋 Agent Prompt — Fix Duplicate Entrypoints (server/index.ts vs server/index.js)
+# 🎯 OBJECTIVE
+Eliminate duplicate backend entrypoints (`server/index.ts` and `server/index.js`) and unify into a single clean authoritative file.  
+Ensure correct dev vs prod handling, proper Vite middleware, static serving, and correct ports/paths for Replit + production.
+
+---
+
+## 🔍 AUDIT
+1. Compare `server/index.ts` and `server/index.js` line by line.
+2. Identify overlapping logic:
+   - Express + Vite dev middleware (for `vite dev`)
+   - Production static serving from `dist/public`
+   - Route mounting (`server/routes.js` or `server/routes/index.ts`)
+   - Security middleware (CORS, headers, rate limiting)
+   - WebSocket / SSE initialization
+   - Logging, crash monitoring
+3. Detect conflicts (different port definitions, middleware duplication).
+
+---
+
+## 🛠️ ACTIONS
+1. **Keep `server/index.ts` as the authoritative entrypoint**  
+   - Remove `server/index.js` after migration (unless it’s an auto-generated `dist/` build file).  
+   - If `server/index.js` has unique logic, merge it into `server/index.ts`.
+
+2. **Implement clean environment switch** inside `server/index.ts`:  
+   ```ts
+   if (process.env.NODE_ENV === "production") {
+     // Serve production build
+     app.use(express.static(path.resolve(__dirname, "../dist/public")));
+     app.get("*", (_req, res) => {
+       res.sendFile(path.resolve(__dirname, "../dist/public/index.html"));
+     });
+   } else {
+     // Dev mode with Vite middleware
+     const vite = await vite.createServer({
+       server: { middlewareMode: true },
+       appType: "custom"
+     });
+     app.use(vite.middlewares);
+   }
+
+
+Preserve all features:
+
+Ensure WebSocket or SSE handlers are still attached.
+
+Retain all middlewares (security, session, logging).
+
+Keep all existing routes (/api/*) mounted.
+
+Ensure correct port binding:
+
+Respect process.env.PORT || 5000
+
+Log environment mode on startup:
+
+[BOOT] Server running in ${process.env.NODE_ENV} mode on port ${PORT}
+
+
+Delete duplicate file:
+
+Remove server/index.js from repo root.
+
+Ensure .gitignore excludes compiled .js outputs in server/ (only keep dist/).
+
+Final integrity check:
+
+Run in NODE_ENV=production → should serve dist/public/index.html with bundled assets.
+
+Run in NODE_ENV=development → should start Vite dev server + Express.
+
+Verify /api/chat/stream works in both environments.
+
+Confirm Stop AI, auth, and legal pages still render correctly.
+
+📁 EXPECTED FINAL STRUCTURE
+server/
+  index.ts    ✅ single authoritative entrypoint
+  routes.js   ✅ main router
+  ...
+dist/public/  ✅ production build output
+.gitignore    ✅ excludes server/index.js (stale duplicates)
+
+✅ SUCCESS CRITERIA
+
+Only one entrypoint (server/index.ts) exists.
+
+No more server/index.js conflicts.
+
+White screen fixed permanently (React loads bundled assets in production).
+
+API, SSE streaming, and routing all function as before.
+
+Clean dev/prod switch without regressions.
