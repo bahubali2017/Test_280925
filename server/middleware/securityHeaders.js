@@ -60,11 +60,10 @@ export function productionCorsMiddleware(req, res, next) {
   const isProduction = process.env.NODE_ENV === 'production';
   const origin = req.headers.origin;
   
-  // Production domain whitelist
+  // Production domain whitelist - will be configured dynamically by Replit
   const productionDomains = [
-    'https://mvp.anamnesis.health',
-    'https://anamnesis.health',
-    'https://admin.anamnesis.health'
+    // Domains will be auto-detected from request headers in production
+    // Removed hardcoded domains to prevent deployment conflicts
   ];
   
   // Development domains (only in development)
@@ -78,8 +77,14 @@ export function productionCorsMiddleware(req, res, next) {
   let allowedOrigins = [];
   
   if (isProduction) {
-    allowedOrigins = productionDomains;
-    console.log(`[SECURITY] Production CORS: Only allowing ${productionDomains.join(', ')}`);
+    // In production, allow the current origin if it's from a Replit deployment
+    if (origin && (origin.includes('.replit.dev') || origin.includes('.replit.app'))) {
+      allowedOrigins = [origin];
+      console.log(`[SECURITY] Production CORS: Allowing Replit deployment origin: ${origin}`);
+    } else {
+      allowedOrigins = [];
+      console.log(`[SECURITY] Production CORS: Strict mode - only Replit deployments allowed`);
+    }
   } else {
     allowedOrigins = [...productionDomains, ...developmentDomains];
     console.log(`[SECURITY] Development CORS: Allowing all domains`);
