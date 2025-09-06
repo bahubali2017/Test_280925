@@ -41,8 +41,11 @@ export async function setupVite(app) {
       hmr: {
         server: app
       },
-      // Using true for allowedHosts to accept all hosts
-      allowedHosts: true
+      // Using true for allowedHosts to accept all hosts including custom domains
+      allowedHosts: true,
+      // Explicitly allow custom domains and Replit domains
+      host: '0.0.0.0',
+      origin: 'http://localhost:5000'
     },
     appType: "spa"
   });
