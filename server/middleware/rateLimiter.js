@@ -256,24 +256,32 @@ export function chatEndpointRateLimit(req, res, next) {
 }
 
 /**
- * Strict production rate limiting
+ * Adaptive rate limiting - strict in production, lenient in development
  */
 export function productionRateLimit(req, res, next) {
   const isProduction = process.env.NODE_ENV === 'production';
-  if (!isProduction) {
-    return next();
-  }
-  
   const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
   
-  // Very strict limits for production
-  if (!rateLimiter.checkIPLimit(clientIP, 100, 300000)) { // 100 requests per 5 minutes
-    console.warn(`[RATE-LIMIT] Production rate limit exceeded for IP ${clientIP}`);
-    return res.status(429).json({
-      success: false,
-      message: 'Rate limit exceeded. Please wait before making more requests.',
-      retryAfter: 300
-    });
+  if (isProduction) {
+    // Strict limits for production
+    if (!rateLimiter.checkIPLimit(clientIP, 100, 300000)) { // 100 requests per 5 minutes
+      console.warn(`[RATE-LIMIT] Production rate limit exceeded for IP ${clientIP}`);
+      return res.status(429).json({
+        success: false,
+        message: 'Rate limit exceeded. Please wait before making more requests.',
+        retryAfter: 300
+      });
+    }
+  } else {
+    // Very lenient limits for development
+    if (!rateLimiter.checkIPLimit(clientIP, 1000, 60000)) { // 1000 requests per minute in dev
+      console.warn(`[RATE-LIMIT] Development rate limit exceeded for IP ${clientIP}`);
+      return res.status(429).json({
+        success: false,
+        message: 'Rate limit exceeded (development mode).',
+        retryAfter: 60
+      });
+    }
   }
   
   next();
