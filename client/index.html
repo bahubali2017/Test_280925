@@ -129,17 +129,18 @@
         // Simple service worker registration without forced reloads
         window.addEventListener('load', async () => {
           try {
-            // Only register service worker if not already registered
+            // Force service worker update by adding cache-busting parameter
+            const registration = await navigator.serviceWorker.register('/sw.js?v=2.1.2', {
+              scope: '/',
+              updateViaCache: 'none'
+            });
+            
+            // Check for existing registration and force update
             const existingRegistration = await navigator.serviceWorker.getRegistration('/');
             if (existingRegistration) {
-              console.log('✅ Service Worker already registered');
-              return;
+              await existingRegistration.update();
+              console.log('🔄 Service Worker updated');
             }
-            
-            // Register new service worker
-            const registration = await navigator.serviceWorker.register('/sw.js', {
-              scope: '/'
-            });
             console.log('✅ Service Worker registered successfully:', registration.scope);
             
             // Check for updates
