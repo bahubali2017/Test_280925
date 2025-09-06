@@ -1,0 +1,86 @@
+🛠️ Agent Prompt — Fix White Screen Deployment & Domain Conflicts
+
+Goal:
+Investigate and fix why the deployed MVP shows a white screen in production. Ensure domain configuration and code protection are correctly aligned for Replit deployment.
+
+🔍 Investigation Tasks
+
+Check Build Artifacts
+
+Inspect /dist/public after npm run build.
+
+Confirm index.html, JS, CSS are generated with correct paths.
+
+Verify vite.config.ts root and outDir are correct for Replit serving.
+
+Check Browser Console Errors
+
+Look for blocked scripts, CSP violations, or CORS errors in the deployed app.
+
+Identify if obfuscation or security headers are preventing script execution.
+
+Check Replit Deployment Logs
+
+Ensure static files are served correctly from dist/public.
+
+Verify API endpoints (e.g., /api/chat/stream) return proper responses.
+
+Check Domain Config
+
+Remove conflicting GoDaddy CNAME records.
+
+Use default Replit URL until deployment works without a white screen.
+
+After confirming success, re-add Custom Domain via Replit only.
+
+🛠️ Fix Tasks
+
+Align Build Config
+
+Ensure vite.config.ts uses:
+
+export default defineConfig({
+  base: "./", // relative paths for Replit
+  build: { outDir: "dist/public" }
+});
+
+
+This prevents absolute path issues that cause blank pages.
+
+Relax Security Headers for Test
+
+Temporarily disable CSP or obfuscator plugin in vite.config.ts.
+
+Deploy again to confirm if white screen disappears.
+
+If resolved, reintroduce security layer with correct CSP rules.
+
+Simplify Domain Setup
+
+Only use Replit’s default URL for now.
+
+Once confirmed working, add mvp.anamnesis.health in Replit → Deploy → Custom Domains.
+
+Add DNS record in GoDaddy only after Replit shows you the exact CNAME.
+
+Final Verification
+
+Confirm mvp.anamnesis.health loads app with no white screen.
+
+Test AI chat + Stop AI streaming.
+
+Confirm legal pages /legal render correctly.
+
+Check admin WebSocket connection is unaffected.
+
+✅ Success Criteria
+
+App loads without white screen in Replit environment.
+
+No script/CSP/CORS errors in browser console.
+
+Only one domain authority (Replit Custom Domain).
+
+AI chat + Stop AI work as expected in production.
+
+Code protection layer re-enabled without breaking UI.
