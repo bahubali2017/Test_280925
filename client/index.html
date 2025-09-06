@@ -125,8 +125,7 @@
         head.appendChild(newFavicon);
       }
 
-      // Temporarily disable service worker for debugging
-      if (false && 'serviceWorker' in navigator) {
+      if ('serviceWorker' in navigator) {
         // Simple service worker registration without forced reloads
         window.addEventListener('load', async () => {
           try {
