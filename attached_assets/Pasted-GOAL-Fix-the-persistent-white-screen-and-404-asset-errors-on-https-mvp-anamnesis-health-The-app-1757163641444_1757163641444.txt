@@ -1,0 +1,46 @@
+GOAL: Fix the persistent white screen and 404 asset errors on https://mvp.anamnesis.health.
+The app must serve correctly from both the Replit domain and the custom domain.
+
+TASKS:
+1. Audit current build & server setup
+   - Check vite.config.ts → confirm `base: "/"` is set.
+   - Confirm `npm run build` outputs assets in dist/public/assets.
+   - Ensure no relative ./assets/ paths remain in index.html.
+
+2. Fix server/index.ts for production mode
+   - Production mode must serve dist/public/index.html and dist/public/assets/* directly.
+   - Add explicit MIME type headers for `.js` and `.css` responses.
+   - Ensure Express.static points to path.resolve(__dirname, "./public").
+   - Verify catch-all SPA fallback routes all non-API requests to index.html.
+
+3. Deployment adjustments
+   - Force NODE_ENV=production in Replit run command.
+   - Build assets on deployment: `npm run build`.
+   - Run server from dist/index.js instead of Vite middleware.
+   - Confirm Replit deployment environment doesn’t fall back to Vite dev server.
+
+4. Service Worker reset
+   - Update service worker version in client/public/sw.js.
+   - Add `updateViaCache: "none"` to force refresh.
+   - Instruct to clear cached assets when deploying (Application → Clear storage).
+
+5. Verification steps
+   - Test anamnesis-mvp.replit.app → confirm dev build still works.
+   - Test https://mvp.anamnesis.health → confirm production build loads, no 404s.
+   - In DevTools > Network verify:
+     ✅ /assets/index-*.js → 200 OK, Content-Type: application/javascript
+     ✅ /assets/index-*.css → 200 OK, Content-Type: text/css
+     ✅ index.html → 200 OK with correct absolute paths.
+   - In Console verify:
+     ✅ No "MIME type" or "React not defined" errors.
+     ✅ React app initializes, login page renders.
+
+DELIVERABLES:
+- Full corrected server/index.ts with proper production static serving.
+- Updated run/deploy script to ensure build + serve production.
+- Confirmation docs (DEPLOYMENT_FIX.md) explaining what was changed and why.
+
+OUTCOME:
+The custom domain mvp.anamnesis.health must render the full MVP (no white screen).
+All assets should load from /assets with correct MIME types.
+Replit domain continues to work in dev mode.
