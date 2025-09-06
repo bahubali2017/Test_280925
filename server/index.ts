@@ -186,35 +186,64 @@ adminWebSocketServer.initialize(httpServer);
         process.exit(1);
       });
   } else {
-    // ✅ FIXED: Always serve from dist/public relative to project root
-    const staticPath = path.resolve(process.cwd(), "dist/public");
+    // Production mode - serve built static files
+    const staticPath = path.resolve(__dirname, "public");
     console.log(`[PRODUCTION] Serving static files from: ${staticPath}`);
 
-    app.use(express.static(staticPath));
+    // Serve static files with explicit MIME types
+    app.use(express.static(staticPath, {
+      setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.js')) {
+          res.setHeader('Content-Type', 'application/javascript');
+        } else if (filePath.endsWith('.css')) {
+          res.setHeader('Content-Type', 'text/css');
+        } else if (filePath.endsWith('.html')) {
+          res.setHeader('Content-Type', 'text/html');
+        }
+      }
+    }));
 
-    // Explicit asset handler
+    // Explicit /assets/* handler with MIME types
     app.get("/assets/*", (req, res, next) => {
-      const filePath = path.resolve(staticPath, req.path.substring(1));
+      const filePath = path.join(staticPath, req.path);
+      
+      // Set correct MIME type based on file extension
+      if (req.path.endsWith('.js')) {
+        res.setHeader('Content-Type', 'application/javascript');
+      } else if (req.path.endsWith('.css')) {
+        res.setHeader('Content-Type', 'text/css');
+      }
+      
       res.sendFile(filePath, (err) => {
         if (err) {
-          console.error(`Asset not found: ${filePath}`);
-          next();
+          console.error(`[PRODUCTION] Asset not found: ${filePath}`);
+          res.status(404).send('Asset not found');
         }
       });
     });
 
-    // SPA fallback (must be last)
+    // SPA fallback - serve index.html for all non-API routes
     app.get("*", (req, res, next) => {
+      // Skip API and admin routes
       if (req.path.startsWith("/api") || req.path.startsWith("/admin")) {
         return next();
       }
-      res.sendFile(path.join(staticPath, "index.html"));
+      
+      const indexPath = path.join(staticPath, "index.html");
+      res.setHeader('Content-Type', 'text/html');
+      res.sendFile(indexPath, (err) => {
+        if (err) {
+          console.error(`[PRODUCTION] index.html not found: ${indexPath}`);
+          res.status(500).send('Application not found');
+        }
+      });
     });
 
     const startServer = (port: number) => {
       try {
         const server = httpServer.listen(port, "0.0.0.0", () => {
-          console.log(`🚀 Prod server started on port ${port}`);
+          console.log(`🚀 Production server started on port ${port}`);
+          console.log(`📁 Static files served from: ${staticPath}`);
         });
         server.requestTimeout = 10000;
         server.headersTimeout = 12000;
