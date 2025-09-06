@@ -143,11 +143,15 @@ app.use("/admin", debugRouter);
 
 // Start server
 (() => {
+  const NODE_ENV = process.env.NODE_ENV || 'development';
+  const PORT = parseInt(process.env.PORT || '5000', 10);
+  
+  console.log(`[BOOT] Server running in ${NODE_ENV} mode on port ${PORT}`);
+  
   // Then set up Vite in development (after API routes) or serve static files in production
-  if (process.env.NODE_ENV === "development") {
+  if (NODE_ENV === "development") {
     setupVite(app)
       .then(() => {
-        const PORT = parseInt(process.env.PORT || '5000', 10);
 
         const startServer = (port: number) => {
           try {
@@ -174,9 +178,8 @@ app.use("/admin", debugRouter);
       });
   } else {
     // Serve static files in production
+    console.log(`[PRODUCTION] Serving static files from dist/public/`);
     serveStatic(app);
-
-    const PORT = parseInt(process.env.PORT || '5000', 10);
 
     const startServer = (port: number) => {
       try {
