@@ -130,6 +130,25 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
   watchdog.start();
 })();
 
+// Mount API routes BEFORE starting server
+app.use("/api", chatRoutes);
+const feedbackRouter = createFeedbackRoutes();
+app.use("/api/feedback", feedbackRouter);
+app.use("/api/system", systemStatusRateLimit, systemStatusRoutes);
+app.use("/api/admin", adminEndpointRateLimit, adminMetricsRoutes);
+
+console.log("✅ Routes mounted: /api/chat, /api/feedback, /api/system, /api/admin");
+
+const debugRouter = express.Router();
+debugRouter.get("/debug/:sessionId", async (req, res) => {
+  res.json({
+    debug: true,
+    sessionId: req.params.sessionId,
+    message: "Debug endpoint active",
+  });
+});
+app.use("/admin", debugRouter);
+
 // HTTP server
 const httpServer = createServer(app);
 adminWebSocketServer.initialize(httpServer);
@@ -212,25 +231,6 @@ adminWebSocketServer.initialize(httpServer);
     };
     startServer(PORT);
   }
-
-  // Mount API routes AFTER static serving
-  app.use("/api", chatRoutes);
-  const feedbackRouter = createFeedbackRoutes();
-  app.use("/api/feedback", feedbackRouter);
-  app.use("/api/system", systemStatusRateLimit, systemStatusRoutes);
-  app.use("/api/admin", adminEndpointRateLimit, adminMetricsRoutes);
-
-  console.log("✅ Routes mounted: /api/chat, /api/feedback, /api/system, /api/admin");
-
-  const debugRouter = express.Router();
-  debugRouter.get("/debug/:sessionId", async (req, res) => {
-    res.json({
-      debug: true,
-      sessionId: req.params.sessionId,
-      message: "Debug endpoint active",
-    });
-  });
-  app.use("/admin", debugRouter);
 })();
 
 process.on("uncaughtException", (err) => {
