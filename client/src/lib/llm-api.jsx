@@ -639,267 +639,114 @@ return promptParts.join("\n\n");
 * @param {Function} [onStreamingUpdate=null] - Callback for streaming updates
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
-export async function sendMessage(message, history = [], _options = {}, onStreamingUpdate = null) {
+export async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
 // Validate input
 if (!message || typeof message !== "string" || message.trim() === "") {
 throw createAPIError("validation", "Message cannot be empty");
 }
-// Phase 7: Enhanced layered interpretation system with caching and timeout handling
-let layerResult;
-// Check cache first for rapid responses
-const cachedResult = getCachedLayerResult(message);
-if (cachedResult) {
-layerResult = cachedResult;
-} else {
-// No cache hit - process through medical layer with 4-second timeout and real-time updates
-const layerStartTime = Date.now();
-console.debug('[Medical Layer] Processing query:', message.substring(0, 100) + '...');
-// Phase 7: Provide real-time feedback during layer processing
-const layerPromise = (async () => {
-// Simulate progressive status updates for streaming feedback
-if (onStreamingUpdate) {
-setTimeout(() => onStreamingUpdate('', { 
-layerStatus: 'triaging', 
-layerProcessingTime: Date.now() - layerStartTime 
-}), 500);
-setTimeout(() => onStreamingUpdate('', { 
-layerStatus: 'enhancing', 
-layerProcessingTime: Date.now() - layerStartTime 
-}), 1500);
-}
-return await routeMedicalQuery(message);
-})();
-const timeoutPromise = new Promise((_, reject) => 
-setTimeout(() => reject(new Error('Medical layer timeout - falling back to standard processing')), 4000)
-);
-try {
-layerResult = await Promise.race([layerPromise, timeoutPromise]);
-const layerProcessingTime = Date.now() - layerStartTime;
-console.debug('[Medical Layer] Processing complete:', {
-processingTime: layerProcessingTime,
-triageLevel: layerResult?.metadata?.triageLevel,
-isHighRisk: layerResult?.isHighRisk
-});
-// Phase 7: Send final layer completion update
-if (onStreamingUpdate) {
-onStreamingUpdate('', { 
-layerStatus: 'completed',
-layerProcessingTime: layerProcessingTime,
-triageLevel: layerResult?.metadata?.triageLevel,
-isHighRisk: layerResult?.isHighRisk
-});
-}
-// Cache successful results
-setCachedLayerResult(message, layerResult);
-} catch (layerError) {
-console.warn('[Medical Layer] Processing failed or timed out, using fallback:', layerError.message);
-// Phase 7: Enhanced graceful degradation with user-friendly error messaging
-const isTimeout = layerError.message.includes('timeout');
-const fallbackReason = isTimeout 
-? 'Medical analysis took longer than expected - providing standard guidance'
-: 'Specialized medical analysis temporarily unavailable - providing general guidance';
-// Send user-friendly feedback about the fallback
-if (onStreamingUpdate) {
-setTimeout(() => onStreamingUpdate('', { 
-layerStatus: 'fallback',
-fallbackReason: fallbackReason,
-layerProcessingTime: Date.now() - layerStartTime
-}), 100);
-}
-// Phase 7: Enhanced fallback with improved user experience
-layerResult = {
-userInput: message,
-enhancedPrompt: `User input: ${message}\n\nProvide helpful, accurate medical information while emphasizing the importance of professional medical consultation for health concerns. Note: This response uses standard medical guidance.`,
-isHighRisk: false,
-disclaimers: [
-"⚠️ Note: This response uses standard medical guidance.",
-"For specialized medical analysis, please try your question again or consult a healthcare provider.",
-"This information is for educational purposes only and should not replace professional medical advice."
-],
-suggestions: [
-"Should I be concerned about these symptoms?",
-"When should I see a doctor about this?", 
-"Are there any warning signs to watch for?",
-"Consider consulting with a healthcare provider for personalized advice."
-],
-metadata: {
-processingTime: Date.now() - layerStartTime,
-intentConfidence: 0.3,
-triageLevel: "routine",
-fallbackMode: true,
-fallbackReason: fallbackReason,
-queryIntent: {
-isSymptomBased: message.toLowerCase().includes('pain') || message.toLowerCase().includes('symptoms'),
-fallbackUsed: true
-}
-},
-atd: undefined
-};
-}
-}
-// Legacy compatibility: create queryIntent object from layer result
-const queryIntent = {
-isHighRisk: layerResult.isHighRisk,
-isMentalHealthCrisis: layerResult.metadata.triageLevel === "emergency",
-isOffTopic: false, // Layer system handles medical queries only
-containsPII: false, // Layer system filters PHI
-isProfessionalQuery: layerResult.metadata.intentConfidence > 0.7,
-isSymptomBased: layerResult.metadata.intentConfidence > 0.5,
-isChronicCondition: false, // TODO: enhance layer system to detect this
-isPreventionFocused: false, // TODO: enhance layer system to detect this 
-hasColdExtremities: false, // TODO: enhance layer system to detect this
-enhancedPrompt: layerResult.enhancedPrompt,
-disclaimers: layerResult.disclaimers,
-suggestions: layerResult.suggestions
-};
-// Log layer processing metadata (no PHI)
-console.log("Layer processing completed:", {
-processingTime: layerResult.metadata.processingTime,
-triageLevel: layerResult.metadata.triageLevel,
-isHighRisk: layerResult.isHighRisk,
-safe: true // indicates this log contains no PHI
-});
-// Determine if we should use streaming based on callback presence
-const useStreaming = typeof onStreamingUpdate === 'function';
-try {
-// Start timing the request
+
+console.debug('[AI] Sending message directly to backend API:', message.substring(0, 100) + '...');
+
 const startTime = Date.now();
-if (useStreaming) {
-return await handleStreamingRequest(message, history, queryIntent, onStreamingUpdate, startTime);
+const isHighRisk = _containsHighRiskTerms(message);
+
+try {
+// Prepare the request body for the backend API
+const requestBody = {
+message: message.trim(),
+conversationHistory: history,
+isHighRisk: isHighRisk
+};
+
+// Check if streaming is supported and requested
+const shouldStream = onStreamingUpdate && typeof onStreamingUpdate === 'function';
+const endpoint = shouldStream ? '/api/chat/stream' : '/api/chat';
+
+if (shouldStream) {
+// Handle streaming response
+console.debug('[AI] Using streaming endpoint');
+return await handleStreamingResponse(endpoint, requestBody, onStreamingUpdate, options);
 } else {
-// Standard non-streaming request
-return await handleStandardRequest(message, history, queryIntent, startTime);
+// Handle regular response  
+console.debug('[AI] Using standard endpoint');
+const response = await apiRequest('POST', endpoint, requestBody);
+const data = await response.json();
+
+if (!data.success) {
+throw createAPIError('api', data.message || 'API request failed');
+}
+
+const requestTime = Date.now() - startTime;
+return {
+content: data.response,
+metadata: {
+requestTime,
+sessionId: data.metadata?.sessionId,
+isHighRisk: data.metadata?.isHighRisk,
+attemptsMade: data.metadata?.attemptsMade || 1,
+modelName: data.metadata?.modelName || 'deepseek-chat',
+usage: data.usage
+}
+};
 }
 } catch (error) {
-// CRITICAL FIX: Suppress errors for specific conditions
-// 1. Message was already delivered successfully
-// 2. Request was manually aborted by user
-// 3. AbortError which is harmless after successful delivery
-// 4. ReferenceError which can happen during cleanup but is harmless
-if (
-error.messageDelivered === true || 
-(streamAbortController && streamAbortController.signal && streamAbortController.signal.aborted) ||
-error.name === 'AbortError' || 
-error instanceof ReferenceError
-) {
-console.log("Suppressing harmless error:", error);
-return {
-content: error.deliveredContent || "Response received successfully.",
-metadata: {
-status: 'delivered',
-error: false,
-isComplete: true
-}
-};
-}
-console.error("Error in message handling, attempting retry:", error);
-// Try backend with retry mechanism
-try {
-const apiResponse = await retryApiRequest("/api/chat", message, history, queryIntent.isHighRisk || queryIntent.isMentalHealthCrisis, queryIntent);
-return apiResponse;
-} catch (retryError) {
-// Final check - if the message was aborted (especially manually), don't show errors
-if (streamAbortController && streamAbortController.signal && streamAbortController.signal.aborted) {
-console.log("Suppressing retry error - request was aborted");
-return {
-content: "Response received or request cancelled.",
-metadata: {
-status: 'cancelled',
-error: false
-}
-};
-}
-console.error("All backend retries failed, falling back to client-side:", retryError);
-// If the backend endpoint fails or isn't available, fall back to client-side implementation
-try {
-const clientResponse = await sendMessageClientSide(message, history, queryIntent);
-return clientResponse;
-} catch (clientError) {
-// If client-side also fails, throw a user-friendly error
-throw createAPIError(
-clientError.type || "api",
-"Unable to get a response from the AI service. Please try again later.",
-{ originalError: clientError }
-);
-}
-}
-}
+console.error('[AI] Error in sendMessage:', error);
+throw error;
 }
 /**
-* Handles standard non-streaming request
-* @param {string} message - User message
-* @param {Array<{role: string, content: string}>} history - Conversation history
-* @param {QueryIntent} queryIntent - Query intent analysis
-* @param {number} startTime - Request start timestamp
+* Handle streaming response from the API
+* @param {string} endpoint - API endpoint
+* @param {object} requestBody - Request body
+* @param {Function} onStreamingUpdate - Streaming callback
+* @param {object} options - Additional options
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
-async function handleStandardRequest(message, history, queryIntent, startTime) {
-let data;
+async function handleStreamingResponse(endpoint, requestBody, onStreamingUpdate, options) {
+console.debug('[AI] Starting streaming request to', endpoint);
+
 try {
-// First try to use the backend proxy endpoint with explicit content type
-const response = await fetch("/api/chat", {
-method: "POST",
-headers: {
-"Content-Type": "application/json",
-"Accept": "application/json"
-},
-body: JSON.stringify({ 
-message: message,
-conversationHistory: history,
-isHighRisk: queryIntent.isHighRisk || queryIntent.isMentalHealthCrisis,
-metadata: {
-queryIntent: extractQueryIntentMetadata(queryIntent)
+const response = await apiRequest('POST', endpoint, requestBody);
+const data = await response.json();
+
+if (!data.success) {
+throw createAPIError('api', data.message || 'Streaming API request failed');
 }
-}),
-credentials: "include"
+
+// For now, since streaming is complex, let's return the complete response
+// and call the streaming callback with the final result
+if (onStreamingUpdate) {
+onStreamingUpdate(data.response, { 
+isComplete: true,
+isStreaming: false,
+status: 'delivered'
 });
-// Validate proper response
-if (!response.ok) {
-const errorText = await response.text();
-console.error("Chat API error:", errorText);
-throw new Error(`API error: ${response.status} ${response.statusText}`);
 }
-// Check for HTML response by looking at content-type
-const contentType = response.headers.get("content-type");
-if (!contentType?.includes("application/json")) {
-console.error("Received non-JSON response:", contentType);
-const responseText = await response.text();
-console.error("Response preview:", responseText.substring(0, 200) + "...");
-throw new Error("Server returned non-JSON data. The API route may be misconfigured.");
-}
-data = await response.json();
-// Validate the response format
-if (!data || typeof data.response !== 'string') {
-console.error("Invalid response format:", data);
-throw new Error("Invalid response format from API");
-}
-// Calculate request time
-const requestTime = Date.now() - startTime;
-// Prepare response with metadata and appropriate disclaimers
-const finalContent = addDisclaimers(data.response, queryIntent);
-// Create response with standardized metadata
+
 return {
-content: finalContent,
-metadata: createResponseMetadata(requestTime, data, queryIntent)
+content: data.response,
+metadata: {
+requestTime: data.metadata?.requestTime || 0,
+sessionId: data.metadata?.sessionId,
+isHighRisk: data.metadata?.isHighRisk,
+attemptsMade: data.metadata?.attemptsMade || 1,
+modelName: data.metadata?.modelName || 'deepseek-chat',
+usage: data.usage
+}
 };
 } catch (error) {
-console.error("Error in standard request:", error);
+console.error('[AI] Streaming error:', error);
 throw error;
 }
 }
+
 /**
 * Global AbortController instance for the current streaming request
 * This allows other components to cancel the stream
 * @type {AbortController|null}
 */
 let streamAbortController = null;
+
 /**
-* Global variable to track and clear the error timeout
-* @type {number|null}
-*/
-let globalErrorTimeout = null;
-/**
-* Global stream reader for immediate cancellation
 * @type {ReadableStreamDefaultReader|null}
 */
 let globalStreamReader = null;
@@ -964,7 +811,7 @@ console.debug('[Cache] Stored layer result for:', message.substring(0, 50) + '..
 * @param {boolean} [isDelivered=false] - Whether the message has already been delivered
 * @returns {boolean} Whether a streaming request was aborted
 */
-export function stopStreaming(isDelivered = false) {
+function stopStreaming(isDelivered = false) {
 if (streamAbortController) {
 // Update our message delivery state - CRITICAL: Mark as clean stop, not error
 messageDeliveryState.messageDelivered = isDelivered;
@@ -1407,7 +1254,7 @@ throw error; // Let the main function handle retries
 * @returns {Promise<APIResponse>} API response with metadata
 * @throws {APIErrorDetails} Standardized error if all retries fail
 */
-export async function retryApiRequest(endpoint, message, history, isHighRisk, queryIntent = null) {
+async function retryApiRequest(endpoint, message, history, isHighRisk, queryIntent = null) {
 const config = getDeepSeekConfig();
 // Use withExponentialBackoff helper to manage retries
 return await withExponentialBackoff(
@@ -1726,3 +1573,6 @@ throw createAPIError("unknown", errorMessage, { originalError: error });
 }
 });
 }
+
+// Export the stopStreaming function
+export { stopStreaming };
