@@ -51,40 +51,62 @@ self.addEventListener('message', (event) => {
     console.log('[SW] Received skip waiting command');
     self.skipWaiting();
   }
+  
+  // Handle force cache clear for problematic devices
+  if (event.data && event.data.type === 'FORCE_CACHE_CLEAR') {
+    console.log('[SW] Force clearing all caches');
+    event.waitUntil(
+      caches.keys().then(cacheNames => {
+        return Promise.all(
+          cacheNames.map(cacheName => {
+            console.log('[SW] Force deleting cache:', cacheName);
+            return caches.delete(cacheName);
+          })
+        );
+      }).then(() => {
+        console.log('[SW] All caches cleared, reloading');
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => client.navigate(client.url));
+        });
+      })
+    );
+  }
 });
 
-// Activate event - clean up old caches
+// Activate event - clean up old caches (more aggressive for problematic devices)
 self.addEventListener('activate', (/** @type {ActivateEvent} */ event) => {
   console.log(`[SW] Activating service worker v${CACHE_VERSION} (${BUILD_HASH})`);
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
-        const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, CACHE_NAME];
+        // More aggressive cache cleaning - delete ALL old anamnesis caches
+        const currentCachePattern = `anamnesis-v${CACHE_VERSION}-${BUILD_HASH}`;
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              // Delete any cache that starts with 'anamnesis-' but isn't current
+              // Delete any anamnesis cache that doesn't match current exact pattern
               return cacheName.startsWith('anamnesis-') && 
-                     !currentCaches.includes(cacheName);
+                     !cacheName.includes(currentCachePattern);
             })
             .map((cacheName) => {
-              console.log('[SW] Deleting old cache:', cacheName);
+              console.log('[SW] Aggressively deleting old cache:', cacheName);
               return caches.delete(cacheName);
             })
         );
       })
       .then(() => {
-        console.log(`[SW] Service worker v${CACHE_VERSION} activated and old caches cleaned`);
+        console.log(`[SW] Service worker v${CACHE_VERSION} activated and all old caches purged`);
         return self.clients.claim();
       })
       .then(() => {
-        // Notify all clients that update is complete
+        // Force reload all clients to ensure fresh content
         return self.clients.matchAll().then(clients => {
           clients.forEach(client => {
             client.postMessage({ 
               type: 'SW_UPDATED', 
               version: CACHE_VERSION,
-              buildHash: BUILD_HASH
+              buildHash: BUILD_HASH,
+              forceReload: true
             });
           });
         });

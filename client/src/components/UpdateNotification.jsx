@@ -105,7 +105,17 @@ export function UpdateNotification() {
     // Tell the waiting service worker to become active
     swRegistration.waiting.postMessage({ type: 'SKIP_WAITING' });
     
-    // The page will reload automatically when the new SW takes control
+    // For problematic devices, also force clear cache
+    setTimeout(() => {
+      if (navigator.serviceWorker.controller) {
+        navigator.serviceWorker.controller.postMessage({ type: 'FORCE_CACHE_CLEAR' });
+      }
+    }, 1000);
+    
+    // Fallback: force reload after 3 seconds if SW doesn't handle it
+    setTimeout(() => {
+      window.location.reload();
+    }, 3000);
   };
 
   /**
