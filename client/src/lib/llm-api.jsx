@@ -706,33 +706,146 @@ throw error;
 async function handleStreamingResponse(endpoint, requestBody, onStreamingUpdate, options) {
 console.debug('[AI] Starting streaming request to', endpoint);
 
-try {
-const response = await apiRequest('POST', endpoint, requestBody);
-const data = await response.json();
+let accumulatedText = '';
+let metadata = {};
+const abortSignal = options.abortSignal || new GlobalAbortController().signal;
 
-if (!data.success) {
-throw createAPIError('api', data.message || 'Streaming API request failed');
+try {
+// Connect to streaming endpoint with proper SSE headers
+const response = await fetch(endpoint, {
+method: "POST",
+headers: {
+"Content-Type": "application/json",
+"Accept": "text/event-stream",
+},
+body: JSON.stringify(requestBody),
+credentials: "include",
+signal: abortSignal
+});
+
+// Validate proper response
+if (!response.ok) {
+const errorText = await response.text();
+console.error("Streaming API error:", errorText);
+throw createAPIError('api', `API error: ${response.status} ${response.statusText}`);
 }
 
-// For now, since streaming is complex, let's return the complete response
-// and call the streaming callback with the final result
-if (onStreamingUpdate) {
-onStreamingUpdate(data.response, { 
-isComplete: true,
-isStreaming: false,
-status: 'delivered'
+// Check for proper content type
+const contentType = response.headers.get("content-type");
+if (contentType && contentType.includes("text/html")) {
+console.error("Received HTML instead of streaming data:", contentType);
+throw createAPIError('api', "Server returned HTML instead of streaming data. The API route may be misconfigured.");
+}
+
+// Handle the streaming response
+const reader = response.body?.getReader();
+if (!reader) {
+throw createAPIError('api', "Unable to get response reader");
+}
+
+const decoder = new TextDecoder();
+let currentEvent = null;
+let buffer = '';
+
+// Process SSE chunks correctly
+while (true) {
+// Check for abort signal before each read
+if (abortSignal.aborted) {
+console.debug("Stream aborted, breaking read loop");
+break;
+}
+
+const { done, value } = await reader.read();
+if (done) {
+console.log("Stream reading complete");
+break;
+}
+
+// Decode chunk
+const chunk = decoder.decode(value, { stream: true });
+buffer += chunk;
+
+// Process complete lines in the buffer
+const lines = buffer.split('\n');
+buffer = lines.pop() || ''; // Keep the last possibly incomplete line
+
+for (const line of lines) {
+const trimmedLine = line.trim();
+// Skip empty lines and comments
+if (!trimmedLine || trimmedLine.startsWith(':')) continue;
+
+// Event line
+if (trimmedLine.startsWith('event:')) {
+currentEvent = trimmedLine.substring(6).trim();
+continue;
+}
+
+// Data line
+if (trimmedLine.startsWith('data:')) {
+const jsonData = trimmedLine.substring(5).trim();
+try {
+const data = JSON.parse(jsonData);
+
+// Process based on current event type
+if (currentEvent === 'chunk' && data.text) {
+// Accumulate text chunks
+accumulatedText += data.text;
+// Update UI with current accumulated text
+onStreamingUpdate(accumulatedText, { 
+isStreaming: true, 
+isComplete: false,
+chunkReceived: true
 });
+} else if (currentEvent === 'done') {
+// Capture metadata from the done event
+metadata = { 
+...metadata, 
+...data,
+isComplete: true,
+completed: true,
+status: 'delivered',
+error: false
+};
+console.log("Stream completed with metadata:", data);
+
+// Final update with complete text
+onStreamingUpdate(accumulatedText, { 
+isStreaming: false, 
+isComplete: true,
+status: 'delivered',
+error: false,
+...metadata
+});
+} else if (currentEvent === 'config') {
+// Store session info from config
+metadata = { ...metadata, ...data };
+console.log("Received config:", data);
+} else if (currentEvent === 'error') {
+console.error("Stream error:", data.error);
+throw createAPIError('streaming', data.error || "Unknown streaming error");
+}
+} catch (parseError) {
+// Handle [DONE] sentinel
+if (jsonData === '[DONE]') {
+console.log("Received [DONE] sentinel, ending stream");
+break;
+}
+console.error("Failed to parse SSE JSON:", jsonData, parseError);
+}
+}
+}
 }
 
 return {
-content: data.response,
+content: accumulatedText,
 metadata: {
-requestTime: data.metadata?.requestTime || 0,
-sessionId: data.metadata?.sessionId,
-isHighRisk: data.metadata?.isHighRisk,
-attemptsMade: data.metadata?.attemptsMade || 1,
-modelName: data.metadata?.modelName || 'deepseek-chat',
-usage: data.usage
+requestTime: metadata.requestTime || 0,
+sessionId: metadata.sessionId,
+isHighRisk: requestBody.isHighRisk,
+attemptsMade: 1,
+modelName: metadata.model || 'deepseek-chat',
+usage: metadata.tokensEstimate ? { total_tokens: metadata.tokensEstimate } : undefined,
+...metadata
 }
 };
 } catch (error) {

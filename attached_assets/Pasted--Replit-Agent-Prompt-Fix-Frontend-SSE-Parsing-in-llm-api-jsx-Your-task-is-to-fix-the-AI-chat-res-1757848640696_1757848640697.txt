@@ -1,0 +1,92 @@
+🟢 Replit Agent Prompt: Fix Frontend SSE Parsing in llm-api.jsx
+
+Your task is to fix the AI chat response handling in the Anamnesis MVP.
+Currently, the backend correctly streams responses with Content-Type: text/event-stream, but the frontend (client/src/lib/llm-api.jsx) is still trying to parse the response as JSON, which causes this error:
+
+Error: Expected JSON response but received text/event-stream
+
+✅ Requirements
+
+Do not touch backend streaming code – it is already correct and returns proper SSE.
+
+Fix only the frontend fetch logic in llm-api.jsx.
+
+Ensure sendMessage, sendMessageWithSafety, and any related functions:
+
+Use fetch("/api/chat/stream") (already implemented).
+
+Read the response with response.body.getReader().
+
+Use a TextDecoder to decode streamed chunks.
+
+Split by \n\n (SSE message separator).
+
+Parse only lines starting with data:.
+
+Handle [DONE] sentinel properly and close the stream.
+
+Call the existing onMessage (or equivalent) to update the chat UI in real time.
+
+🛠️ Implementation Guidance
+
+Replace this incorrect pattern:
+
+const res = await fetch("/api/chat/stream", options);
+const data = await res.json();
+return data;
+
+
+With this corrected streaming handler:
+
+const res = await fetch("/api/chat/stream", options);
+
+if (!res.ok) {
+  throw new Error(`HTTP error: ${res.status}`);
+}
+
+const reader = res.body.getReader();
+const decoder = new TextDecoder("utf-8");
+let buffer = "";
+
+while (true) {
+  const { done, value } = await reader.read();
+  if (done) break;
+
+  buffer += decoder.decode(value, { stream: true });
+
+  const parts = buffer.split("\n\n");
+  buffer = parts.pop(); // keep the last partial chunk
+
+  for (const part of parts) {
+    if (part.startsWith("data:")) {
+      const jsonStr = part.replace(/^data:\s*/, "").trim();
+      if (jsonStr === "[DONE]") {
+        return; // stream finished
+      }
+      try {
+        const parsed = JSON.parse(jsonStr);
+        onMessage(parsed); // existing UI update function
+      } catch (err) {
+        console.error("Failed to parse SSE JSON:", jsonStr, err);
+      }
+    }
+  }
+}
+
+🔒 Must Preserve
+
+Medical safety layers (triage, emergency detection, Advice-to-Doctor routing).
+
+Admin monitoring integration (/ws/admin + /api/ai/stats).
+
+Security layers (rate limiting, CORS, headers).
+
+Multi-LLM architecture and streaming response behavior.
+
+✅ Deliverables
+
+Full corrected client/src/lib/llm-api.jsx.
+
+Verified fix: AI chat box responds in real time (no JSON parse error).
+
+Documentation: Update docs/BUILD_FIX_LOG.md with summary of changes, reasoning, and verification results.
