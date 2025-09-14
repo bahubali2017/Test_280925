@@ -130,7 +130,7 @@
         window.addEventListener('load', async () => {
           try {
             // Force service worker update by adding cache-busting parameter
-            const registration = await navigator.serviceWorker.register('/sw.js?v=2.1.4', {
+            const registration = await navigator.serviceWorker.register('/sw.js?v=2.1.5', {
               scope: '/',
               updateViaCache: 'none'
             });
