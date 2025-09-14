@@ -7,6 +7,7 @@ import { Input } from "../components/ui/input";
 import AnimatedNeuralLogo from '../components/AnimatedNeuralLogo.jsx'; // eslint-disable-line no-unused-vars
 import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-line no-unused-vars
 import { PWAInstallButton } from '../components/PWAInstallButton.jsx';
+import { UpdateNotification } from '../components/UpdateNotification.jsx';
 import { apiRequest } from '../lib/queryClient';
 import { stopStreaming, getSafeTimeoutFunctions } from '../lib/llm-api';
 import { getRandomStarterQuestions } from '../lib/suggestions';
@@ -755,7 +756,9 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
-      {/* PWA Installation Notice - Component removed */}
+      {/* PWA Update Notification */}
+      <UpdateNotification />
+      
       {/* Header */}
       <header className="bg-card dark:bg-sidebar-background py-3 px-4 md:px-6 shadow-md border-b border-border transition-colors duration-300">
         <div className="container-xl">

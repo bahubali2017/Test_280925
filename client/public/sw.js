@@ -3,11 +3,14 @@
 /* eslint no-unused-vars: "off" */
 // @ts-nocheck
 // Anamnesis Medical AI Assistant - Service Worker
-// Version 1.0.0
+// Version 2.2.0 - Auto-updating cache system
+// Build timestamp: 2025-09-14T13:36:02.031Z
 
-const CACHE_NAME = 'anamnesis-v2.2.0';
-const STATIC_CACHE = 'anamnesis-static-v1.1.0';
-const DYNAMIC_CACHE = 'anamnesis-dynamic-v1.1.0';
+const CACHE_VERSION = '2.2.0';
+const BUILD_HASH = 'fc108031';
+const CACHE_NAME = `anamnesis-v${CACHE_VERSION}-${BUILD_HASH}`;
+const STATIC_CACHE = `anamnesis-static-v${CACHE_VERSION}`;
+const DYNAMIC_CACHE = `anamnesis-dynamic-v${CACHE_VERSION}`;
 
 // Static assets to cache (HTML files removed to prevent stale cache)
 const STATIC_ASSETS = [
@@ -24,7 +27,7 @@ const API_ENDPOINTS = [
 
 // Install event - cache static assets
 self.addEventListener('install', (/** @type {InstallEvent} */ event) => {
-  console.log('[SW] Installing service worker');
+  console.log(`[SW] Installing service worker v${CACHE_VERSION} (${BUILD_HASH})`);
   event.waitUntil(
     caches.open(STATIC_CACHE)
       .then((cache) => {
@@ -33,7 +36,8 @@ self.addEventListener('install', (/** @type {InstallEvent} */ event) => {
       })
       .then(() => {
         console.log('[SW] Static assets cached successfully');
-        return self.skipWaiting();
+        // Don't skip waiting automatically - let update notification handle it
+        console.log('[SW] New version installed, waiting for user approval');
       })
       .catch((error) => {
         console.error('[SW] Failed to cache static assets:', error);
@@ -41,18 +45,27 @@ self.addEventListener('install', (/** @type {InstallEvent} */ event) => {
   );
 });
 
+// Listen for skip waiting message from update notification
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    console.log('[SW] Received skip waiting command');
+    self.skipWaiting();
+  }
+});
+
 // Activate event - clean up old caches
 self.addEventListener('activate', (/** @type {ActivateEvent} */ event) => {
-  console.log('[SW] Activating service worker');
+  console.log(`[SW] Activating service worker v${CACHE_VERSION} (${BUILD_HASH})`);
   event.waitUntil(
     caches.keys()
       .then((cacheNames) => {
+        const currentCaches = [STATIC_CACHE, DYNAMIC_CACHE, CACHE_NAME];
         return Promise.all(
           cacheNames
             .filter((cacheName) => {
-              return cacheName !== STATIC_CACHE && 
-                     cacheName !== DYNAMIC_CACHE &&
-                     cacheName.startsWith('anamnesis-');
+              // Delete any cache that starts with 'anamnesis-' but isn't current
+              return cacheName.startsWith('anamnesis-') && 
+                     !currentCaches.includes(cacheName);
             })
             .map((cacheName) => {
               console.log('[SW] Deleting old cache:', cacheName);
@@ -61,8 +74,20 @@ self.addEventListener('activate', (/** @type {ActivateEvent} */ event) => {
         );
       })
       .then(() => {
-        console.log('[SW] Service worker activated');
+        console.log(`[SW] Service worker v${CACHE_VERSION} activated and old caches cleaned`);
         return self.clients.claim();
+      })
+      .then(() => {
+        // Notify all clients that update is complete
+        return self.clients.matchAll().then(clients => {
+          clients.forEach(client => {
+            client.postMessage({ 
+              type: 'SW_UPDATED', 
+              version: CACHE_VERSION,
+              buildHash: BUILD_HASH
+            });
+          });
+        });
       })
   );
 });
