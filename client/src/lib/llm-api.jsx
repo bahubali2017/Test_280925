@@ -127,7 +127,7 @@ clearTimeout: typeof globals === 'object' && globals && 'clearTimeout' in global
 * Gets safe timeout functions that work in both browser and Node environments
 * @returns {TimeoutFunctions} Object containing setTimeout and clearTimeout functions
 */
-function getSafeTimeoutFunctions() {
+export function getSafeTimeoutFunctions() {
 return getTimeoutFunctions();
 }
 // Extract functions for use within this module
@@ -639,7 +639,7 @@ return promptParts.join("\n\n");
 * @param {Function} [onStreamingUpdate=null] - Callback for streaming updates
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
-async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
+export async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
 // Validate input
 if (!message || typeof message !== "string" || message.trim() === "") {
 throw createAPIError("validation", "Message cannot be empty");
@@ -693,6 +693,8 @@ usage: data.usage
 console.error('[AI] Error in sendMessage:', error);
 throw error;
 }
+} // Close sendMessage function
+
 /**
 * Handle streaming response from the API
 * @param {string} endpoint - API endpoint
@@ -1318,7 +1320,7 @@ console.info(`Retrying in ${Math.round(delay/100)/10}s...`);
  * @param {object} [options.abortSignal] - Abort signal for cancellation
  * @returns {Promise<object>} Enhanced response with safety processing
  */
-async function sendMessageWithSafety(message, history = [], options = {}) {
+export async function sendMessageWithSafety(message, history = [], options = {}) {
   const {
     region = 'US',
     demographics = {},
@@ -1574,15 +1576,5 @@ throw createAPIError("unknown", errorMessage, { originalError: error });
 });
 } // Close sendMessageClientSide function
 
-// Export all necessary functions for the medical AI system
-export { 
-  sendMessage,
-  sendMessageWithSafety,
-  sendMessageClientSide,
-  stopStreaming,
-  getSafeTimeoutFunctions,
-  getFollowUpSuggestions,
-  extractMedicalSafetyInfo,
-  _addBasicDisclaimers,
-  _containsHighRiskTerms
-};
+// Additional internal exports for backward compatibility
+export { sendMessageClientSide, getFollowUpSuggestions, extractMedicalSafetyInfo, _addBasicDisclaimers, _containsHighRiskTerms, stopStreaming };
