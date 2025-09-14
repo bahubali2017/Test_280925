@@ -1,0 +1,135 @@
+🟢 Replit Agent Prompt: Pre-Redeployment Full System Validation
+
+Your task is to perform a comprehensive audit of the Anamnesis MVP before the next redeployment.
+The system must be verified across frontend, backend, caching, security, database, and admin integrations.
+
+✅ Validation Tasks
+1. Frontend Rendering
+
+Ensure all React components render without errors in production:
+
+Home.tsx, LoadingIntro.tsx, AnimatedLogo.tsx
+
+Chat UI: messages stream correctly with no console errors
+
+ATD (Advice-to-Doctor) flow UI appears when triggered
+
+Validate static assets load with correct MIME types:
+
+/assets/*.js → application/javascript
+
+/assets/*.css → text/css
+
+/neural-logo.png → image/png
+
+2. Caching & Service Worker
+
+Confirm sw.js does not cache index.html (to prevent white screen).
+
+Verify cache busting strategy:
+
+Old builds with hashed filenames are removed from cache.
+
+New build assets (e.g., /assets/index-xxxx.js) always load fresh.
+
+Check in DevTools → Application tab → Service Workers.
+
+3. Endpoints
+
+Test all API endpoints:
+
+/api/chat → responds with streaming SSE.
+
+/api/chat/stream → delivers [DONE] sentinel at end.
+
+/api/feedback → stores feedback successfully.
+
+/api/system → returns system status JSON.
+
+/api/admin → returns metrics with proper authentication.
+
+/api/ai/stats → returns JSON schema with correct fields.
+
+4. Admin Integration
+
+WebSocket at wss://mvp.anamnesis.health/ws/admin:
+
+Connects successfully.
+
+Receives live ai_session_update events.
+
+Flags regressions properly (ai_session_flagged).
+
+REST /api/ai/stats:
+
+Returns fields: activeSessions, failedResponses, successRate, averageResponseTime, totalSessions, flaggedRegressions, failureRate, requestsPerDay, timestamp, source.
+
+5. Security Layer
+
+Validate:
+
+✅ CORS allows only mvp.anamnesis.health and admin.anamnesis.health.
+
+✅ Rate limiting active:
+
+Chat API: production limit 100 requests / 5 min.
+
+Admin API: stricter limit (50 / 5 min).
+
+✅ Security headers enforced:
+
+HSTS
+
+Content-Security-Policy
+
+X-Frame-Options
+
+X-Content-Type-Options
+
+✅ Honeypot routes return fake data for bots.
+
+6. Database & Supabase
+
+Confirm /api/health → supabase: up.
+
+Test queries from storage.ts (users, sessions, feedback).
+
+Verify watchdog circuit breaker:
+
+When Supabase is down, returns 503 with demo mode response.
+
+When Supabase is healthy, returns real data.
+
+7. ATD (Advice-to-Doctor) Flow
+
+Simulate high-risk query (e.g., “chest pain at night”).
+
+Ensure:
+
+AI safety layer flags it correctly.
+
+ATD routing triggers emergency alert flow.
+
+Admin monitoring shows the flagged session.
+
+No infinite loops or duplicate exports.
+
+🔒 Must Preserve
+
+Medical safety layers (triage, emergency, regional adaptation).
+
+Security layers (rate limiting, CORS, headers, honeypot).
+
+Admin dashboard metrics and WebSocket monitoring.
+
+AI streaming functionality with [DONE] sentinel handling.
+
+Database health checks and circuit breaker.
+
+🎯 Deliverables
+
+A full audit log (docs/PRE_DEPLOYMENT_AUDIT.md) with pass/fail for each check above.
+
+Fixes for any failed checks (if minor).
+
+✅ Go/No-Go recommendation for redeployment.
