@@ -127,7 +127,7 @@ clearTimeout: typeof globals === 'object' && globals && 'clearTimeout' in global
 * Gets safe timeout functions that work in both browser and Node environments
 * @returns {TimeoutFunctions} Object containing setTimeout and clearTimeout functions
 */
-export function getSafeTimeoutFunctions() {
+function getSafeTimeoutFunctions() {
 return getTimeoutFunctions();
 }
 // Extract functions for use within this module
@@ -639,7 +639,7 @@ return promptParts.join("\n\n");
 * @param {Function} [onStreamingUpdate=null] - Callback for streaming updates
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
-export async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
+async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
 // Validate input
 if (!message || typeof message !== "string" || message.trim() === "") {
 throw createAPIError("validation", "Message cannot be empty");
