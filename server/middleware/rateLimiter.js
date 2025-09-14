@@ -234,9 +234,9 @@ export function chatEndpointRateLimit(req, res, next) {
   
   // Different limits for different endpoints
   const limits = {
-    '/api/chat': { requests: 30, window: 60000 }, // 30 requests per minute for regular chat
-    '/api/chat/stream': { requests: 20, window: 60000 }, // 20 requests per minute for streaming
-    default: { requests: 15, window: 60000 } // 15 requests per minute for other endpoints
+    '/api/chat': { requests: 100, window: 60000 }, // 100 requests per minute for regular chat
+    '/api/chat/stream': { requests: 100, window: 60000 }, // 100 requests per minute for streaming
+    default: { requests: 50, window: 60000 } // 50 requests per minute for other endpoints
   };
   
   const endpoint = req.path;
