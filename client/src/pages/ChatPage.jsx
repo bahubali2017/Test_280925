@@ -739,6 +739,9 @@ export default function ChatPage() {
       
       // Reset the stopping state immediately for faster UI response
       setIsStoppingAI(false);
+      
+      // CRITICAL FIX: Reset loading state to immediately re-enable input
+      setIsLoading(false);
     }
   };
 
