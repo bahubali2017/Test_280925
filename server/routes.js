@@ -194,6 +194,78 @@ router.get("/health", (req, res) => {
     });
   });
 
+/**
+ * Generate app version hash based on package version and build timestamp
+ * @returns {Promise<string>} 8-character version hash
+ */
+async function generateAppVersionHash() {
+  const crypto = await import('crypto');
+  const fs = await import('fs');
+  const path = await import('path');
+  
+  try {
+    // Read package.json for version info
+    const packagePath = path.resolve(process.cwd(), 'package.json');
+    const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
+    
+    // Use timestamp as build identifier (could be replaced with git commit hash in CI/CD)
+    const buildTimestamp = process.env.BUILD_TIMESTAMP || Date.now().toString();
+    const version = packageJson.version || '1.0.0';
+    
+    return crypto.default
+      .createHash('sha256')
+      .update(`${version}-${buildTimestamp}`)
+      .digest('hex')
+      .substring(0, 8);
+  } catch (error) {
+    console.error('Failed to generate version hash:', error);
+    // Fallback to timestamp-based hash
+    return Date.now().toString().slice(-8);
+  }
+}
+
+/**
+ * App configuration endpoint for version checking
+ * Returns current app version with no-cache headers to ensure freshness
+ */
+router.get("/app-config.json", async (req, res) => {
+  try {
+    // Set no-cache headers to ensure fresh version checks
+    res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    
+    const versionHash = await generateAppVersionHash();
+    const timestamp = new Date().toISOString();
+    
+    // Basic app configuration with version info
+    const config = {
+      version: versionHash,
+      timestamp: timestamp,
+      mustRefresh: false, // Can be set to true if forced refresh needed
+      swKillSwitch: false, // Emergency kill switch for problematic service workers
+      buildInfo: {
+        nodeEnv: process.env.NODE_ENV || 'development',
+        buildTime: timestamp
+      }
+    };
+    
+    // Log version requests for debugging
+    console.log(`[Version Check] Client requested app-config.json, serving version: ${versionHash}`);
+    
+    res.json(config);
+  } catch (error) {
+    console.error('Error serving app-config.json:', error);
+    res.status(500).json({
+      error: 'Failed to get app configuration',
+      version: 'unknown',
+      timestamp: new Date().toISOString(),
+      mustRefresh: false,
+      swKillSwitch: false
+    });
+  }
+});
+
   /**
    * Authentication endpoints
    */

@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Version System Test</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #f0f0f0; }
+        .test-section { margin: 20px 0; padding: 15px; background: white; border-radius: 5px; }
+        .log { background: #000; color: #0f0; padding: 10px; margin: 10px 0; border-radius: 3px; font-size: 12px; overflow-x: auto; }
+        button { padding: 10px 15px; margin: 5px; cursor: pointer; }
+        .success { color: green; }
+        .error { color: red; }
+        .warning { color: orange; }
+    </style>
+</head>
+<body>
+    <h1>🔄 Version Checking System Test</h1>
+    
+    <div class="test-section">
+        <h3>📊 Current Status</h3>
+        <div id="status">Initializing...</div>
+    </div>
+    
+    <div class="test-section">
+        <h3>🧪 Manual Tests</h3>
+        <button onclick="testVersionCheck()">Test Version Check</button>
+        <button onclick="testServerEndpoint()">Test Server Endpoint</button>
+        <button onclick="simulateVersionMismatch()">⚠️ Simulate Version Mismatch</button>
+        <button onclick="testKillSwitch()">🔴 Test Service Worker Kill Switch</button>
+    </div>
+    
+    <div class="test-section">
+        <h3>📋 Test Results</h3>
+        <div id="results" class="log"></div>
+    </div>
+
+    <script>
+        // Mock version checker for testing
+        let mockInitialVersion = null;
+        let testLog = [];
+        
+        function log(message, level = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const levelColors = {
+                info: '#0f0',
+                error: '#f00', 
+                warning: '#fa0',
+                success: '#0a0'
+            };
+            
+            testLog.push(`[${timestamp}] ${message}`);
+            
+            const resultsDiv = document.getElementById('results');
+            resultsDiv.innerHTML = testLog.map(entry => 
+                `<div style="color: ${levelColors[level] || '#0f0'}">${entry}</div>`
+            ).join('');
+            resultsDiv.scrollTop = resultsDiv.scrollHeight;
+        }
+        
+        async function testVersionCheck() {
+            log('🧪 Testing version check functionality...', 'info');
+            
+            try {
+                const response = await fetch('/api/app-config.json', {
+                    headers: { 'Cache-Control': 'no-cache' },
+                    cache: 'no-cache'
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+                }
+                
+                const config = await response.json();
+                log(`✅ Server version: ${config.version}`, 'success');
+                log(`📅 Server timestamp: ${config.timestamp}`, 'info');
+                log(`🔧 mustRefresh: ${config.mustRefresh}`, 'info');
+                log(`🚫 swKillSwitch: ${config.swKillSwitch}`, 'info');
+                
+                if (!mockInitialVersion) {
+                    mockInitialVersion = config.version;
+                    log(`🎯 Set initial client version: ${mockInitialVersion}`, 'success');
+                } else {
+                    if (config.version !== mockInitialVersion) {
+                        log(`⚠️ VERSION MISMATCH DETECTED!`, 'warning');
+                        log(`   Client: ${mockInitialVersion}`, 'warning');
+                        log(`   Server: ${config.version}`, 'warning');
+                        log(`🔄 Would trigger app reload here...`, 'warning');
+                    } else {
+                        log(`✅ Versions match - no action needed`, 'success');
+                    }
+                }
+                
+                updateStatus('✅ Version check successful');
+            } catch (error) {
+                log(`❌ Version check failed: ${error.message}`, 'error');
+                updateStatus('❌ Version check failed');
+            }
+        }
+        
+        async function testServerEndpoint() {
+            log('🌐 Testing server endpoint configuration...', 'info');
+            
+            try {
+                const response = await fetch('/api/app-config.json');
+                const headers = response.headers;
+                
+                log(`📝 Response Headers:`, 'info');
+                log(`   Cache-Control: ${headers.get('Cache-Control')}`, 'info');
+                log(`   Pragma: ${headers.get('Pragma')}`, 'info');
+                log(`   Expires: ${headers.get('Expires')}`, 'info');
+                
+                const config = await response.json();
+                const hasRequiredFields = config.version && config.timestamp !== undefined && 
+                                         config.mustRefresh !== undefined && config.swKillSwitch !== undefined;
+                
+                if (hasRequiredFields) {
+                    log(`✅ All required fields present in response`, 'success');
+                } else {
+                    log(`❌ Missing required fields in response`, 'error');
+                }
+                
+            } catch (error) {
+                log(`❌ Server endpoint test failed: ${error.message}`, 'error');
+            }
+        }
+        
+        async function simulateVersionMismatch() {
+            log('⚠️ SIMULATING VERSION MISMATCH...', 'warning');
+            log('This would normally trigger an app reload', 'warning');
+            
+            // Simulate what would happen with version mismatch
+            const fakeOldVersion = 'abc12345';
+            const currentVersion = mockInitialVersion || 'def67890';
+            
+            log(`📱 Client version: ${fakeOldVersion}`, 'info');
+            log(`🖥️ Server version: ${currentVersion}`, 'info');
+            log(`🔄 Version mismatch detected!`, 'error');
+            log(`💾 Would clear all caches...`, 'warning');
+            log(`🌐 Would reload with cache-busting URL: ${window.location.href}?v=${currentVersion}&_reload=${Date.now()}`, 'warning');
+            
+            // In the real system, this would trigger:
+            // 1. Cache clearing
+            // 2. window.location.reload(true) or window.location.href redirect with cache-busting params
+            
+            log(`✅ Version mismatch simulation complete`, 'success');
+        }
+        
+        async function testKillSwitch() {
+            log('🔴 Testing Service Worker kill switch simulation...', 'warning');
+            
+            if ('serviceWorker' in navigator) {
+                try {
+                    const registrations = await navigator.serviceWorker.getRegistrations();
+                    log(`🔍 Found ${registrations.length} service worker registrations`, 'info');
+                    
+                    for (let i = 0; i < registrations.length; i++) {
+                        log(`📋 SW ${i+1}: ${registrations[i].scope}`, 'info');
+                    }
+                    
+                    if (registrations.length > 0) {
+                        log(`⚠️ Kill switch would unregister all ${registrations.length} service workers`, 'warning');
+                        // In real implementation: await registration.unregister() for each
+                    } else {
+                        log(`ℹ️ No service workers to unregister`, 'info');
+                    }
+                    
+                    log(`✅ Kill switch simulation complete`, 'success');
+                } catch (error) {
+                    log(`❌ Kill switch test failed: ${error.message}`, 'error');
+                }
+            } else {
+                log(`ℹ️ Service Worker not supported in this environment`, 'info');
+            }
+        }
+        
+        function updateStatus(message) {
+            document.getElementById('status').innerHTML = message;
+        }
+        
+        // Auto-initialize
+        window.addEventListener('load', () => {
+            log('🚀 Version System Test initialized', 'success');
+            updateStatus('Ready for testing');
+            
+            // Auto-run initial test
+            setTimeout(testVersionCheck, 1000);
+        });
+        
+        // Test focus-based checking
+        window.addEventListener('focus', () => {
+            log('👁️ Window focus detected - would trigger version check', 'info');
+        });
+    </script>
+</body>
+</html>
