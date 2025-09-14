@@ -273,7 +273,7 @@ modelName: data?.model || options.modelName || "deepseek-chat",
 * Note: This function is kept for backward compatibility but should not be used in new code.
 */
 // Exported to avoid unused variable warning while preserving for backward compatibility
-export function _addBasicDisclaimers(content, queryIntent) {
+function _addBasicDisclaimers(content, queryIntent) {
 if (!queryIntent) return content;
 let result = content;
 if (queryIntent.disclaimer) {
@@ -311,7 +311,7 @@ return content;
 * @param {QueryIntent} queryIntent - Query intent analysis results
 * @returns {string[]} Array of suggested follow-up questions
 */
-export function getFollowUpSuggestions(queryIntent) {
+function getFollowUpSuggestions(queryIntent) {
 if (!queryIntent) {
 return [
 "What other medical information can I help with?",
@@ -403,7 +403,7 @@ throw lastError;
 * @private Internal utility function
 */
 // Exported to avoid unused variable warning while preserving for backward compatibility
-export function _containsHighRiskTerms(message) {
+function _containsHighRiskTerms(message) {
 const lowerCaseMessage = message.toLowerCase();
 return HIGH_RISK_TERMS.some(term => lowerCaseMessage.includes(term));
 }
@@ -1318,7 +1318,7 @@ console.info(`Retrying in ${Math.round(delay/100)/10}s...`);
  * @param {object} [options.abortSignal] - Abort signal for cancellation
  * @returns {Promise<object>} Enhanced response with safety processing
  */
-export async function sendMessageWithSafety(message, history = [], options = {}) {
+async function sendMessageWithSafety(message, history = [], options = {}) {
   const {
     region = 'US',
     demographics = {},
@@ -1462,7 +1462,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
  * @param {object} response - Enhanced response from sendMessageWithSafety
  * @returns {object} Medical safety information for UI components
  */
-export function extractMedicalSafetyInfo(response) {
+function extractMedicalSafetyInfo(response) {
   const safetyInfo = response.metadata?.medicalSafety;
   
   if (!safetyInfo) {
@@ -1487,7 +1487,7 @@ export function extractMedicalSafetyInfo(response) {
   };
 }
 
-export async function sendMessageClientSide(message, history = [], queryIntent = null) {
+async function sendMessageClientSide(message, history = [], queryIntent = null) {
 const config = getDeepSeekConfig();
 // Default isHighRisk if no query intent
 const isHighRisk = queryIntent ? (queryIntent.isHighRisk || queryIntent.isMentalHealthCrisis) : false;
@@ -1574,5 +1574,15 @@ throw createAPIError("unknown", errorMessage, { originalError: error });
 });
 }
 
-// Export the stopStreaming function
-export { stopStreaming };
+// Export all necessary functions for the medical AI system
+export { 
+  sendMessage,
+  sendMessageWithSafety,
+  sendMessageClientSide,
+  stopStreaming,
+  getSafeTimeoutFunctions,
+  getFollowUpSuggestions,
+  extractMedicalSafetyInfo,
+  _addBasicDisclaimers,
+  _containsHighRiskTerms
+};
