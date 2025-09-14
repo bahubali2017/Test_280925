@@ -1572,7 +1572,7 @@ error.message : "Unknown error occurred";
 throw createAPIError("unknown", errorMessage, { originalError: error });
 }
 });
-}
+} // Close sendMessageClientSide function
 
 // Export all necessary functions for the medical AI system
 export { 

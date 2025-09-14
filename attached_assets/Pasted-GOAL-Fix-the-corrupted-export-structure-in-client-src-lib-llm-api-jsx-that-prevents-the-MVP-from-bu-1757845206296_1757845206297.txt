@@ -1,0 +1,46 @@
+GOAL: Fix the corrupted export structure in client/src/lib/llm-api.jsx that prevents the MVP from building, while preserving all existing business logic (medical safety, ATD, admin integration).
+
+TASKS:
+1. Locate corruption in llm-api.jsx
+   - Open client/src/lib/llm-api.jsx around lines 1570–1590.
+   - Verify if any functions (`sendMessage`, `sendMessageWithSafety`, `getSafeTimeoutFunctions`, etc.) are missing closing braces `}`.
+   - Ensure no export statements exist inside function bodies or conditional blocks.
+
+2. Correct file structure
+   - Add missing closing braces to properly terminate any open function or object definitions.
+   - Move the final export block to the bottom of the file at the top-level scope:
+
+     ```js
+     // Export all necessary functions for the medical AI system
+     export {
+       sendMessage,
+       sendMessageWithSafety,
+       getSafeTimeoutFunctions,
+       /* include all other core functions */
+     };
+     ```
+
+   - Ensure the export block is outside of any functions or callbacks.
+
+3. Verify no duplicate exports
+   - Check that none of the functions are already exported inline (`export function …`).
+   - If inline exports exist, remove duplicates from the final block.
+
+4. Preserve medical & admin functionality
+   - Do NOT remove or refactor medical processing, triage, ATD, safety validation, or admin WebSocket code.
+   - Only adjust braces and export placement.
+
+5. Run integrity checks
+   - Run `npm run build` → verify Vite completes without syntax errors.
+   - Run `npm run dev` → confirm frontend initializes normally.
+   - Test AI chat flow to confirm:
+     ✅ AI responses stream correctly  
+     ✅ “Stop AI” works instantly  
+     ✅ Follow-up suggestions appear  
+     ✅ Admin dashboard `/api/ai/stats` still works
+
+6. Document fix
+   - Update docs/BUILD_FIX_LOG.md with:
+     - Root cause (export inside incomplete block)  
+     - Exact fix (closing braces + top-level export)  
+     - Verification steps & test results
