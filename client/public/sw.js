@@ -5,9 +5,9 @@
 // Anamnesis Medical AI Assistant - Service Worker
 // Version 1.0.0
 
-const CACHE_NAME = 'anamnesis-v2.1.5';
-const STATIC_CACHE = 'anamnesis-static-v1.0.4';
-const DYNAMIC_CACHE = 'anamnesis-dynamic-v1.0.4';
+const CACHE_NAME = 'anamnesis-v2.2.0';
+const STATIC_CACHE = 'anamnesis-static-v1.1.0';
+const DYNAMIC_CACHE = 'anamnesis-dynamic-v1.1.0';
 
 // Static assets to cache (HTML files removed to prevent stale cache)
 const STATIC_ASSETS = [
