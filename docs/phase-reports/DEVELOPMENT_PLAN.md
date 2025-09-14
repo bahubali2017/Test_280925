@@ -1196,3 +1196,146 @@ The objective of this phase is to prepare the MVP and Admin Dashboard for stagin
 - [x] All deployment processes automated and reproducible
 
 **Phase 10 Status: ✅ COMPLETED** - Full deployment readiness achieved with staging and production environments validated. The Anamnesis MVP is now live and ready for beta testing with enterprise-grade CI/CD pipeline, comprehensive security validation, and multi-domain deployment infrastructure.
+
+---
+
+## Phase 11: Admin Dashboard MVP Integration
+
+**Status**: ✅ COMPLETED
+
+**Objective**: Implement comprehensive Admin Dashboard Integration for MVP platform to support real-time AI monitoring and statistics reporting for the external admin dashboard at `https://admin.anamnesis.health`.
+
+### 🎯 Integration Requirements
+
+**Implementation**: Support external admin dashboard with real-time AI system metrics and WebSocket monitoring capabilities.
+
+### 📊 REST API Endpoint: /api/ai/stats
+
+**Implementation**: `server/index.ts` (direct endpoint mounting)
+
+**Tasks:**
+- [x] Create GET /api/ai/stats endpoint with exact schema compliance
+- [x] Implement Bearer token authentication using ADMIN_API_TOKEN
+- [x] Calculate real-time metrics from live session data:
+  - [x] activeSessions: Current active AI sessions count
+  - [x] failedResponses: Total failed AI responses (24h window)
+  - [x] successRate: Success rate percentage (0-100)
+  - [x] averageResponseTime: Mean response time in milliseconds
+  - [x] totalSessions: Total AI sessions count (lifetime)
+  - [x] flaggedRegressions: Manually flagged problematic responses
+  - [x] failureRate: Failure rate percentage (0-100)
+  - [x] requestsPerDay: Last 7 days of request counts with date breakdown
+  - [x] timestamp: ISO timestamp of when stats were generated
+  - [x] source: "mvp-live-data" identifier
+- [x] Integrate with sessionTracker for real session data
+- [x] Add comprehensive error handling and admin audit logging
+
+### 🔄 WebSocket Real-time Updates: /ws/admin
+
+**Implementation**: Enhanced `server/websocket/adminMonitoring.js`
+
+**Tasks:**
+- [x] Implement admin authentication flow with auth/subscribe message handling
+- [x] Add real-time event broadcasting for required event types:
+  - [x] ai_session_update: Session start/complete/failed events
+  - [x] ai_session_flagged: Quality control flagging alerts
+  - [x] ai_metrics_update: Periodic metrics updates (every 30 seconds)
+- [x] Transform sessionTracker events to admin dashboard format
+- [x] Implement subscription-based event filtering
+- [x] Add periodic metrics broadcasting (30-second intervals)
+
+### 🛡️ Security Enhancements
+
+**Implementation**: `server/middleware/adminAuthMiddleware.js` and WebSocket auth
+
+**Tasks:**
+- [x] Create production-safe WebSocket authentication:
+  - [x] Restrict query parameter tokens to development only
+  - [x] Enforce Authorization header usage in production
+  - [x] Implement secure token validation without null WebSocket handling
+- [x] Enhanced rate limiting for admin endpoints
+- [x] Comprehensive audit logging for all admin access
+- [x] Remove duplicate endpoint implementations to prevent configuration drift
+
+### 🌐 CORS Configuration Update
+
+**Implementation**: `server/middleware/securityHeaders.js`
+
+**Tasks:**
+- [x] Add admin.anamnesis.health to production domain whitelist
+- [x] Configure CORS for WebSocket connections from admin dashboard
+- [x] Maintain existing security headers and policies
+
+### 📈 Data Integration
+
+**Implementation**: Integration with existing `sessionTracker` and `adminLogger`
+
+**Tasks:**
+- [x] Real-time data aggregation from live AI sessions
+- [x] 7-day request history calculation with proper date formatting
+- [x] Session state tracking integration for accurate metrics
+- [x] Flag detection and broadcasting for quality control workflows
+
+---
+
+### API Schema Compliance
+
+**Validated Response Format:**
+```json
+{
+  "activeSessions": 0,
+  "failedResponses": 0,
+  "successRate": 100,
+  "averageResponseTime": 0,
+  "totalSessions": 0,
+  "flaggedRegressions": 0,
+  "failureRate": 0,
+  "requestsPerDay": {
+    "2025-09-14": 0,
+    "2025-09-13": 0,
+    "2025-09-12": 0,
+    "2025-09-11": 0,
+    "2025-09-10": 0,
+    "2025-09-09": 0,
+    "2025-09-08": 0
+  },
+  "timestamp": "2025-09-14T09:25:49.768Z",
+  "source": "mvp-live-data"
+}
+```
+
+### Integration Endpoints Ready
+
+**External Admin Dashboard Connectivity:**
+- **REST Endpoint**: `GET https://mvp.anamnesis.health/api/ai/stats`
+- **WebSocket**: `wss://mvp.anamnesis.health/ws/admin`
+- **Authentication**: Bearer token via ADMIN_API_TOKEN environment variable
+- **CORS**: Configured for admin.anamnesis.health domain
+
+---
+
+### Security Considerations
+
+**Tasks Completed:**
+- [x] **Production WebSocket Auth**: Headers-only authentication in production
+- [x] **Token Masking**: All admin tokens masked in logs for security
+- [x] **Rate Limiting**: Admin endpoints protected with appropriate limits
+- [x] **Audit Trail**: Complete logging of admin access and errors
+- [x] **Error Handling**: Generic error messages for unauthorized access
+- [x] **CORS Restrictions**: Whitelist-based domain access control
+
+---
+
+### Phase 11 Completion Criteria
+
+- [x] /api/ai/stats endpoint returns exact schema required by admin dashboard
+- [x] WebSocket real-time updates operational with proper event types
+- [x] Authentication secured with Bearer token validation
+- [x] All metrics calculated from real session tracking data
+- [x] CORS configured for admin.anamnesis.health access
+- [x] Security hardening applied for production deployment
+- [x] Real-time event broadcasting functional for session monitoring
+- [x] Error handling and audit logging comprehensive
+- [x] Integration tested and validated with live domains
+
+**Phase 11 Status: ✅ COMPLETED** - The MVP platform now provides complete admin dashboard integration with real-time AI monitoring capabilities, enabling external administrative oversight of the medical AI assistant through secure REST and WebSocket APIs.
