@@ -878,7 +878,7 @@ router.get("/health", (req, res) => {
         
         if (!closed) {
           // Finalize the streaming response and apply final processing
-          responseText = processAIResponse(responseText, sessionId);
+          responseText = await processAIResponse(responseText, sessionId);
           const requestDuration = Date.now() - startTime;
           // Only log completion if client is still connected
           if (!closed) {
