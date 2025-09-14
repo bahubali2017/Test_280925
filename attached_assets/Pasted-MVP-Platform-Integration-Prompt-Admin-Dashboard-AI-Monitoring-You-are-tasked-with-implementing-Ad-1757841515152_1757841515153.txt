@@ -1,0 +1,134 @@
+MVP Platform Integration Prompt - Admin Dashboard AI Monitoring
+You are tasked with implementing Admin Dashboard Integration for the MVP platform to support real-time AI monitoring and statistics reporting. The admin dashboard at https://admin.anamnesis.health requires specific API endpoints and WebSocket connections to display live AI system metrics.
+
+🎯 REQUIRED IMPLEMENTATIONS
+1. REST API Endpoint: /api/ai/stats
+Purpose: Provide comprehensive AI system statistics for admin monitoring dashboard
+
+HTTP Method: GET
+Authentication: Bearer token (Admin API token from environment)
+Response Format: JSON
+
+Required Response Schema:
+
+{
+  "activeSessions": <number>,           // Currently active AI sessions
+  "failedResponses": <number>,          // Total failed AI responses  
+  "successRate": <number>,              // Success rate percentage (0-100)
+  "averageResponseTime": <number>,      // Average response time in milliseconds
+  "totalSessions": <number>,            // Total AI sessions count
+  "flaggedRegressions": <number>,       // Manually flagged problematic responses
+  "failureRate": <number>,              // Failure rate percentage (0-100)
+  "requestsPerDay": {                   // Last 7 days of request counts
+    "2025-09-14": <number>,
+    "2025-09-13": <number>,
+    // ... continue for 7 days
+  },
+  "timestamp": "<ISO_timestamp>",       // When stats were generated
+  "source": "mvp-live-data"            // Data source identifier
+}
+Data Calculation Requirements:
+
+activeSessions: Count of currently running AI sessions
+failedResponses: Count of AI requests that returned errors/failed
+successRate: (successful_requests / total_requests) * 100
+averageResponseTime: Mean response time of AI requests in milliseconds
+totalSessions: Total count of all AI sessions (lifetime)
+flaggedRegressions: Count of responses manually flagged by admins/quality control
+failureRate: 100 - successRate
+requestsPerDay: Daily aggregated counts for last 7 days
+2. WebSocket Endpoint: /ws/admin
+Purpose: Real-time updates for admin dashboard AI monitoring
+
+Connection: WebSocket with admin authentication
+Protocol: JSON message format
+
+Authentication Flow:
+
+// Client sends on connection:
+{
+  "type": "auth",
+  "userId": <admin_user_id>,
+  "username": "<admin_username>",
+  "role": "<admin_role>"
+}
+// Client subscribes to events:
+{
+  "type": "subscribe", 
+  "events": ["ai_session_update", "ai_session_flagged", "ai_metrics_update"]
+}
+Required Event Types to Broadcast:
+
+ai_session_update - When AI session starts/ends/status changes
+{
+  "type": "ai_session_update",
+  "sessionId": "<session_id>",
+  "status": "started|completed|failed",
+  "timestamp": "<ISO_timestamp>",
+  "userId": <user_id>,
+  "responseTime": <milliseconds>
+}
+ai_session_flagged - When AI response is flagged for quality issues
+{
+  "type": "ai_session_flagged", 
+  "sessionId": "<session_id>",
+  "flagReason": "<reason>",
+  "flaggedBy": "<admin_username>",
+  "timestamp": "<ISO_timestamp>"
+}
+ai_metrics_update - Periodic metrics updates (every 30 seconds)
+{
+  "type": "ai_metrics_update",
+  "metrics": {
+    "activeSessions": <number>,
+    "successRate": <number>,
+    "averageResponseTime": <number>
+  },
+  "timestamp": "<ISO_timestamp>"
+}
+🔧 TECHNICAL REQUIREMENTS
+Authentication & Security
+Validate Bearer token from Authorization header
+Only allow authenticated admin users access
+Reject requests with invalid/missing tokens with 401 Unauthorized
+Log all admin access attempts for audit trail
+Error Handling
+Return proper HTTP status codes
+For /api/ai/stats: Return 500 with error message if data retrieval fails
+For WebSocket: Send error events when operations fail
+Handle rate limiting gracefully
+Implement request timeout handling
+Performance & Monitoring
+Cache statistics for up to 30 seconds to reduce database load
+Ensure WebSocket broadcasts don't impact main application performance
+Log response times for monitoring
+Track API usage statistics
+Data Sources
+Use REAL DATA from your existing AI session logs/database
+Calculate metrics from actual user interactions and AI responses
+Ensure timestamps are accurate and reflect real activity
+Store flagged sessions in persistent storage
+🚀 IMPLEMENTATION STEPS
+Create /api/ai/stats endpoint with authentication middleware
+Set up WebSocket server at /ws/admin with proper authentication
+Implement real-time event broadcasting for AI session changes
+Add data aggregation functions to calculate metrics from live data
+Create admin flagging system for quality control workflows
+Add proper error handling and logging throughout
+🔍 VALIDATION CRITERIA
+After implementation, verify:
+
+✅ Admin dashboard can fetch /api/ai/stats and display real metrics
+✅ WebSocket connects successfully and receives real-time events
+✅ All data fields match the required schema exactly
+✅ Statistics reflect actual AI usage patterns
+✅ Real-time updates trigger when AI sessions start/end
+✅ Flagged sessions increment counters appropriately
+✅ Authentication prevents unauthorized access
+📡 INTEGRATION ENDPOINTS
+The admin dashboard will connect from:
+
+Domain: https://admin.anamnesis.health
+REST calls: GET https://mvp.anamnesis.health/api/ai/stats
+WebSocket: wss://mvp.anamnesis.health/ws/admin
+Ensure CORS is configured to allow requests from the admin dashboard domain.

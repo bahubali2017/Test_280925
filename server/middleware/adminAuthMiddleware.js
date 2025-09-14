@@ -74,26 +74,30 @@ export function adminAuthMiddleware(req, res, next) {
 }
 
 /**
- * WebSocket authentication for admin connections
- * @param {WebSocket} ws - WebSocket connection
+ * Validate admin token for WebSocket authentication (security-focused)
  * @param {import('http').IncomingMessage} req - HTTP request object
- * @returns {boolean} Whether authentication was successful
+ * @returns {boolean} Whether token is valid
  */
-export function authenticateAdminWebSocket(ws, req) {
+export function validateAdminWebSocketToken(req) {
   try {
-    // Check for token in query parameters or headers
-    const token = req.url?.includes('token=') 
-      ? new URL(req.url, 'http://localhost').searchParams.get('token')
-      : req.headers.authorization?.substring(7); // Remove 'Bearer ' prefix
+    // SECURITY: Only use Authorization header in production for WebSocket auth
+    // Query params can leak in logs and intermediaries
+    const isProduction = process.env.NODE_ENV === 'production';
+    
+    const token = isProduction 
+      ? req.headers.authorization?.substring(7) // Only header in production
+      : (req.headers.authorization?.substring(7) || 
+         (req.url?.includes('token=') ? new URL(req.url, 'http://localhost').searchParams.get('token') : null));
     
     const expectedToken = process.env.ADMIN_API_TOKEN;
     
     if (!expectedToken || !token || token !== expectedToken) {
-      ws.close(4001, 'Unauthorized');
+      const clientIP = req.connection?.remoteAddress || 'unknown';
+      console.warn(`[ADMIN-WS] Authentication failed from ${clientIP}`);
       return false;
     }
     
-    const clientIP = req.connection.remoteAddress || 'unknown';
+    const clientIP = req.connection?.remoteAddress || 'unknown';
     const maskedToken = token.length > 8 ? `${token.substring(0, 4)}***${token.substring(token.length - 4)}` : '***';
     
     console.info(`[ADMIN-WS] Authenticated WebSocket connection from ${clientIP} with token ${maskedToken}`);
@@ -101,7 +105,22 @@ export function authenticateAdminWebSocket(ws, req) {
     return true;
   } catch (error) {
     console.error('[ADMIN-WS] Authentication error:', error);
-    ws.close(4000, 'Authentication Error');
     return false;
   }
+}
+
+/**
+ * WebSocket authentication for admin connections (legacy - use validateAdminWebSocketToken)
+ * @param {WebSocket} ws - WebSocket connection
+ * @param {import('http').IncomingMessage} req - HTTP request object
+ * @returns {boolean} Whether authentication was successful
+ */
+export function authenticateAdminWebSocket(ws, req) {
+  const isValid = validateAdminWebSocketToken(req);
+  
+  if (!isValid && ws) {
+    ws.close(4001, 'Unauthorized');
+  }
+  
+  return isValid;
 }

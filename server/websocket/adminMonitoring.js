@@ -4,7 +4,7 @@
  */
 
 import { WebSocket, WebSocketServer } from 'ws';
-import { authenticateAdminWebSocket } from '../middleware/adminAuthMiddleware.js';
+import { validateAdminWebSocketToken } from '../middleware/adminAuthMiddleware.js';
 import { checkWebSocketRateLimit, incrementWebSocketConnections, decrementWebSocketConnections } from '../middleware/rateLimiter.js';
 import { sessionTracker } from '../utils/sessionTracker.js';
 import { adminLogger } from '../utils/adminLogger.js';
@@ -54,8 +54,8 @@ class AdminWebSocketServer {
    */
   verifyClient(info) {
     try {
-      // Check basic authentication
-      if (!authenticateAdminWebSocket(null, info.req)) {
+      // Check basic authentication (security-focused token validation)
+      if (!validateAdminWebSocketToken(info.req)) {
         return false;
       }
       
@@ -229,6 +229,31 @@ class AdminWebSocketServer {
       
       // Handle different message types
       switch (message.type) {
+        case 'auth':
+          // Authentication message (already handled during connection)
+          this.sendToClient(ws, {
+            type: 'auth_success',
+            data: { 
+              timestamp: new Date().toISOString(),
+              userId: message.userId || 'admin',
+              role: message.role || 'admin'
+            }
+          });
+          break;
+          
+        case 'subscribe':
+          // Subscribe to specific event types
+          const events = message.events || ['ai_session_update', 'ai_session_flagged', 'ai_metrics_update'];
+          this.clientInfo.get(ws).subscribedEvents = events;
+          this.sendToClient(ws, {
+            type: 'subscription_success',
+            data: { 
+              events: events,
+              timestamp: new Date().toISOString()
+            }
+          });
+          break;
+          
         case 'ping':
           this.sendToClient(ws, {
             type: 'pong',
@@ -296,13 +321,92 @@ class AdminWebSocketServer {
    * Set up event listeners for session tracker events
    */
   setupEventListeners() {
+    // Listen for session tracker events and transform them to admin dashboard format
     sessionTracker.addEventListener((eventType, eventData) => {
-      // Broadcast session events to all connected admin clients
-      this.broadcast({
-        type: eventType,
-        data: eventData
-      });
+      this.handleSessionEvent(eventType, eventData);
     });
+    
+    // Set up periodic metrics updates (every 30 seconds)
+    setInterval(() => {
+      this.broadcastMetricsUpdate();
+    }, 30000);
+  }
+  
+  /**
+   * Handle session events and broadcast in admin dashboard format
+   * @param {string} eventType - Type of session event
+   * @param {Object} eventData - Event data
+   */
+  handleSessionEvent(eventType, eventData) {
+    let adminEvent = null;
+    
+    switch (eventType) {
+      case 'session_started':
+        adminEvent = {
+          type: 'ai_session_update',
+          sessionId: eventData.sessionId,
+          status: 'started',
+          timestamp: eventData.timestamp,
+          userId: eventData.userId || 'anonymous',
+          responseTime: null
+        };
+        break;
+        
+      case 'session_completed':
+        adminEvent = {
+          type: 'ai_session_update',
+          sessionId: eventData.sessionId,
+          status: 'completed',
+          timestamp: eventData.timestamp,
+          userId: eventData.userId || 'anonymous',
+          responseTime: eventData.responseTime || null
+        };
+        break;
+        
+      case 'session_failed':
+        adminEvent = {
+          type: 'ai_session_update',
+          sessionId: eventData.sessionId,
+          status: 'failed',
+          timestamp: eventData.timestamp,
+          userId: eventData.userId || 'anonymous',
+          responseTime: eventData.responseTime || null
+        };
+        break;
+        
+      case 'session_flagged':
+        adminEvent = {
+          type: 'ai_session_flagged',
+          sessionId: eventData.sessionId,
+          flagReason: eventData.flagReason || 'quality_concern',
+          flaggedBy: eventData.flaggedBy || 'system',
+          timestamp: eventData.timestamp
+        };
+        break;
+    }
+    
+    if (adminEvent) {
+      this.broadcast(adminEvent);
+    }
+  }
+  
+  /**
+   * Broadcast periodic metrics updates to admin dashboard
+   */
+  broadcastMetricsUpdate() {
+    const metrics = sessionTracker.getDetailedMetrics();
+    
+    const metricsUpdate = {
+      type: 'ai_metrics_update',
+      metrics: {
+        activeSessions: metrics.active_sessions || 0,
+        successRate: Math.round(metrics.success_rate || 100),
+        averageResponseTime: Math.round(metrics.avg_response_time || 0)
+      },
+      timestamp: new Date().toISOString()
+    };
+    
+    this.broadcast(metricsUpdate);
   }
   
   /**

@@ -66,6 +66,7 @@ export function productionCorsMiddleware(req, res, next) {
   const productionDomains = [
     // Domains will be auto-detected from request headers in production
     // Removed hardcoded domains to prevent deployment conflicts
+    'https://admin.anamnesis.health' // Admin dashboard domain
   ];
   
   // Development domains (only in development)

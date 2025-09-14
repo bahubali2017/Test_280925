@@ -137,7 +137,123 @@ app.use("/api/feedback", feedbackRouter);
 app.use("/api/system", systemStatusRateLimit, systemStatusRoutes);
 app.use("/api/admin", adminEndpointRateLimit, adminMetricsRoutes);
 
-console.log("✅ Routes mounted: /api/chat, /api/feedback, /api/system, /api/admin");
+// Mount specific AI stats endpoint at /api/ai/stats as required by admin dashboard
+import { adminAuthMiddleware } from './middleware/adminAuthMiddleware.js';
+import { sessionTracker } from './utils/sessionTracker.js';
+import { adminLogger } from './utils/adminLogger.js';
+
+app.get('/api/ai/stats', adminEndpointRateLimit, adminAuthMiddleware, async (req, res) => {
+  const requestStart = Date.now();
+  
+  try {
+    const metrics = sessionTracker.getDetailedMetrics();
+    const allSessions = [...sessionTracker.activeSessions.values(), ...sessionTracker.completedSessions];
+    
+    // Calculate last 7 days of requests
+    const requestsPerDay = {};
+    const today = new Date();
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(today);
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dayStart = new Date(date);
+      dayStart.setHours(0, 0, 0, 0);
+      const dayEnd = new Date(date);
+      dayEnd.setHours(23, 59, 59, 999);
+      
+      requestsPerDay[dateStr] = allSessions.filter(session => 
+        session.startTime >= dayStart.getTime() && session.startTime <= dayEnd.getTime()
+      ).length;
+    }
+    
+    // Calculate metrics from real session data
+    const completedSessionsLast24h = sessionTracker.completedSessions.filter(session => 
+      session.endTime && session.endTime > (Date.now() - 24 * 60 * 60 * 1000)
+    );
+    
+    const totalRequests = completedSessionsLast24h.length;
+    const failedSessions = completedSessionsLast24h.filter(s => s.status !== 'completed');
+    const successfulSessions = completedSessionsLast24h.filter(s => s.status === 'completed');
+    const flaggedSessions = completedSessionsLast24h.filter(s => s.flagged);
+    
+    const successRate = totalRequests > 0 ? Math.round((successfulSessions.length / totalRequests) * 100) : 100;
+    const failureRate = 100 - successRate;
+    
+    // Calculate average response time from all completed sessions
+    const responseTimes = completedSessionsLast24h
+      .map(s => s.metrics.avgLatency)
+      .filter(time => time > 0);
+    const averageResponseTime = responseTimes.length > 0 
+      ? Math.round(responseTimes.reduce((sum, time) => sum + time, 0) / responseTimes.length)
+      : 0;
+    
+    const aiStatsResponse = {
+      activeSessions: sessionTracker.activeSessions.size,
+      failedResponses: failedSessions.length,
+      successRate: successRate,
+      averageResponseTime: averageResponseTime,
+      totalSessions: allSessions.length,
+      flaggedRegressions: flaggedSessions.length,
+      failureRate: failureRate,
+      requestsPerDay: requestsPerDay,
+      timestamp: new Date().toISOString(),
+      source: "mvp-live-data"
+    };
+    
+    // Log admin access
+    const responseTime = Date.now() - requestStart;
+    const clientIP = req.ip || req.connection?.remoteAddress || 'unknown';
+    const authHeader = req.headers.authorization;
+    const token = authHeader ? authHeader.substring(7) : 'unknown';
+    const maskedToken = token.length > 8 ? `${token.substring(0, 4)}***${token.substring(token.length - 4)}` : '***';
+    
+    await adminLogger.logAccess({
+      endpoint: '/api/ai/stats',
+      method: 'GET',
+      adminToken: maskedToken,
+      sourceIP: clientIP,
+      userAgent: req.headers['user-agent'] || 'unknown',
+      responseStatus: 200,
+      responseTime
+    });
+    
+    res.json(aiStatsResponse);
+  } catch (error) {
+    console.error('[AI-STATS] Stats endpoint error:', error);
+    
+    // Log error
+    await adminLogger.logError({
+      component: 'ai-stats',
+      error: error.message || 'Unknown error',
+      severity: 'high',
+      sessionId: 'ai-stats-endpoint'
+    });
+    
+    const responseTime = Date.now() - requestStart;
+    const clientIP = req.ip || req.connection?.remoteAddress || 'unknown';
+    const authHeader = req.headers.authorization;
+    const token = authHeader ? authHeader.substring(7) : 'unknown';
+    const maskedToken = token.length > 8 ? `${token.substring(0, 4)}***${token.substring(token.length - 4)}` : '***';
+    
+    await adminLogger.logAccess({
+      endpoint: '/api/ai/stats',
+      method: 'GET',
+      adminToken: maskedToken,
+      sourceIP: clientIP,
+      userAgent: req.headers['user-agent'] || 'unknown',
+      responseStatus: 500,
+      responseTime
+    });
+    
+    res.status(500).json({
+      success: false,
+      message: 'AI statistics unavailable'
+    });
+  }
+});
+
+console.log("✅ Routes mounted: /api/chat, /api/feedback, /api/system, /api/admin, /api/ai");
 
 const debugRouter = express.Router();
 debugRouter.get("/debug/:sessionId", async (req, res) => {
