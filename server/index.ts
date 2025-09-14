@@ -355,33 +355,325 @@ adminWebSocketServer.initialize(httpServer);
       });
     });
 
-    const startServer = (port: number) => {
+    const startServer = async (port: number, retries: number = 3) => {
       try {
+        // Check if port is in use and attempt cleanup
+        await cleanupExistingProcess(port);
+        
+        // Create PID file before attempting to listen
+        createPidFile(process.pid);
+        
         const server = httpServer.listen(port, "0.0.0.0", () => {
           console.log(`🚀 Production server started on port ${port}`);
           console.log(`📁 Static files served from: ${staticPath}`);
+          
+          // Store server reference for graceful shutdown
+          global.httpServer = server;
         });
+        
         server.requestTimeout = 10000;
         server.headersTimeout = 12000;
         server.keepAliveTimeout = 5000;
+        
+        server.on('error', async (err: any) => {
+          if (err.code === "EADDRINUSE" && retries > 0) {
+            console.warn(`⚠️ Port ${port} still in use after cleanup, retrying (${retries} attempts left)`);
+            // Remove PID file since we're retrying
+            removePidFile();
+            // Wait a bit and retry with more aggressive cleanup
+            await new Promise(resolve => setTimeout(resolve, 2000));
+            startServer(port, retries - 1);
+          } else if (err.code === "EADDRINUSE") {
+            console.error(`❌ Port ${port} remains in use after ${3} cleanup attempts. Exiting.`);
+            removePidFile();
+            process.exit(1);
+          } else {
+            console.error("Server error:", err);
+            removePidFile();
+            process.exit(1);
+          }
+        });
+        
       } catch (err: any) {
-        if (err.code === "EADDRINUSE") {
-          console.warn(`⚠️ Port ${port} in use, trying ${port + 1}`);
-          startServer(port + 1);
-        } else {
-          console.error("Failed to start server:", err);
-          process.exit(1);
-        }
+        console.error("Failed to start server:", err);
+        process.exit(1);
       }
     };
+    
     startServer(PORT);
   }
 })();
 
+// ============================================================================
+// COMPREHENSIVE PROCESS MANAGEMENT & CLEANUP SYSTEM
+// ============================================================================
+
+import { exec } from 'child_process';
+import fs from 'fs';
+import { promisify } from 'util';
+const execAsync = promisify(exec);
+
+// Add global type for server reference
+declare global {
+  var httpServer: any;
+}
+
+/**
+ * Process lock and PID file management for single instance enforcement
+ */
+const PID_FILE = '/tmp/anamnesis-server.pid';
+const LOCK_FILE = '/tmp/anamnesis-server.lock';
+
+/**
+ * Acquire process lock to prevent multiple instances
+ */
+function acquireProcessLock(): boolean {
+  try {
+    // Check if lock file exists
+    if (fs.existsSync(LOCK_FILE)) {
+      const lockData = fs.readFileSync(LOCK_FILE, 'utf8');
+      const { pid, timestamp } = JSON.parse(lockData);
+      
+      // Check if the process is still running
+      try {
+        process.kill(parseInt(pid), 0); // Test signal
+        const age = Date.now() - timestamp;
+        
+        // If lock is older than 30 seconds and process exists, it might be stuck
+        if (age > 30000) {
+          console.log(`[PROCESS-MGMT] Stale lock detected (${Math.round(age/1000)}s old), attempting cleanup...`);
+          try {
+            process.kill(parseInt(pid), 'SIGKILL');
+            removeLockFile();
+          } catch (e) {
+            // Process might already be dead
+            removeLockFile();
+          }
+        } else {
+          console.warn(`[PROCESS-MGMT] Another server instance is running (PID: ${pid})`);
+          return false;
+        }
+      } catch (e) {
+        // Process not running, remove stale lock
+        console.log(`[PROCESS-MGMT] Removing stale lock file (process ${pid} not running)`);
+        removeLockFile();
+      }
+    }
+    
+    // Create new lock file
+    const lockData = {
+      pid: process.pid,
+      timestamp: Date.now(),
+      startTime: new Date().toISOString()
+    };
+    
+    fs.writeFileSync(LOCK_FILE, JSON.stringify(lockData, null, 2));
+    console.log(`[PROCESS-MGMT] Process lock acquired for PID: ${process.pid}`);
+    return true;
+    
+  } catch (err) {
+    console.error(`[PROCESS-MGMT] Failed to acquire process lock:`, err);
+    return false;
+  }
+}
+
+function removeLockFile() {
+  try {
+    if (fs.existsSync(LOCK_FILE)) {
+      fs.unlinkSync(LOCK_FILE);
+      console.log(`[PROCESS-MGMT] Lock file removed: ${LOCK_FILE}`);
+    }
+  } catch (err) {
+    console.warn(`[PROCESS-MGMT] Failed to remove lock file:`, err);
+  }
+}
+
+function createPidFile(pid: number) {
+  try {
+    fs.writeFileSync(PID_FILE, pid.toString());
+    console.log(`[PROCESS-MGMT] PID file created: ${PID_FILE} (${pid})`);
+  } catch (err) {
+    console.warn(`[PROCESS-MGMT] Failed to create PID file:`, err);
+  }
+}
+
+function removePidFile() {
+  try {
+    if (fs.existsSync(PID_FILE)) {
+      fs.unlinkSync(PID_FILE);
+      console.log(`[PROCESS-MGMT] PID file removed: ${PID_FILE}`);
+    }
+  } catch (err) {
+    console.warn(`[PROCESS-MGMT] Failed to remove PID file:`, err);
+  }
+}
+
+/**
+ * Cleanup existing processes that might be holding the port
+ */
+async function cleanupExistingProcess(port: number): Promise<void> {
+  console.log(`[PROCESS-MGMT] Checking for existing processes on port ${port}`);
+  
+  try {
+    // Check PID file first
+    if (fs.existsSync(PID_FILE)) {
+      const oldPid = fs.readFileSync(PID_FILE, 'utf8').trim();
+      console.log(`[PROCESS-MGMT] Found PID file with PID: ${oldPid}`);
+      
+      try {
+        // Check if process is still running
+        process.kill(parseInt(oldPid), 0); // Test signal, doesn't kill
+        console.log(`[PROCESS-MGMT] Old process ${oldPid} still running, terminating...`);
+        
+        // Try graceful shutdown first
+        process.kill(parseInt(oldPid), 'SIGTERM');
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        // Force kill if still running
+        try {
+          process.kill(parseInt(oldPid), 0);
+          console.log(`[PROCESS-MGMT] Force killing old process ${oldPid}`);
+          process.kill(parseInt(oldPid), 'SIGKILL');
+        } catch (e) {
+          // Process already dead
+        }
+      } catch (e) {
+        // Process not running, remove stale PID file
+        removePidFile();
+      }
+    }
+    
+    // Kill any processes using the target port
+    try {
+      const { stdout } = await execAsync(`netstat -tlnp 2>/dev/null | grep :${port} || true`);
+      if (stdout.trim()) {
+        console.log(`[PROCESS-MGMT] Found process using port ${port}, cleaning up...`);
+        
+        // Extract PIDs and kill them
+        const lines = stdout.trim().split('\n');
+        for (const line of lines) {
+          const match = line.match(/(\d+)\/node/);
+          if (match) {
+            const pid = match[1];
+            console.log(`[PROCESS-MGMT] Killing process ${pid} using port ${port}`);
+            try {
+              process.kill(parseInt(pid), 'SIGTERM');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              try {
+                process.kill(parseInt(pid), 'SIGKILL');
+              } catch (e) { /* Already dead */ }
+            } catch (e) {
+              console.warn(`[PROCESS-MGMT] Failed to kill PID ${pid}:`, e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      // netstat might not be available, continue anyway
+      console.log(`[PROCESS-MGMT] netstat unavailable, proceeding with startup`);
+    }
+    
+    // Additional cleanup: kill any node processes with "dist/index.js"
+    try {
+      const { stdout } = await execAsync(`pgrep -f "dist/index.js" || true`);
+      if (stdout.trim()) {
+        const pids = stdout.trim().split('\n');
+        for (const pid of pids) {
+          if (pid && pid !== process.pid.toString()) {
+            console.log(`[PROCESS-MGMT] Killing orphaned server process: ${pid}`);
+            try {
+              process.kill(parseInt(pid), 'SIGTERM');
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              process.kill(parseInt(pid), 'SIGKILL');
+            } catch (e) { /* Already dead */ }
+          }
+        }
+      }
+    } catch (e) {
+      // pgrep might not be available
+    }
+    
+    console.log(`[PROCESS-MGMT] Cleanup completed for port ${port}`);
+    
+  } catch (error) {
+    console.warn(`[PROCESS-MGMT] Cleanup error (non-fatal):`, error);
+  }
+}
+
+/**
+ * Graceful shutdown handler
+ */
+async function gracefulShutdown(signal: string) {
+  console.log(`\n[PROCESS-MGMT] Received ${signal}, initiating graceful shutdown...`);
+  
+  // Close HTTP server if it exists
+  if (global.httpServer) {
+    console.log(`[PROCESS-MGMT] Closing HTTP server...`);
+    global.httpServer.close((err) => {
+      if (err) {
+        console.error(`[PROCESS-MGMT] Error closing server:`, err);
+      } else {
+        console.log(`[PROCESS-MGMT] HTTP server closed`);
+      }
+    });
+  }
+  
+  // Close WebSocket connections
+  try {
+    if (adminWebSocketServer && adminWebSocketServer.wss) {
+      adminWebSocketServer.wss.close();
+      console.log(`[PROCESS-MGMT] WebSocket server closed`);
+    }
+  } catch (err) {
+    console.warn(`[PROCESS-MGMT] Error closing WebSocket:`, err);
+  }
+  
+  // Clean up PID and lock files
+  removePidFile();
+  removeLockFile();
+  
+  console.log(`[PROCESS-MGMT] Graceful shutdown completed`);
+  
+  // Force exit after timeout
+  setTimeout(() => {
+    console.log(`[PROCESS-MGMT] Force exit after timeout`);
+    process.exit(0);
+  }, 5000);
+}
+
+// Register signal handlers for graceful shutdown
+process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
+process.on('SIGINT', () => gracefulShutdown('SIGINT'));
+process.on('SIGHUP', () => gracefulShutdown('SIGHUP'));
+
+// Enhanced error handling
 process.on("uncaughtException", (err) => {
-  console.error("Uncaught Exception:", err);
+  console.error("[PROCESS-MGMT] Uncaught Exception:", err);
+  removePidFile();
+  removeLockFile();
+  process.exit(1);
 });
 
 process.on("unhandledRejection", (reason, promise) => {
-  console.error("Unhandled Rejection at:", promise, "reason:", reason);
+  console.error("[PROCESS-MGMT] Unhandled Rejection at:", promise, "reason:", reason);
+  removePidFile();
+  removeLockFile();
+  process.exit(1);
 });
+
+// Cleanup on normal exit
+process.on('exit', (code) => {
+  console.log(`[PROCESS-MGMT] Process exiting with code: ${code}`);
+  removePidFile();
+  removeLockFile();
+});
+
+// Initialize process management - acquire lock BEFORE everything else
+console.log(`[PROCESS-MGMT] Initializing process management for PID: ${process.pid}`);
+
+if (!acquireProcessLock()) {
+  console.error(`[PROCESS-MGMT] Failed to acquire process lock - another instance may be running`);
+  process.exit(1);
+}
+
+console.log(`[PROCESS-MGMT] Process management initialized successfully`);
