@@ -6,7 +6,7 @@ import { MessageBubble } from '../components/MessageBubble';
 import { Input } from "../components/ui/input";
 import AnimatedNeuralLogo from '../components/AnimatedNeuralLogo.jsx'; // eslint-disable-line no-unused-vars
 import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-line no-unused-vars
-import { PWAInstallButton } from '../components/PWAInstallButton.jsx';
+import { InstallationNotice } from '../components/InstallationNotice.jsx';
 import { UpdateNotification } from '../components/UpdateNotification.jsx';
 import { apiRequest } from '../lib/queryClient';
 import { stopStreaming, getSafeTimeoutFunctions } from '../lib/llm-api';
@@ -759,6 +759,9 @@ export default function ChatPage() {
       {/* PWA Update Notification */}
       <UpdateNotification />
       
+      {/* PWA Installation Notice Popup */}
+      <InstallationNotice />
+      
       {/* Header */}
       <header className="bg-card dark:bg-sidebar-background py-3 px-4 md:px-6 shadow-md border-b border-border transition-colors duration-300">
         <div className="container-xl">
@@ -780,9 +783,6 @@ export default function ChatPage() {
               
               {/* Right side controls - horizontal layout */}
               <div className="flex items-center gap-2">
-                {/* PWA Install Button */}
-                <PWAInstallButton />
-                
                 {/* Theme Toggle */}
                 <ThemeToggle />
                 
@@ -822,9 +822,6 @@ export default function ChatPage() {
                   {user.email}
                 </span>
               )}
-
-              {/* PWA Install Button */}
-              <PWAInstallButton />
 
               {/* Theme Toggle */}
               <ThemeToggle />
