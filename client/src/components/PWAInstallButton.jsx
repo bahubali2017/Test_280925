@@ -101,7 +101,7 @@ export function PWAInstallButton() {
   return (
     <button
       onClick={handleInstallClick}
-      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 dark:from-cyan-900/20 dark:to-cyan-800/20 dark:hover:from-cyan-800/30 dark:hover:to-cyan-700/30 border border-cyan-200 dark:border-cyan-700/50 rounded-md transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+      className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 dark:from-cyan-900/20 dark:to-cyan-800/20 dark:hover:from-cyan-800/30 dark:hover:to-cyan-700/30 border border-cyan-200 dark:border-cyan-700/50 rounded transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/30 sm:gap-1.5 sm:px-2.5 sm:py-1 sm:text-xs"
       title="Install Anamnesis as an app"
       aria-label="Install Anamnesis Medical AI Assistant as an app"
     >
