@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 
 /**
  * PWA Install Button Component
@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react';
  * @returns {JSX.Element|null} Install button or null if not installable
  */
 export function PWAInstallButton() {
+  /** @type {[any, React.Dispatch<React.SetStateAction<any>>]} */
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [showInstallButton, setShowInstallButton] = useState(false);
   const [isInstalled, setIsInstalled] = useState(false);
@@ -36,6 +37,7 @@ export function PWAInstallButton() {
     }
 
     // Listen for the beforeinstallprompt event
+    /** @param {Event} e */
     const handleBeforeInstallPrompt = (e) => {
       console.log('💾 PWA install prompt available');
       e.preventDefault();
@@ -75,10 +77,10 @@ export function PWAInstallButton() {
     }
 
     // Show the install prompt
-    deferredPrompt.prompt();
+    /** @type {any} */ (deferredPrompt).prompt();
 
     // Wait for the user to respond to the prompt
-    const { outcome } = await deferredPrompt.userChoice;
+    const { outcome } = await /** @type {any} */ (deferredPrompt).userChoice;
     
     if (outcome === 'accepted') {
       console.log('User accepted the install prompt');
@@ -99,11 +101,11 @@ export function PWAInstallButton() {
   return (
     <button
       onClick={handleInstallClick}
-      className="inline-flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 dark:from-cyan-900/20 dark:to-cyan-800/20 dark:hover:from-cyan-800/30 dark:hover:to-cyan-700/30 border border-cyan-200 dark:border-cyan-700/50 rounded-lg transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+      className="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium text-cyan-600 hover:text-cyan-700 dark:text-cyan-400 dark:hover:text-cyan-300 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 dark:from-cyan-900/20 dark:to-cyan-800/20 dark:hover:from-cyan-800/30 dark:hover:to-cyan-700/30 border border-cyan-200 dark:border-cyan-700/50 rounded-md transition-all duration-200 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
       title="Install Anamnesis as an app"
       aria-label="Install Anamnesis Medical AI Assistant as an app"
     >
-      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
         <polyline points="7 10 12 15 17 10"/>
         <line x1="12" y1="15" x2="12" y2="3"/>
