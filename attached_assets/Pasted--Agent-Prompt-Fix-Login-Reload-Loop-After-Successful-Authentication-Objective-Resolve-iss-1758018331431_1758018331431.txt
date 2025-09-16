@@ -1,0 +1,80 @@
+# Agent Prompt — Fix Login Reload Loop After Successful Authentication
+
+🎯 Objective:
+Resolve issue where user logs in successfully, but frontend reloads back to the login/authentication page instead of entering the main app.
+
+---
+
+🔍 Investigation Tasks:
+1. Inspect `server/auth.js`:
+   - Check `passport.serializeUser` and `deserializeUser`.
+   - Confirm `req.user` is properly set after login.
+   - Verify `successRedirect` and `failureRedirect` values.
+   - Ensure session cookie options use:
+     - `httpOnly: true`
+     - `secure: true`
+     - `sameSite: "none"`
+     - `domain: ".anamnesis.health"`
+
+2. Inspect `AuthProvider.jsx` (or `use-auth.js`):
+   - Check if `loginWithEmail` (or equivalent) updates auth state after login.
+   - Verify `/api/auth/session` returns `{ authenticated: true, user: {…} }` immediately after login.
+   - Ensure `setUser(response.user)` is called.
+
+3. Inspect Replit deployment environment:
+   - Confirm `SESSION_SECRET` is set in `.env`.
+   - Verify `ADMIN_API_TOKEN` and Supabase keys are correct.
+   - Check if Replit deployment strips cookies from custom domain.
+
+---
+
+🛠️ Fix Implementation:
+1. **Fix Session Cookie Handling**
+   - Update `express-session` config in `server/auth.js`:
+     ```js
+     app.use(session({
+       secret: process.env.SESSION_SECRET,
+       resave: false,
+       saveUninitialized: false,
+       cookie: {
+         httpOnly: true,
+         secure: true,
+         sameSite: "none",
+         domain: ".anamnesis.health"
+       }
+     }));
+     ```
+   - Ensures cookies persist across `mvp.anamnesis.health`.
+
+2. **Fix Redirects**
+   - In login handler:
+     ```js
+     router.post('/login', passport.authenticate('local'), (req, res) => {
+       res.json({ success: true, user: req.user });
+     });
+     ```
+   - Remove `res.redirect("/login")`.
+
+3. **Fix Frontend AuthProvider**
+   - In `AuthProvider.jsx`:
+     - After `login()`, call `/api/auth/session`.
+     - Set `isAuthenticated=true` and `user=data.user`.
+     - Ensure router pushes `/` (not `/login`).
+
+4. **Add Debug Route**
+   - Add `/api/auth/debug` to return `{ session: req.session, user: req.user }`.
+   - Helps confirm if session works in production.
+
+---
+
+✅ Expected Results:
+- After login, `/api/auth/session` returns `{ authenticated: true, user: {…} }`.
+- Frontend sets `isAuthenticated=true` and loads main app.
+- No more reload loop to login page.
+- Cookies persist across custom domain (`mvp.anamnesis.health`).
+
+---
+
+⚠️ Notes:
+- This is NOT rate limiting anymore — it’s session/cookie handling + frontend state sync.
+- Ensure deployment uses HTTPS (already enforced) so `secure: true` cookies work.
