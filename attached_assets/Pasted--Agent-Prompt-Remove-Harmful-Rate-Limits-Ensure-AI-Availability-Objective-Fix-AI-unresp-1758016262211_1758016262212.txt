@@ -1,0 +1,63 @@
+# Agent Prompt — Remove Harmful Rate Limits & Ensure AI Availability
+
+🎯 Objective:
+Fix AI unresponsiveness and login reload loops caused by aggressive rate limiting. Ensure AI and login endpoints are always available without artificial restrictions, while keeping production security.
+
+---
+
+🔍 Investigation Tasks:
+1. Open `server/middleware/rateLimiter.js`.
+   - Identify `chatEndpointRateLimit`, `systemStatusRateLimit`, `adminEndpointRateLimit`, and `productionRateLimit`.
+   - Confirm current request-per-minute settings.
+
+2. Trace all `app.use()` calls in `server/index.ts`:
+   - Find where these limiters are applied (`/api/chat`, `/api/chat/stream`, `/api/feedback`, `/api/system`, `/api/admin`).
+   - Verify if login (`/api/auth/*`) is affected by global `productionRateLimit`.
+
+3. Audit logs for `[RATE-LIMIT]` events:
+   - Confirm login and AI endpoints are being throttled in production.
+
+---
+
+🛠️ Fix Implementation:
+1. **Disable Rate Limiting for Critical Endpoints**
+   - Remove rate limiting from:
+     - `/api/auth/*` (login, logout, registration).
+     - `/api/chat` and `/api/chat/stream`.
+   - These must never block users in production.
+
+2. **Keep Mild Protection for Admin APIs**
+   - Keep `adminEndpointRateLimit` but raise thresholds (e.g., 500 requests/min).
+   - Maintain audit logging and authentication checks.
+
+3. **Replace Limits with Security Middleware**
+   - Enable honeypot routes (already present in `routes/honeypot.js`).
+   - Use `securityLoggingMiddleware` to monitor abuse attempts instead of blocking.
+   - Add optional exponential backoff only for repeated failed logins from the same IP (not all requests).
+
+4. **Update Logging**
+   - Add `[RATE-LIMIT]` warnings only for admin endpoints.
+   - Log suspicious activity without blocking AI/chat endpoints.
+
+5. **Rebuild & Verify**
+   - Run `npm run build && NODE_ENV=production node dist/index.js`.
+   - Test login with multiple retries → should never hit 429.
+   - Test chat streaming → unlimited messages stream without block.
+   - Test admin metrics → still protected with higher limit + logs.
+
+---
+
+✅ Expected Results:
+- AI chat endpoints (`/api/chat`, `/api/chat/stream`) → unlimited availability.
+- Login endpoints (`/api/auth/*`) → no artificial throttling.
+- Admin endpoints → protected but not over-restricted.
+- System logs → security events logged, not blocked.
+- Users → never see "Rate limit exceeded" in production.
+
+---
+
+⚠️ Notes:
+- Keep honeypot + security headers to catch bots.
+- Do not hardcode limits for production AI flows.
+- Add config option (`DISABLE_RATE_LIMIT=1`) to toggle limits in production if needed.
+
