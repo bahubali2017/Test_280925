@@ -391,6 +391,161 @@ router.get("/app-config.json", async (req, res) => {
   });
 
   /**
+   * Authentication debug endpoint - returns comprehensive auth state information
+   * Helps troubleshoot authentication issues in production
+   */
+  router.get("/auth/debug", async (req, res) => {
+    try {
+      const timestamp = new Date().toISOString();
+      const authHeader = req.headers.authorization;
+      
+      // Initialize response object
+      const debugInfo = {
+        timestamp,
+        authenticated: false,
+        user: null,
+        session: null,
+        supabase_status: null,
+        environment: process.env.NODE_ENV || "development",
+        auth_header_present: !!authHeader,
+        circuit_breaker_open: watchdog.isCircuitBreakerOpen()
+      };
+
+      // Check Supabase health status
+      try {
+        const { testSupabaseConnection } = await import("./test-connection.js");
+        const healthResult = await testSupabaseConnection();
+        debugInfo.supabase_status = healthResult.ok ? "connected" : "disconnected";
+        debugInfo.supabase_method = healthResult.method || null;
+        debugInfo.supabase_error = healthResult.reason || null;
+      } catch (error) {
+        debugInfo.supabase_status = "error";
+        debugInfo.supabase_error = error.message;
+      }
+
+      // If no auth header, return early with connection info
+      if (!authHeader) {
+        debugInfo.message = "No authorization header provided";
+        return res.json(debugInfo);
+      }
+
+      // Extract token from Bearer header
+      const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+      
+      if (!token) {
+        debugInfo.message = "No token found in authorization header";
+        return res.json(debugInfo);
+      }
+
+      // Mask token for security (show first 4 and last 4 characters)
+      debugInfo.token_preview = token.length > 8 
+        ? `${token.substring(0, 4)}***${token.substring(token.length - 4)}`
+        : "***";
+
+      // Verify token using existing auth function
+      if (!watchdog.isCircuitBreakerOpen()) {
+        try {
+          const result = await verifyToken(token);
+          
+          if (result.success) {
+            debugInfo.authenticated = true;
+            debugInfo.user = {
+              id: result.user.id,
+              email: result.user.email,
+              name: result.user.user_metadata?.name || "",
+              created_at: result.user.created_at,
+              last_sign_in_at: result.user.last_sign_in_at
+            };
+            debugInfo.message = "Authentication successful";
+          } else {
+            debugInfo.auth_error = result.error;
+            debugInfo.message = "Token verification failed";
+          }
+        } catch (error) {
+          debugInfo.auth_error = error.message;
+          debugInfo.message = "Error during token verification";
+        }
+      } else {
+        debugInfo.message = "Circuit breaker open - Supabase unavailable";
+      }
+
+      return res.json(debugInfo);
+    } catch (error) {
+      console.error("Auth debug error:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Internal server error during auth debug",
+        timestamp: new Date().toISOString(),
+        error: error.message
+      });
+    }
+  });
+
+  /**
+   * Simple session check endpoint - returns basic authentication status
+   * Lightweight endpoint for frontend auth state verification
+   */
+  router.get("/auth/session", async (req, res) => {
+    try {
+      const authHeader = req.headers.authorization;
+      
+      // Initialize response
+      const sessionInfo = {
+        authenticated: false,
+        user: null,
+        timestamp: new Date().toISOString()
+      };
+
+      // Check if we have auth header
+      if (!authHeader) {
+        return res.json(sessionInfo);
+      }
+
+      // Extract token
+      const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
+      
+      if (!token) {
+        return res.json(sessionInfo);
+      }
+
+      // Check circuit breaker
+      if (watchdog.isCircuitBreakerOpen()) {
+        return res.status(503).json({
+          ...sessionInfo,
+          error: "Authentication service temporarily unavailable"
+        });
+      }
+
+      // Verify token
+      try {
+        const result = await verifyToken(token);
+        
+        if (result.success) {
+          sessionInfo.authenticated = true;
+          sessionInfo.user = {
+            id: result.user.id,
+            email: result.user.email,
+            name: result.user.user_metadata?.name || ""
+          };
+        }
+      } catch (error) {
+        console.warn("Session check error:", error.message);
+        // Return unauthenticated state on any error
+      }
+
+      return res.json(sessionInfo);
+    } catch (error) {
+      console.error("Session endpoint error:", error);
+      return res.status(500).json({
+        authenticated: false,
+        user: null,
+        timestamp: new Date().toISOString(),
+        error: "Internal server error"
+      });
+    }
+  });
+
+  /**
    * Chat endpoint for processing messages with DeepSeek API
    * Enhanced for Phase 4 with conversation history, retry logic, safety features, and streaming support
    */

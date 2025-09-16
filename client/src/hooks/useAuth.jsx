@@ -82,6 +82,7 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     try {
       setIsLoading(true);
+      
       // Allow test users for demo purposes (works in all environments)
       if ((email === 'test@example.com' && password === 'testpass123') ||
           (email === 'demo@example.com' && password === 'password')) {
@@ -90,8 +91,10 @@ export function AuthProvider({ children }) {
           email: email,
           role: 'user'
         });
+        // For test users, return immediately since we set the user state directly
         return { success: true, error: null };
       }
+
       const { error } = await supabaseClient.auth.signInWithPassword({
         email,
         password
@@ -101,7 +104,42 @@ export function AuthProvider({ children }) {
         return { success: false, error: error.message };
       }
 
-      return { success: true, error: null };
+      // Wait for the auth state to be updated before returning success
+      // This prevents the race condition where login returns success but
+      // the user state hasn't been updated yet by onAuthStateChange
+      return new Promise((resolve, reject) => {
+        const timeout = setTimeout(() => {
+          reject(new Error('Authentication state update timeout'));
+        }, 10000); // 10 second timeout
+
+        // Check if we already have a session
+        const checkSession = async () => {
+          try {
+            const { data: { session } } = await supabaseClient.auth.getSession();
+            if (session?.user) {
+              clearTimeout(timeout);
+              resolve({ success: true, error: null });
+            }
+          } catch (sessionError) {
+            console.warn('Session check error during login:', sessionError);
+          }
+        };
+
+        // First, check if session is already available
+        checkSession();
+
+        // Also listen for auth state change as backup
+        const { data: authListener } = supabaseClient.auth.onAuthStateChange(
+          (event, session) => {
+            if (event === 'SIGNED_IN' && session?.user) {
+              clearTimeout(timeout);
+              authListener.subscription.unsubscribe();
+              resolve({ success: true, error: null });
+            }
+          }
+        );
+      });
+
     } catch (err) {
       return { 
         success: false, 
