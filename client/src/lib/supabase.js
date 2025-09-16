@@ -7,10 +7,16 @@ import { createClient } from '@supabase/supabase-js';
 
 // Load and validate config from environment variables
 // Properly access environment variables through import.meta.env in Vite
-const VITE_SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
-const VITE_SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
+// @ts-ignore - Vite handles this at build time
+const VITE_SUPABASE_URL = import.meta.env?.VITE_SUPABASE_URL;
+// @ts-ignore - Vite handles this at build time
+const VITE_SUPABASE_ANON_KEY = import.meta.env?.VITE_SUPABASE_ANON_KEY;
 
 // Simple helper to get environment variables from either Vite or Node.js
+/**
+ * @param {string} key - The environment variable key
+ * @returns {string | undefined} The environment variable value
+ */
 const getEnvVariable = (key) => {
   if (key === 'VITE_SUPABASE_URL') return VITE_SUPABASE_URL;
   if (key === 'VITE_SUPABASE_ANON_KEY') return VITE_SUPABASE_ANON_KEY;
@@ -38,10 +44,10 @@ if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
 function isValidUrl(url) {
   try {
     // Use a safer URL check that doesn't rely on the global URL constructor
-    return url && 
+    return Boolean(url && 
            typeof url === 'string' && 
            url.startsWith('https://') && 
-           url.includes('.');
+           url.includes('.'));
   } catch {
     return false;
   }
@@ -59,34 +65,35 @@ function isValidKey(key) {
 /**
  * Creates a dummy Supabase client that throws useful errors if used before initialization
  * @param {string} errorMessage - The error message to show when methods are called
- * @returns {object} - A proxy object that throws errors when accessed
+ * @returns {import('@supabase/supabase-js').SupabaseClient} - A proxy object that throws errors when accessed
  */
 function createDummyClient(errorMessage) {
-  return new Proxy({}, {
+  return /** @type {import('@supabase/supabase-js').SupabaseClient} */ (new Proxy({}, {
     get() {
       return () => {
         throw new Error(`[Supabase Error] ${errorMessage}`);
       };
     }
-  });
+  }));
 }
 
 /**
  * Initialize and return the Supabase client singleton
  * @returns {import('@supabase/supabase-js').SupabaseClient}
  */
+/** @type {import('@supabase/supabase-js').SupabaseClient | null} */
 let _supabaseClient = null;
 
 function getSupabaseClient() {
   if (_supabaseClient) return _supabaseClient;
 
-  if (!isValidUrl(SUPABASE_URL)) {
+  if (!SUPABASE_URL || !isValidUrl(SUPABASE_URL)) {
     const msg = 'Invalid or missing VITE_SUPABASE_URL in environment.';
     console.error(msg);
     return createDummyClient(msg);
   }
 
-  if (!isValidKey(SUPABASE_ANON_KEY)) {
+  if (!SUPABASE_ANON_KEY || !isValidKey(SUPABASE_ANON_KEY)) {
     const msg = 'Invalid or missing VITE_SUPABASE_ANON_KEY in environment.';
     console.error(msg);
     return createDummyClient(msg);

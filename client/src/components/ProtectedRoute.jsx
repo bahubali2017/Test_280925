@@ -30,6 +30,7 @@ export function ProtectedRoute({ children }) {
   const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
+    /** @type {ReturnType<typeof safeSetTimeout> | undefined} */
     let redirectTimeout;
     if (!isLoading && !isAuthenticated) {
       setIsRedirecting(true);

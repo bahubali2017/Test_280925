@@ -146,7 +146,7 @@ export default function LoginPage() {
         }
       }
     } catch (err) {
-      const errorMessage = err && typeof err === 'object' && 'message' in err ? err.message : 'Authentication failed';
+      const errorMessage = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Authentication failed';
       setError(errorMessage);
       console.error('Authentication error:', err);
     } finally {
@@ -159,7 +159,11 @@ export default function LoginPage() {
    * @param {string} provider - The OAuth provider
    * @returns {Function} Event handler function
    */
-  const handleSocialLogin = (provider) => async (e) => {
+  const handleSocialLogin = (provider) => 
+    /**
+     * @param {React.MouseEvent} e - Event object
+     */
+    async (e) => {
     e.preventDefault();
     clearError();
     setIsLoading(true);

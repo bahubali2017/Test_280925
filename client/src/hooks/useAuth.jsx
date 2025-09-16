@@ -2,8 +2,15 @@ import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabaseClient } from '../lib/supabase.js';
 
 /**
+ * @typedef {object} User
+ * @property {string} id - User ID
+ * @property {string | undefined} email - User email
+ * @property {string} [role] - User role
+ */
+
+/**
  * @typedef {object} AuthContextType
- * @property {object|null} user - The authenticated user or null if not authenticated
+ * @property {User|null} user - The authenticated user or null if not authenticated
  * @property {boolean} isAuthenticated - Whether a user is currently authenticated
  * @property {boolean} isLoading - Whether authentication is in progress
  * @property {(email: string, password: string) => Promise<{success: boolean, error: string|null}>} login - Function to log in
@@ -11,15 +18,18 @@ import { supabaseClient } from '../lib/supabase.js';
  * @property {() => Promise<void>} logout - Function to log out
  */
 
-/** @type {React.Context<AuthContextType>} */
-const AuthContext = createContext({
+/** @type {AuthContextType} */
+const defaultAuthContext = {
   user: null,
   isAuthenticated: false,
   isLoading: true,
   login: async (_email, _password) => ({ success: false, error: 'Context not initialized' }),
   register: async (_email, _password, _metadata = {}) => ({ success: false, error: 'Context not initialized' }),
   logout: async () => {}
-});
+};
+
+/** @type {React.Context<AuthContextType>} */
+const AuthContext = createContext(defaultAuthContext);
 
 /**
  * Authentication context provider component
@@ -28,9 +38,9 @@ const AuthContext = createContext({
  * @returns {JSX.Element} Authentication provider component
  */
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+  const [user, setUser] = useState(/** @type {User|null} */ (null));
   const [isLoading, setIsLoading] = useState(true);
-  const [authListener, setAuthListener] = useState(null);
+  const [authListener, setAuthListener] = useState(/** @type {{subscription: any}|null} */ (null));
 
   useEffect(() => {
     let isMounted = true;
@@ -40,14 +50,14 @@ export function AuthProvider({ children }) {
         const { data: { session } } = await supabaseClient.auth.getSession();
 
         if (session?.user && isMounted) {
-          setUser(session.user);
+          setUser(/** @type {User} */ (session.user));
         }
 
         if (!authListener && isMounted) {
           const { data } = supabaseClient.auth.onAuthStateChange(
             (_event, session) => {
               if (isMounted) {
-                setUser(session?.user ?? null);
+                setUser(session?.user ? /** @type {User} */ (session.user) : null);
                 setIsLoading(false);
               }
             }
@@ -86,11 +96,13 @@ export function AuthProvider({ children }) {
       // Allow test users for demo purposes (works in all environments)
       if ((email === 'test@example.com' && password === 'testpass123') ||
           (email === 'demo@example.com' && password === 'password')) {
-        setUser({ 
+        /** @type {User} */
+        const testUser = { 
           id: 'test-user-id',
           email: email,
           role: 'user'
-        });
+        };
+        setUser(testUser);
         // For test users, return immediately since we set the user state directly
         return { success: true, error: null };
       }
