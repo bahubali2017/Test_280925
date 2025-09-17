@@ -547,7 +547,7 @@ export default function ChatPage() {
               content: content, // CRITICAL FIX: Start with actual content, not empty
               isUser: false,
               timestamp: new Date(),
-              sessionId,
+              sessionId: metadata.sessionId || sessionId, // Use backend sessionId if available
               isStreaming: true,
               status: 'pending',
               metadata: {
@@ -563,7 +563,8 @@ export default function ChatPage() {
               msg.id === responseId 
                 ? {
                     ...msg,
-                    content: content // Update with latest content
+                    content: content, // Update with latest content
+                    sessionId: metadata.sessionId || msg.sessionId // Update sessionId if available
                   }
                 : msg
             )
@@ -626,6 +627,7 @@ export default function ChatPage() {
                   ? {
                       ...msg,
                       content: content,
+                      sessionId: metadata.sessionId || msg.sessionId, // Update sessionId if available
                       isStreaming: false,
                       status: 'delivered', // Ensure delivered status is set
                       metadata: {
