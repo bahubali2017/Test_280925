@@ -29,6 +29,11 @@ import honeypotRoutes from "./routes/honeypot.js";
 // Load environment variables
 dotenv.config();
 
+// CRITICAL: Override NODE_ENV to development for Replit webpreview compatibility
+// This must happen before any middleware imports/initialization
+process.env.NODE_ENV = "development";
+console.log(`[ENV-OVERRIDE] NODE_ENV set to: ${process.env.NODE_ENV}`);
+
 // Create Express app
 const app = express();
 app.locals.supabaseHealthy = false;
@@ -271,8 +276,7 @@ adminWebSocketServer.initialize(httpServer);
 
 // Start server
 (() => {
-  // Override NODE_ENV to development for Replit webpreview compatibility
-  const NODE_ENV = "development";
+  const NODE_ENV = process.env.NODE_ENV;
   const PORT = parseInt(process.env.PORT || "5000", 10);
 
   console.log(`[BOOT] Server running in ${NODE_ENV} mode on port ${PORT}`);
