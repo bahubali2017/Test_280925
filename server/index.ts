@@ -271,7 +271,8 @@ adminWebSocketServer.initialize(httpServer);
 
 // Start server
 (() => {
-  const NODE_ENV = process.env.NODE_ENV || "development";
+  // Override NODE_ENV to development for Replit webpreview compatibility
+  const NODE_ENV = "development";
   const PORT = parseInt(process.env.PORT || "5000", 10);
 
   console.log(`[BOOT] Server running in ${NODE_ENV} mode on port ${PORT}`);
