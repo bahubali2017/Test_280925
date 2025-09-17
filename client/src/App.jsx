@@ -8,6 +8,7 @@ import { ToastProvider } from "./components/ToastProvider";
 import { useAuthAvailability } from './contexts/AuthAvailabilityContext.jsx';
 // eslint-disable-next-line no-unused-vars
 import SupabaseDownBanner from './components/SupabaseDownBanner.jsx';
+// import { initializeVersionChecking } from './lib/versionChecker';
 import LoginPage from "./pages/LoginPage";
 import ChatPage from "./pages/ChatPage";
 import LegalPage from "./pages/LegalPage";
@@ -55,13 +56,18 @@ function Router() {
 export default function App() {
   const { supabaseUp } = useAuthAvailability();
 
+  // DISABLED: Version checking system causing infinite reload loops
   // Service worker controllerchange listener for automatic reload after deploy
   useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.addEventListener("controllerchange", () => {
-        window.location.reload();
-      });
-    }
+    // DISABLED: This was causing infinite reload loops
+    // if ("serviceWorker" in navigator) {
+    //   navigator.serviceWorker.addEventListener("controllerchange", () => {
+    //     window.location.reload();
+    //   });
+    // }
+    
+    // DISABLED: Version checking initialization
+    // initializeVersionChecking();
   }, []);
 
   return (

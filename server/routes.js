@@ -195,10 +195,18 @@ router.get("/health", (req, res) => {
   });
 
 /**
- * Generate app version hash based on package version and build timestamp
- * @returns {Promise<string>} 8-character version hash
+ * Generate app version hash based on package version and server start time
+ * @returns {Promise<string>} 8-character version hash (consistent per server session)
  */
+let cachedVersionHash = null;
+const serverStartTime = Date.now().toString(); // Fixed at server startup
+
 async function generateAppVersionHash() {
+  // Return cached version to ensure consistency per server session
+  if (cachedVersionHash) {
+    return cachedVersionHash;
+  }
+  
   const crypto = await import('crypto');
   const fs = await import('fs');
   const path = await import('path');
@@ -208,19 +216,25 @@ async function generateAppVersionHash() {
     const packagePath = path.resolve(process.cwd(), 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
     
-    // Use timestamp as build identifier (could be replaced with git commit hash in CI/CD)
-    const buildTimestamp = process.env.BUILD_TIMESTAMP || Date.now().toString();
+    // Use fixed server start time as build identifier
+    const buildTimestamp = process.env.BUILD_TIMESTAMP || serverStartTime;
     const version = packageJson.version || '1.0.0';
+    const replId = process.env.REPL_ID || 'local-dev';
     
-    return crypto.default
+    // Create consistent hash using server start time, not current time
+    cachedVersionHash = crypto.default
       .createHash('sha256')
-      .update(`${version}-${buildTimestamp}`)
+      .update(`${version}-${buildTimestamp}-${replId}`)
       .digest('hex')
       .substring(0, 8);
+      
+    console.log(`[Version] Generated consistent version hash: ${cachedVersionHash}`);
+    return cachedVersionHash;
   } catch (error) {
     console.error('Failed to generate version hash:', error);
-    // Fallback to timestamp-based hash
-    return Date.now().toString().slice(-8);
+    // Fallback to consistent hash based on server start time
+    cachedVersionHash = serverStartTime.slice(-8);
+    return cachedVersionHash;
   }
 }
 
