@@ -571,6 +571,22 @@ router.get("/app-config.json", async (req, res) => {
       // Generate a unique session ID if not provided
       const sessionId = req.headers['x-session-id'] || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       
+      // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors
+      if (req.body && Array.isArray(req.body.conversationHistory)) {
+        req.body.conversationHistory = req.body.conversationHistory.filter(entry => {
+          // Only include entries with non-empty content after trimming
+          return entry && 
+                 typeof entry === 'object' && 
+                 entry.content && 
+                 typeof entry.content === 'string' && 
+                 entry.content.trim().length > 0 &&
+                 entry.role && 
+                 typeof entry.role === 'string' && 
+                 entry.role.trim().length > 0;
+        });
+        console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
+      }
+      
       // Validate request
       const validation = chatRequestSchema.safeParse(req.body);
       if (!validation.success) {
@@ -846,6 +862,22 @@ router.get("/app-config.json", async (req, res) => {
       
       // Generate a unique session ID if not provided
       const sessionId = req.headers['x-session-id'] || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      
+      // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors  
+      if (req.body && Array.isArray(req.body.conversationHistory)) {
+        req.body.conversationHistory = req.body.conversationHistory.filter(entry => {
+          // Only include entries with non-empty content after trimming
+          return entry && 
+                 typeof entry === 'object' && 
+                 entry.content && 
+                 typeof entry.content === 'string' && 
+                 entry.content.trim().length > 0 &&
+                 entry.role && 
+                 typeof entry.role === 'string' && 
+                 entry.role.trim().length > 0;
+        });
+        console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
+      }
       
       // Validate request body against schema
       const validation = chatRequestSchema.safeParse(req.body);

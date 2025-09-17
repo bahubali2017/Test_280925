@@ -155,11 +155,30 @@ export default function ChatPage() {
    */
   const prepareConversationHistory = (messageList) => {
     return messageList
-      .filter(msg => !msg.isError) // Skip error messages in conversation history
+      .filter(msg => {
+        // Skip error messages in conversation history
+        if (msg.isError) return false;
+        
+        // Include all user messages
+        if (msg.isUser) return true;
+        
+        // For assistant messages, only include if:
+        // - Status is 'delivered' (not pending/streaming)
+        // - Not cancelled and not streaming
+        // - Has actual content (not empty/whitespace)
+        return (
+          msg.status === 'delivered' &&
+          !msg.isCancelled &&
+          !msg.isStreaming &&
+          msg.content &&
+          msg.content.trim().length > 0
+        );
+      })
       .map(msg => ({
         role: msg.isUser ? 'user' : 'assistant',
         content: msg.content
-      }));
+      }))
+      .filter(entry => entry.content && entry.content.trim().length > 0); // Final safety filter
   };
 
   /**
@@ -235,66 +254,76 @@ export default function ChatPage() {
       // Import from lib to avoid circular dependencies
       const { sendMessage } = await import('../lib/llm-api');
 
-      // Create a placeholder for the AI response with streaming status
+      // Create the response ID but don't add to messages yet
       const responseId = `${retryId}_response`;
-      setMessages(prev => [
-        ...prev,
-        {
-          id: responseId,
-          content: '',
-          isUser: false,
-          timestamp: new Date(),
-          sessionId: retryId,
-          isStreaming: true,
-          status: 'pending',
-          metadata: {
-            isStreaming: true,
-            isRetry: true
-          }
-        }
-      ]);
-
-      // Set as current streaming message
+      
+      // Set as current streaming message for display
       setStreamingMessageId(responseId);
       setPartialContent('');
+      
+      // Track if we've added the message to the array yet
+      let messageAdded = false;
 
       // Streaming update handler
       const handleStreamingUpdate = (content, metadata = {}) => {
         // Update the partial content for display
         setPartialContent(content);
+        
+        // Add the assistant message only when first token arrives (not empty content)
+        if (!messageAdded && content && content.trim().length > 0) {
+          messageAdded = true;
+          setMessages(prev => [
+            ...prev,
+            {
+              id: responseId,
+              content: '', // Start empty, will be updated below or on complete
+              isUser: false,
+              timestamp: new Date(),
+              sessionId: retryId,
+              isStreaming: true,
+              status: 'pending',
+              metadata: {
+                isStreaming: true,
+                isRetry: true
+              }
+            }
+          ]);
+        }
 
         // If this is the final update (streaming complete)
         if (metadata.isComplete) {
           console.debug(`[Chat] Stream complete for retry message ${responseId}, updating status to delivered`);
-
-          // Update the message with final content and metadata
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === responseId 
-                ? {
-                    ...msg,
-                    content: content,
-                    isStreaming: false,
-                    status: 'delivered', // Ensure delivered status is set
-                    metadata: {
-                      ...msg.metadata,
-                      ...metadata,
-                      isRetry: true,
+          
+          // Only finalize if we have actual content and the message was added
+          if (messageAdded && content && content.trim().length > 0) {
+            // Update the message with final content and metadata
+            setMessages(prev => 
+              prev.map(msg => 
+                msg.id === responseId 
+                  ? {
+                      ...msg,
+                      content: content,
                       isStreaming: false,
-                      status: 'delivered' // Also set in metadata for consistency
+                      status: 'delivered', // Ensure delivered status is set
+                      metadata: {
+                        ...msg.metadata,
+                        ...metadata,
+                        isRetry: true,
+                        isStreaming: false,
+                        status: 'delivered' // Also set in metadata for consistency
+                      }
                     }
-                  }
-                : msg
-            )
-          );
+                  : msg
+              )
+            );
+          } else {
+            // No content received - don't add empty message to history
+            console.debug(`[Chat] Stream completed but no content for retry ${responseId}, not adding to message history`);
+          }
 
           // Clear streaming state immediately to prevent any lingering animations
           setStreamingMessageId(null);
           setPartialContent('');
-
-          // Force immediate re-render to ensure animation stops
-          console.debug('[Chat] Immediate re-render to ensure retry animation stops');
-          setMessages(prev => [...prev]);
         }
       };
 
@@ -476,36 +505,44 @@ export default function ChatPage() {
       // Import from lib to avoid circular dependencies
       const { sendMessage } = await import('../lib/llm-api');
 
-      // Create a placeholder for the AI response with streaming status
+      // Create the response ID but don't add to messages yet
       const responseId = `${messageId}_response`;
-      setMessages((prev) => [
-        ...prev,
-        {
-          id: responseId,
-          content: '',
-          isUser: false,
-          timestamp: new Date(),
-          sessionId,
-          isStreaming: true,
-          status: 'pending',
-          metadata: {
-            isStreaming: true,
-            layerStatus: 'parsing' // Phase 7: Initial medical layer processing status
-          }
-        }
-      ]);
-
-      // Set as current streaming message
+      
+      // Set as current streaming message for display
       setStreamingMessageId(responseId);
       setPartialContent('');
+      
+      // Track if we've added the message to the array yet
+      let messageAdded = false;
 
       // Phase 7: Enhanced streaming update handler with real-time medical layer feedback
       const handleStreamingUpdate = (content, metadata = {}) => {
         // Update the partial content for display
         setPartialContent(content);
+        
+        // Add the assistant message only when first token arrives (not empty content)
+        if (!messageAdded && content && content.trim().length > 0) {
+          messageAdded = true;
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: responseId,
+              content: '', // Start empty, will be updated below or on complete
+              isUser: false,
+              timestamp: new Date(),
+              sessionId,
+              isStreaming: true,
+              status: 'pending',
+              metadata: {
+                isStreaming: true,
+                layerStatus: 'parsing' // Phase 7: Initial medical layer processing status
+              }
+            }
+          ]);
+        }
 
-        // Phase 7: Handle real-time medical layer status updates
-        if (metadata.layerStatus) {
+        // Phase 7: Handle real-time medical layer status updates (only if message has been added)
+        if (messageAdded && metadata.layerStatus) {
           console.debug(`[Medical Layer] Status update: ${metadata.layerStatus}`);
           
           // Update message with layer processing status
@@ -527,8 +564,8 @@ export default function ChatPage() {
           );
         }
 
-        // Phase 7: Handle dynamic disclaimer updates based on streaming content
-        if (metadata.dynamicDisclaimers) {
+        // Phase 7: Handle dynamic disclaimer updates based on streaming content (only if message has been added)
+        if (messageAdded && metadata.dynamicDisclaimers) {
           setMessages((prev) => 
             prev.map(msg => 
               msg.id === responseId 
@@ -550,37 +587,37 @@ export default function ChatPage() {
         // If this is the final update (streaming complete)
         if (metadata.isComplete) {
           console.debug(`[Chat] Stream complete for message ${responseId}, updating status to delivered`);
-
-          // Update the message with final content and metadata
-          setMessages((prev) => 
-            prev.map(msg => 
-              msg.id === responseId 
-                ? {
-                    ...msg,
-                    content: content,
-                    isStreaming: false,
-                    status: 'delivered', // Ensure delivered status is set
-                    metadata: {
-                      ...msg.metadata,
-                      ...metadata,
+          
+          // Only finalize if we have actual content and the message was added
+          if (messageAdded && content && content.trim().length > 0) {
+            // Update the message with final content and metadata
+            setMessages((prev) => 
+              prev.map(msg => 
+                msg.id === responseId 
+                  ? {
+                      ...msg,
+                      content: content,
                       isStreaming: false,
-                      status: 'delivered', // Also set in metadata for consistency
-                      layerStatus: 'completed' // Mark layer processing as complete
+                      status: 'delivered', // Ensure delivered status is set
+                      metadata: {
+                        ...msg.metadata,
+                        ...metadata,
+                        isStreaming: false,
+                        status: 'delivered', // Also set in metadata for consistency
+                        layerStatus: 'completed' // Mark layer processing as complete
+                      }
                     }
-                  }
-                : msg
-            )
-          );
+                  : msg
+              )
+            );
+          } else {
+            // No content received - don't add empty message to history
+            console.debug(`[Chat] Stream completed but no content for ${responseId}, not adding to message history`);
+          }
 
           // Clear streaming state immediately to prevent any lingering animations
           setStreamingMessageId(null);
           setPartialContent('');
-
-          // Force an extra render cycle to ensure animation stops
-          safeSetTimeout(() => {
-            console.debug('[Chat] Forcing re-render to ensure animation stops');
-            setMessages(prev => [...prev]);
-          }, 50);
         }
       };
 
@@ -711,9 +748,18 @@ export default function ChatPage() {
         console.warn("Failed to stop streaming - no active stream found");
       }
 
-      // Update message with cancellation notice and clear state immediately
-      setMessages(prev => 
-        prev.map(msg => 
+      // CRITICAL FIX: Remove messages with empty content to prevent conversation history pollution
+      setMessages(prev => {
+        const currentMessage = prev.find(msg => msg.id === streamingMessageId);
+        
+        // If the message has no meaningful content, remove it completely
+        if (!currentMessage || !currentMessage.content || currentMessage.content.trim().length === 0) {
+          console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} to prevent history pollution`);
+          return prev.filter(msg => msg.id !== streamingMessageId);
+        }
+        
+        // If the message has content, mark it as stopped but cancelled
+        return prev.map(msg => 
           msg.id === streamingMessageId 
             ? {
                 ...msg,
@@ -731,8 +777,8 @@ export default function ChatPage() {
                 }
               }
             : msg
-        )
-      );
+        );
+      });
 
       // Clear streaming state immediately
       setStreamingMessageId(null);
