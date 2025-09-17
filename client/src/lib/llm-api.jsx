@@ -849,6 +849,12 @@ usage: metadata.tokensEstimate ? { total_tokens: metadata.tokensEstimate } : und
 }
 };
 } catch (error) {
+// Handle AbortError (user cancellation) differently from other errors
+if (error.name === 'AbortError' || abortSignal?.aborted) {
+  console.debug('[AI] Stream aborted by user - not treating as error');
+  // Don't throw - let the calling function handle this as a cancellation
+  return;
+}
 console.error('[AI] Streaming error:', error);
 throw error;
 }
