@@ -9,11 +9,10 @@ import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-l
 import { InstallationNotice } from '../components/InstallationNotice.jsx';
 import { UpdateNotification } from '../components/UpdateNotification.jsx';
 import { apiRequest } from '../lib/queryClient';
-import { stopStreaming, getSafeTimeoutFunctions } from '../lib/llm-api';
 import { getRandomStarterQuestions } from '../lib/suggestions';
 
-// Extract safe timeout functions for use in this component
-const { setTimeout: safeSetTimeout } = getSafeTimeoutFunctions();
+// Use native timeout function directly
+const safeSetTimeout = window.setTimeout;
 
 /**
  * @typedef {object} Message
@@ -40,6 +39,15 @@ const { setTimeout: safeSetTimeout } = getSafeTimeoutFunctions();
  * @property {Date|string} timestamp - Message timestamp
  * @property {object} [metadata] - Message metadata
  */
+
+// Cache for llm-api module to avoid repeated dynamic imports
+let llmApiModule = null;
+const getLLMApi = async () => {
+  if (!llmApiModule) {
+    llmApiModule = await import('../lib/llm-api');
+  }
+  return llmApiModule;
+};
 
 /**
  * @typedef {object} APIErrorResponse
@@ -253,8 +261,8 @@ export default function ChatPage() {
 
       const conversationHistory = prepareConversationHistory(recentMessages);
 
-      // Import from lib to avoid circular dependencies
-      const { sendMessage } = await import('../lib/llm-api');
+      // Get cached llm-api module
+      const { sendMessage } = await getLLMApi();
 
       // Create the response ID but don't add to messages yet
       const responseId = `${retryId}_response`;
@@ -517,8 +525,8 @@ export default function ChatPage() {
       const recentMessages = messages.slice(-6); // Use last 6 messages for context
       const conversationHistory = prepareConversationHistory(recentMessages);
 
-      // Import from lib to avoid circular dependencies
-      const { sendMessage } = await import('../lib/llm-api');
+      // Get cached llm-api module
+      const { sendMessage } = await getLLMApi();
 
       // Create the response ID but don't add to messages yet
       const responseId = `${messageId}_response`;
@@ -774,8 +782,9 @@ export default function ChatPage() {
         const currentMessage = messages.find(msg => msg.id === streamingMessageId);
         const isDelivered = currentMessage?.status === 'delivered';
 
-        // Call stopStreaming - it handles both client and server cancellation
+        // Get stopStreaming from cached module
         console.debug('[Chat] About to call stopStreaming...');
+        const { stopStreaming } = await getLLMApi();
         await stopStreaming(isDelivered);
         console.debug('[Chat] stopStreaming completed');
       } catch (error) {

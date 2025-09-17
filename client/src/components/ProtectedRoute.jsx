@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../hooks/useAuth';
-import { getSafeTimeoutFunctions } from '../lib/llm-api';
-
-// Get safe timeout functions
-const { setTimeout: safeSetTimeout, clearTimeout: safeClearTimeout } = getSafeTimeoutFunctions();
+// Use native timeout functions directly
+const safeSetTimeout = window.setTimeout;
+const safeClearTimeout = window.clearTimeout;
 
 /**
  * Loading spinner component shown during authentication checks
