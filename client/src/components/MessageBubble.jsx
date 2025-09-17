@@ -601,7 +601,14 @@ export function MessageBubble({
             {!isUser && isStreaming && status !== 'failed' && onStopAI && (
               <div className="mt-2 flex justify-start">
                 <button
-                  onClick={(e) => onStopAI(e)}
+                  data-testid="button-stop-ai"
+                  type="button"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.debug('[Chat] Stop AI clicked');
+                    onStopAI?.(e);
+                  }}
                   disabled={isStoppingAI}
                   className="flex items-center text-xs py-1 px-2.5 rounded-md bg-destructive/20 hover:bg-destructive/30 text-destructive font-medium transition-colors"
                   title="Stop the AI response"

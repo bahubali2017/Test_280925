@@ -763,8 +763,8 @@ export default function ChatPage() {
   /**
    * Handles stopping an in-progress AI response
    */
-  const handleStopAI = async () => {
-    console.debug('[Chat] Stop AI clicked');
+  const handleStopAI = useCallback(async () => {
+    console.debug('[Chat] handleStopAI invoked');
     if (streamingMessageId) {
       setIsStoppingAI(true);
       console.debug(`[Chat] Stopping AI response for message: ${streamingMessageId}`);
@@ -829,7 +829,7 @@ export default function ChatPage() {
       // CRITICAL FIX: Reset loading state to immediately re-enable input
       setIsLoading(false);
     }
-  };
+  }, [streamingMessageId, messages, setIsStoppingAI, setStreamingMessageId, setPartialContent, setIsLoading]);
 
   /**
    * Handles user logout
@@ -1002,7 +1002,7 @@ export default function ChatPage() {
                     showFollowUps={isLastAiMessage}
                     isFirst={isFirst}
                     isLast={isLast}
-                    onStopAI={!msg.isUser && streamingMessageId === msg.id ? handleStopAI : undefined}
+                    onStopAI={!msg.isUser && msg.id === streamingMessageId ? handleStopAI : undefined}
                     isStoppingAI={isStoppingAI}
                     isStreaming={msg.id === streamingMessageId}
                     partialContent={msg.id === streamingMessageId ? partialContent : ''}
