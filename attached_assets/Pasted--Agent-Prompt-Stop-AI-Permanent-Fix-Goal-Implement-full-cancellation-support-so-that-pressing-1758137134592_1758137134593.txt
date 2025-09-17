@@ -1,0 +1,54 @@
+🛠️ Agent Prompt — Stop AI Permanent Fix
+
+Goal: Implement full cancellation support so that pressing Stop AI immediately halts response generation both client- and server-side, preserving partial content and preventing wasted credits.
+
+Tasks:
+	1.	Frontend (client/src/lib/llm-api.jsx + ChatPage.jsx):
+	•	Add AbortController per streaming request.
+	•	In handleStopAI, call both:
+    controller.abort();
+fetch(`/api/chat/cancel/${sessionId}`, { method: "POST" });
+
+•	Update error handling in handleStreamingResponseSSE:
+	•	Treat AbortError as cancellation (status = "stopped"), not failure.
+	•	Preserve partial content.
+	•	Ensure stopped messages are excluded from prepareConversationHistory.
+
+	2.	Backend (server/routes.js):
+	•	Add activeSessions map to track ongoing AI calls.
+	•	Store AbortController when starting AI generation.
+	•	Pass controller.signal to OpenAI/DeepSeek client.
+	•	New route:
+    app.post("/api/chat/cancel/:sessionId", (req, res) => {
+  const controller = activeSessions.get(req.params.sessionId);
+  if (controller) {
+    controller.abort();
+    activeSessions.delete(req.params.sessionId);
+    return res.json({ success: true, cancelled: true });
+  }
+  res.json({ success: false, cancelled: false });
+});
+
+	•	Add req.on("close") → trigger abort for safety.
+	3.	Testing Checklist:
+	•	Start AI response → press Stop AI:
+	•	✅ Generation halts immediately (server + client).
+	•	✅ Message status stays "stopped by user".
+	•	✅ Partial response visible.
+	•	✅ No API credits wasted.
+	•	Ask new question:
+	•	✅ Clean response (no ghost tokens).
+	•	✅ Validation errors gone.
+    
+🚀 Strict Rules
+	•	No extra features.
+	•	No experimental logic.
+	•	No service worker, cache, or version checks.
+	•	Focus ONLY on Stop AI cancel protocol (client + server).
+    • Remove and delete previous reductent testing scripts
+    
+Expected Outcome:
+	•	AI stops instantly on Stop AI.
+	•	No more “failed” status spam.
+	•	No wasted credits from ghost generations.
+	•	Smooth multi-turn conversations with reliable cancel support.

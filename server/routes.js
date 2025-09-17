@@ -20,6 +20,12 @@ import { testSupabaseConnection } from "./test-connection.js";
 import watchdog from "./supabase-watchdog.js";
 
 /**
+ * Active AI sessions map to track ongoing requests for cancellation
+ * Maps sessionId -> AbortController
+ */
+const activeSessions = new Map();
+
+/**
  * Circuit breaker middleware for Supabase-dependent APIs
  * @param {import('express').Request} req - Express request object
  * @param {import('express').Response} res - Express response object  
@@ -852,6 +858,21 @@ router.get("/app-config.json", async (req, res) => {
   });
   
   /**
+   * Cancel active AI streaming session
+   */
+  router.post("/chat/cancel/:sessionId", (req, res) => {
+    const { sessionId } = req.params;
+    const controller = activeSessions.get(sessionId);
+    if (controller) {
+      controller.abort();
+      activeSessions.delete(sessionId);
+      console.log(`[${sessionId}] AI session cancelled by user`);
+      return res.json({ success: true, cancelled: true });
+    }
+    res.json({ success: false, cancelled: false });
+  });
+  
+  /**
    * Streaming chat endpoint for real-time message processing
    * Implements Server-Sent Events (SSE) for streaming responses
    */
@@ -969,6 +990,9 @@ router.get("/app-config.json", async (req, res) => {
       const ac = new AbortController();
       let closed = false;
       
+      // Track active session for cancellation support
+      activeSessions.set(sessionId, ac);
+      
       // Unified abort handler - triggers on user Stop AI or connection close
       const handleAbort = (reason) => {
         if (closed) return; // Guard against multiple calls
@@ -1004,6 +1028,9 @@ router.get("/app-config.json", async (req, res) => {
         } catch (writeError) {
           // Silent fail - connection might already be closed
         }
+        
+        // Remove from active sessions map
+        activeSessions.delete(sessionId);
         
         // Background session cleanup (non-blocking)
         process.nextTick(() => {
@@ -1198,6 +1225,9 @@ router.get("/app-config.json", async (req, res) => {
             sessionTracker.updateSession(sessionId, requestDuration, false);
             sessionTracker.endSession(sessionId, 'completed');
           }
+          
+          // Always clean up from active sessions on completion
+          activeSessions.delete(sessionId);
           
           // End the response safely only if not aborted
           if (!res.writableEnded && !closed && !ac.signal.aborted) {
