@@ -1,0 +1,170 @@
+🛠️ Agent Prompt — Fix Cache/Service Worker + Replit Preview Reconnect Issues
+
+🎯 Objective:
+Ensure Anamnesis MVP app loads instantly and consistently across:
+
+✅ Custom domain (mvp.anamnesis.health)
+
+✅ Direct Replit URL (anamnesis-mvp.replit.app)
+
+✅ Replit webpreview (editor preview panel)
+
+Remove sluggishness, stale cache reload loops, and preview reconnect failures.
+
+🔍 Investigation Tasks
+
+Service Worker Audit
+
+Check client/public/sw.js:
+
+Verify cache versioning (CACHE_VERSION) bumps each deploy.
+
+Confirm index.html is never cached (must always be fetched fresh).
+
+Confirm self.skipWaiting() + clients.claim() exist for instant SW activation.
+
+Check caching strategy doesn’t block WebSocket or SSE requests.
+
+Replit Preview Environment
+
+Inspect WebSocket connection in devtools:
+
+Verify ws:// → wss:// upgrade succeeds in preview panel.
+
+Check if origin mismatch blocks CORS or WS handshake (preview uses *.repl.co not your domain).
+
+Inspect SSE connections:
+
+Confirm /api/chat/stream responds with Content-Type: text/event-stream and isn’t cached.
+
+Cache-Control Headers
+
+Inspect server/index.ts:
+
+Ensure:
+
+res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+
+
+is applied to index.html.
+
+Ensure /assets/* get long-lived caching with hashed filenames.
+
+Preview vs Browser Differences
+
+Compare behavior between:
+
+✅ Browser direct load
+
+❌ Replit webpreview
+
+Likely culprit = preview iframe blocks SW or caches differently.
+
+🛠️ Fix Implementation
+1. Service Worker Fix
+
+Rewrite sw.js with safe caching:
+
+const CACHE_VERSION = "v3.1.0"; // bump each deploy
+const CACHE_NAME = `anamnesis-cache-${CACHE_VERSION}`;
+
+self.addEventListener("install", (event) => {
+  self.skipWaiting();
+});
+
+self.addEventListener("activate", (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((key) => {
+        if (key !== CACHE_NAME) return caches.delete(key);
+      }))
+    )
+  );
+  self.clients.claim();
+});
+
+// Never cache index.html (prevents reload loops)
+self.addEventListener("fetch", (event) => {
+  const url = new URL(event.request.url);
+
+  if (url.pathname === "/" || url.pathname.endsWith("index.html")) {
+    return event.respondWith(fetch(event.request));
+  }
+
+  // Don’t cache SSE or WebSocket requests
+  if (url.pathname.includes("/chat/stream") || url.protocol.startsWith("ws")) {
+    return;
+  }
+
+  event.respondWith(
+    caches.match(event.request).then((cached) =>
+      cached || fetch(event.request).then((res) => {
+        const copy = res.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(event.request, copy));
+        return res;
+      })
+    )
+  );
+});
+
+2. Server-Side Headers (server/index.ts)
+// Index.html always fresh
+app.get("/", (req, res) => {
+  res.setHeader("Cache-Control", "no-cache, no-store, must-revalidate");
+  res.sendFile(path.resolve(__dirname, "./public/index.html"));
+});
+
+// Assets hashed → cache aggressively
+app.use("/assets", express.static(path.resolve(__dirname, "./public/assets"), {
+  setHeaders: (res) => {
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+  }
+}));
+
+3. Replit Preview Fix
+
+Add allowedHosts: true in vite.config.ts (already partially done).
+
+Update CORS middleware to allow *.repl.co and *.replit.dev origins dynamically:
+
+const allowedOrigins = [
+  /\.repl\.co$/,
+  /\.replit\.dev$/,
+  "https://mvp.anamnesis.health",
+  "https://anamnesis-mvp.replit.app"
+];
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || allowedOrigins.some((pat) => pat.test(origin))) {
+      cb(null, true);
+    } else {
+      cb(new Error("CORS blocked"));
+    }
+  },
+  credentials: true
+}));
+
+4. Auto-Reload After Deploy
+
+In App.jsx:
+
+useEffect(() => {
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      window.location.reload();
+    });
+  }
+}, []);
+
+✅ Expected Results
+
+Laptop login reload loop permanently gone (fresh index.html always fetched).
+
+No stale cache issues (SW version bump + no-cache headers).
+
+MVP app responsive (no sluggishness from blocked SSE/WS).
+
+Replit webpreview works consistently (CORS allows *.repl.co origins).
+
+Automatic reload after each deploy ensures users always run latest build.
