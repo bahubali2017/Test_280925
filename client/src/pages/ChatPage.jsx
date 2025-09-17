@@ -771,20 +771,9 @@ export default function ChatPage() {
       // Get the current message status before stopping
       const currentMessage = messages.find(msg => msg.id === streamingMessageId);
       const isDelivered = currentMessage?.status === 'delivered';
-      const sessionId = currentMessage?.sessionId;
 
-      // Call the stopStreaming function from llm-api first
+      // Call stopStreaming - it handles both client and server cancellation
       const stopped = stopStreaming(isDelivered);
-
-      // Also cancel server-side generation
-      if (sessionId) {
-        try {
-          await fetch(`/api/chat/cancel/${sessionId}`, { method: "POST" });
-          console.debug(`Server-side AI generation cancelled for session: ${sessionId}`);
-        } catch (error) {
-          console.warn("Failed to cancel server-side generation:", error);
-        }
-      }
 
       if (!stopped) {
         console.warn("Failed to stop streaming - no active stream found");

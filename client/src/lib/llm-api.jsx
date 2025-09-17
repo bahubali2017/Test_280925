@@ -819,6 +819,11 @@ error: false,
 } else if (currentEvent === 'config') {
 // Store session info from config
 metadata = { ...metadata, ...data };
+// CRITICAL: Capture server sessionId for cancellation
+if (data.sessionId) {
+  currentStream.sessionId = data.sessionId;
+  console.log("Captured server sessionId for cancellation:", data.sessionId);
+}
 console.log("Received config:", data);
 } else if (currentEvent === 'error') {
 console.error("Stream error:", data.error);
@@ -865,7 +870,15 @@ throw error;
 * This allows other components to cancel the stream
 * @type {AbortController|null}
 */
-let streamAbortController = null;
+/**
+ * Global stream management object - single source of truth
+ * @type {{controller: AbortController|null, sessionId: string|null, messageId: string|null}}
+ */
+let currentStream = {
+  controller: null,
+  sessionId: null,
+  messageId: null
+};
 
 /**
 * @type {ReadableStreamDefaultReader|null}
@@ -933,37 +946,59 @@ console.debug('[Cache] Stored layer result for:', message.substring(0, 50) + '..
 * @returns {boolean} Whether a streaming request was aborted
 */
 function stopStreaming(isDelivered = false) {
-if (streamAbortController) {
-// Update our message delivery state - CRITICAL: Mark as clean stop, not error
-messageDeliveryState.messageDelivered = isDelivered;
-messageDeliveryState.isStopped = true; // Add stopped flag
-messageDeliveryState.isError = false; // Explicitly prevent error state
-// CRITICAL FIX: Clear the global error timeout immediately to prevent delays
-if (globalErrorTimeout) {
-console.debug("Clearing global error timeout on stop");
-window.clearTimeout(globalErrorTimeout);
-globalErrorTimeout = null;
-}
+  // Check if we have an active stream
+  if (!currentStream.controller) {
+    return false;
+  }
 
-// IMMEDIATE READER CLEANUP: Cancel active reader if it exists
-if (globalStreamReader) {
-try {
-console.debug("STOP_AI: Cancelling active reader immediately");
-globalStreamReader.cancel();
-globalStreamReader = null;
-} catch (e) {
-console.debug("Reader already cancelled or unavailable");
-}
-}
+  // Update our message delivery state - CRITICAL: Mark as clean stop, not error  
+  messageDeliveryState.messageDelivered = isDelivered;
+  messageDeliveryState.isStopped = true;
+  messageDeliveryState.isError = false;
 
-// If the message was already delivered, we'll use a custom abort reason
-// This helps avoid triggering error messages in the error handler
-streamAbortController.abort(isDelivered ? 'message_complete' : 'user_cancelled');
-console.debug("STOP_AI: Streaming request manually aborted", isDelivered ? "(message already delivered)" : "");
-streamAbortController = null;
-return true;
-}
-return false;
+  // Clear the global error timeout immediately to prevent delays
+  if (globalErrorTimeout) {
+    console.debug("Clearing global error timeout on stop");
+    window.clearTimeout(globalErrorTimeout);
+    globalErrorTimeout = null;
+  }
+
+  // IMMEDIATE READER CLEANUP: Cancel active reader if it exists
+  if (globalStreamReader) {
+    try {
+      console.debug("STOP_AI: Cancelling active reader immediately");
+      globalStreamReader.cancel();
+      globalStreamReader = null;
+    } catch (e) {
+      console.debug("Reader already cancelled or unavailable");
+    }
+  }
+
+  // Abort the client-side streaming request first (CRITICAL: this must happen IMMEDIATELY)
+  currentStream.controller.abort(isDelivered ? 'message_complete' : 'user_cancelled');
+  console.debug("STOP_AI: Streaming request manually aborted", isDelivered ? "(message already delivered)" : "");
+
+  // Cancel server-side generation if we have the sessionId
+  if (currentStream.sessionId) {
+    // Fire-and-forget server cancellation with timeout
+    fetch(`/api/chat/cancel/${currentStream.sessionId}`, { 
+      method: "POST",
+      signal: AbortSignal.timeout(2000) // 2 second timeout
+    }).catch(error => {
+      console.warn("Failed to cancel server-side generation:", error);
+      // This is non-critical since client abort triggers req.on('close')
+    });
+    console.debug(`Server-side AI generation cancel requested for session: ${currentStream.sessionId}`);
+  } else {
+    console.debug("No server sessionId available, relying on client abort to trigger req.on('close')");
+  }
+
+  // Clear the stream state
+  currentStream.controller = null;
+  currentStream.sessionId = null;
+  currentStream.messageId = null;
+
+  return true;
 }
 /**
 * Handles streaming request with real-time updates
@@ -992,9 +1027,9 @@ onStreamingUpdate(accumulatedText, { isStreaming: true, isComplete: false });
 try {
 // Create a new AbortController for this request
 // This makes the controller globally available for stopStreaming()
-streamAbortController = new GlobalAbortController();
+currentStream.controller = new GlobalAbortController();
 // Use the provided signal or the one from our controller
-const abortSignal = signal || streamAbortController.signal;
+const abortSignal = signal || currentStream.controller.signal;
 // Set an error timeout to handle real connection issues
 // This will be cleared if 'done' event is received
 errorTimeout = window.setTimeout(() => {
@@ -1002,8 +1037,8 @@ errorTimeout = window.setTimeout(() => {
 if (!messageDelivered) {
 console.debug("Stream timeout - no complete response received within timeout period");
 // Only abort if not already aborted
-if (streamAbortController && !abortSignal.aborted) {
-streamAbortController.abort('timeout');
+if (currentStream.controller && !abortSignal.aborted) {
+currentStream.controller.abort('timeout');
 }
 }
 }, 120000); // 120 second timeout to allow complete medical responses
@@ -1013,7 +1048,7 @@ globalErrorTimeout = errorTimeout;
 const onAbort = () => {
 console.debug("AI stream request aborted");
 // Check if this was a timeout vs user cancellation
-const isTimeoutAbort = streamAbortController?.signal?.reason === 'timeout';
+const isTimeoutAbort = currentStream.controller?.signal?.reason === 'timeout';
 const cancelMessage = isTimeoutAbort ? 
 "Response timed out. The medical information may be incomplete. Please try asking again or rephrase your question." :
 "AI response cancelled by user.";
@@ -1200,6 +1235,11 @@ reason: 'user_cancelled',
 } else if (currentEvent === 'config') {
 // Store session info from config
 metadata = { ...metadata, ...data };
+// CRITICAL: Capture server sessionId for cancellation
+if (data.sessionId) {
+  currentStream.sessionId = data.sessionId;
+  console.log("Captured server sessionId for cancellation:", data.sessionId);
+}
 console.log("Received config:", data);
 } else if (currentEvent === 'error') {
 console.error("Stream error:", data.error);
@@ -1216,8 +1256,8 @@ if (globalStreamReader) {
 try { globalStreamReader.cancel(); } catch {}
 globalStreamReader = null;
 }
-if (streamAbortController) {
-streamAbortController = null;
+if (currentStream.controller) {
+currentStream.controller = null;
 }
 // Final update with complete flag
 const requestTime = Date.now() - startTime;
@@ -1266,8 +1306,8 @@ if (globalStreamReader) {
 try { globalStreamReader.cancel(); } catch {}
 globalStreamReader = null;
 }
-if (streamAbortController) {
-streamAbortController = null;
+if (currentStream.controller) {
+currentStream.controller = null;
 }
 // If message was already successfully delivered (done event received),
 // don't show error message to the user
