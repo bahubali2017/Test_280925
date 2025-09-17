@@ -942,73 +942,70 @@ router.get("/app-config.json", async (req, res) => {
         if (closed) return; // Guard against multiple calls
         closed = true;
         
-        console.log(`[${sessionId}] [SSE] STOPPED_BY_USER flushed + closed immediately - ${new Date().toISOString()}`);
+        // IMMEDIATE upstream abort - highest priority to stop AI generation
+        ac.abort();
         
-        // Update session tracking for stopped session
-        sessionTracker.updateSession(sessionId, Date.now() - startTime, false);
-        sessionTracker.endSession(sessionId, 'stopped');
+        console.log(`[${sessionId}] [SSE] STOPPED_BY_USER - upstream aborted immediately - ${new Date().toISOString()}`);
         
-        // Immediate client flush BEFORE upstream cleanup
+        // Immediate socket destruction for instant Network tab cancellation
         try {
-          if (!res.destroyed && !res.closed) {
+          if (res.socket && !res.socket.destroyed) {
+            res.socket.destroy();
+          }
+        } catch (socketError) {
+          console.debug(`[${sessionId}] Socket destroy error:`, socketError.message);
+        }
+        
+        // Quick client notification (non-blocking)
+        try {
+          if (!res.destroyed && !res.closed && !res.writableEnded) {
             res.write(`event: STOPPED_BY_USER\ndata: ${JSON.stringify({
               stopped: true,
               reason: reason,
               timestamp: Date.now()
             })}\n\n`);
             
-            // Immediate flush to push response to client
-            res.flushHeaders();
+            // Immediate flush and end
             if (res.flush) res.flush();
-            
-            // End response immediately
             res.end();
           }
         } catch (writeError) {
-          console.debug(`[${sessionId}] Could not send STOPPED_BY_USER event:`, writeError.message);
+          // Silent fail - connection might already be closed
         }
         
-        // Immediate socket destruction for instant Network tab cancellation
-        if (res.socket && !res.socket.destroyed) {
-          res.socket.destroy();
-        }
-        
-        // Abort upstream fetch (fire-and-forget)
-        ac.abort();
-        
-        // Background cleanup - silently detached (no logging to avoid delays)
+        // Background session cleanup (non-blocking)
         process.nextTick(() => {
-          // Fire-and-forget upstream cleanup happens here
+          try {
+            sessionTracker.updateSession(sessionId, Date.now() - startTime, false);
+            sessionTracker.endSession(sessionId, 'stopped');
+          } catch (sessionError) {
+            // Silent fail - session tracking is not critical
+          }
         });
       };
       
       // IMMEDIATE client abort handlers - triggers on user Stop AI
       req.on("close", () => {
-        console.log("[SSE] Client closed – aborting upstream fetch");
-        ac.abort();       // abort DeepSeek fetch
-        try { 
-          if (!res.writableEnded) {
-            res.end(); 
-          }
-          if (res.socket && !res.socket.destroyed) {
-            res.socket.destroy(); 
-          }
-        } catch {}
+        console.log(`[${sessionId}] [SSE] Client closed – triggering immediate abort`);
         handleAbort('connection_close');
       });
       
       req.on("aborted", () => {
-        console.log("[SSE] Request aborted – forcing termination");
-        ac.abort();
-        try { 
-          if (!res.writableEnded) {
-            res.end(); 
-          }
-          if (res.socket && !res.socket.destroyed) {
-            res.socket.destroy(); 
-          }
-        } catch {}
+        console.log(`[${sessionId}] [SSE] Request aborted – triggering immediate abort`);
         handleAbort('connection_aborted');
+      });
+      
+      // Additional handler for connection errors that might not trigger close/aborted
+      res.on("error", () => {
+        console.log(`[${sessionId}] [SSE] Response error – triggering immediate abort`);
+        handleAbort('response_error');
+      });
+      
+      res.on("finish", () => {
+        // Response finished normally or was ended
+        if (!closed) {
+          console.log(`[${sessionId}] [SSE] Response finished normally`);
+        }
       });
       
       // Create fire-and-forget upstream fetch (detached from SSE lifecycle)
@@ -1058,7 +1055,8 @@ router.get("/app-config.json", async (req, res) => {
         // Read the stream chunk by chunk with abort signal checking
         try {
           while (true) {
-            if (ac.signal.aborted) throw new Error('aborted');
+            // Check abort signal before each read
+            if (ac.signal.aborted || closed) throw new Error('aborted');
             const { done, value } = await reader.read();
             
             if (done) {
@@ -1073,6 +1071,12 @@ router.get("/app-config.json", async (req, res) => {
             buffer = lines.pop() || ''; // Keep the last partial line in the buffer
             
             for (const line of lines) {
+              // Check abort signal during line processing for immediate termination
+              if (ac.signal.aborted || closed) {
+                console.log(`[${sessionId}] [SSE] Abort detected during token processing - stopping immediately`);
+                throw new Error('aborted');
+              }
+              
               // Skip empty lines and :keep-alive comments
               if (!line || line.trim() === '' || line.startsWith(':')) {
                 continue;
@@ -1099,10 +1103,13 @@ router.get("/app-config.json", async (req, res) => {
                     responseText += cleanedContent;
                     
                     // Send the cleaned chunk to the client using event-based format for SSE
-                    if (!closed && !res.writableEnded) {
+                    if (!closed && !res.writableEnded && !ac.signal.aborted) {
                       res.write(`event: chunk\ndata: ${JSON.stringify({ text: cleanedContent })}\n\n`);
                       // Flush to ensure immediate delivery
                       if (res.flush) res.flush();
+                    } else if (closed || ac.signal.aborted) {
+                      // Stop processing if connection is closed or aborted
+                      throw new Error('aborted');
                     }
                   }
                 } catch (error) {
@@ -1117,26 +1124,27 @@ router.get("/app-config.json", async (req, res) => {
           try { response.body?.cancel(); } catch {}
         }
         
-        if (!closed) {
+        // Early exit check - don't process anything if connection was aborted
+        if (!closed && !ac.signal.aborted) {
           // Finalize the streaming response and apply final processing
           responseText = await processAIResponse(responseText, sessionId);
           const requestDuration = Date.now() - startTime;
           // Only log completion if client is still connected
-          if (!closed) {
+          if (!closed && !ac.signal.aborted) {
             console.log(`[${sessionId}] [SSE] STREAM_ENDED - completed in ${requestDuration}ms - ${new Date().toISOString()}`);
           }
           
-          // Save the messages to the database
+          // Save the messages to the database only if not aborted
           try {
-            if (userId !== "anonymous" && responseText) {
+            if (userId !== "anonymous" && responseText && !closed && !ac.signal.aborted) {
               await storage.saveMessage(userId, message, responseText);
             }
           } catch (dbError) {
             console.error(`[${sessionId}] Error saving messages:`, dbError);
           }
           
-          // Send configuration data for the client
-          if (!closed && !res.writableEnded) {
+          // Send configuration data for the client only if not aborted
+          if (!closed && !res.writableEnded && !ac.signal.aborted) {
             res.write(`event: config\ndata: ${JSON.stringify({
               model: config.model || "deepseek-chat",
               sessionId: sessionId,
@@ -1145,25 +1153,31 @@ router.get("/app-config.json", async (req, res) => {
             })}\n\n`);
           }
           
-          // Send completion event
-          if (!closed && !res.writableEnded) {
+          // Send completion event only if not aborted
+          if (!closed && !res.writableEnded && !ac.signal.aborted) {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: true,
               requestTime: requestDuration
             })}\n\n`);
           }
           
-          // Update session with completion metrics
-          sessionTracker.updateSession(sessionId, requestDuration, false);
-          sessionTracker.endSession(sessionId, 'completed');
+          // Update session with completion metrics only if not aborted
+          if (!closed && !ac.signal.aborted) {
+            sessionTracker.updateSession(sessionId, requestDuration, false);
+            sessionTracker.endSession(sessionId, 'completed');
+          }
           
-          // End the response safely
-          if (!res.writableEnded) {
+          // End the response safely only if not aborted
+          if (!res.writableEnded && !closed && !ac.signal.aborted) {
             res.end();
           }
+        } else {
+          // Connection was aborted - clean exit
+          console.log(`[${sessionId}] [SSE] Stream processing skipped - connection aborted`);
         }
         } catch (apiError) {
-          if (!closed) {
+          // Only handle errors if connection wasn't intentionally aborted
+          if (!closed && !ac.signal.aborted && apiError.message !== 'aborted') {
             console.error(`[${sessionId}] Streaming error:`, apiError);
             // Send error event with proper SSE formatting
             try {
@@ -1187,6 +1201,8 @@ router.get("/app-config.json", async (req, res) => {
             } catch (writeError) {
               console.debug(`[${sessionId}] Could not send error event:`, writeError.message);
             }
+          } else if (apiError.message === 'aborted') {
+            console.log(`[${sessionId}] [SSE] Stream processing aborted as expected`);
           }
         }
       } catch (fetchError) {
