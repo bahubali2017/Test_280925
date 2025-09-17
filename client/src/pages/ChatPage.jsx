@@ -82,6 +82,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   /** @type {React.RefObject<HTMLInputElement>} */
   const inputRef = useRef(null);
+  /** @type {React.RefObject<string>} - Ref to track latest partial content, avoiding stale state in closures */
+  const partialContentRef = useRef('');
 
   /**
    * Scrolls to the bottom of the chat container
@@ -266,8 +268,9 @@ export default function ChatPage() {
 
       // Streaming update handler
       const handleStreamingUpdate = (content, metadata = {}) => {
-        // Update the partial content for display
+        // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
+        partialContentRef.current = content;
         
         // Add the assistant message only when first token arrives (not empty content)
         if (!messageAdded && content && content.trim().length > 0) {
@@ -276,7 +279,7 @@ export default function ChatPage() {
             ...prev,
             {
               id: responseId,
-              content: '', // Start empty, will be updated below or on complete
+              content: content, // CRITICAL FIX: Start with actual content, not empty
               isUser: false,
               timestamp: new Date(),
               sessionId: retryId,
@@ -288,6 +291,18 @@ export default function ChatPage() {
               }
             }
           ]);
+        } else if (messageAdded && content && content.trim().length > 0) {
+          // CRITICAL FIX: Update message content incrementally on every streaming update
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === responseId 
+                ? {
+                    ...msg,
+                    content: content // Update with latest content
+                  }
+                : msg
+            )
+          );
         }
 
         // If this is the final update (streaming complete)
@@ -367,7 +382,7 @@ export default function ChatPage() {
 
             // Get the original message so we can extract any partial content already delivered
             const originalMessage = prev.find(msg => msg.id === streamingMessageId);
-            const partialContent = originalMessage?.content || '';
+            const partialContent = originalMessage?.content || partialContentRef.current || '';
 
             // Add a cancellation notice to the content
             return prev.map(msg => 
@@ -517,8 +532,9 @@ export default function ChatPage() {
 
       // Phase 7: Enhanced streaming update handler with real-time medical layer feedback
       const handleStreamingUpdate = (content, metadata = {}) => {
-        // Update the partial content for display
+        // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
+        partialContentRef.current = content;
         
         // Add the assistant message only when first token arrives (not empty content)
         if (!messageAdded && content && content.trim().length > 0) {
@@ -527,7 +543,7 @@ export default function ChatPage() {
             ...prev,
             {
               id: responseId,
-              content: '', // Start empty, will be updated below or on complete
+              content: content, // CRITICAL FIX: Start with actual content, not empty
               isUser: false,
               timestamp: new Date(),
               sessionId,
@@ -539,6 +555,18 @@ export default function ChatPage() {
               }
             }
           ]);
+        } else if (messageAdded && content && content.trim().length > 0) {
+          // CRITICAL FIX: Update message content incrementally on every streaming update
+          setMessages((prev) => 
+            prev.map(msg => 
+              msg.id === responseId 
+                ? {
+                    ...msg,
+                    content: content // Update with latest content
+                  }
+                : msg
+            )
+          );
         }
 
         // Phase 7: Handle real-time medical layer status updates (only if message has been added)
@@ -656,7 +684,7 @@ export default function ChatPage() {
 
             // Get the original message so we can extract any partial content already delivered
             const originalMessage = prev.find(msg => msg.id === streamingMessageId);
-            const partialContent = originalMessage?.content || '';
+            const partialContent = originalMessage?.content || partialContentRef.current || '';
 
             // Add a cancellation notice to the content
             return prev.map(msg => 
@@ -748,23 +776,27 @@ export default function ChatPage() {
         console.warn("Failed to stop streaming - no active stream found");
       }
 
-      // CRITICAL FIX: Remove messages with empty content to prevent conversation history pollution
+      // CRITICAL FIX: Preserve partial content when stopping AI instead of removing it
       setMessages(prev => {
         const currentMessage = prev.find(msg => msg.id === streamingMessageId);
         
-        // If the message has no meaningful content, remove it completely
-        if (!currentMessage || !currentMessage.content || currentMessage.content.trim().length === 0) {
-          console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} to prevent history pollution`);
+        // Get the latest partial content from either the message or the ref
+        const latestContent = currentMessage?.content || partialContentRef.current || '';
+        
+        // If there's no content at all (stream just started), remove the message to prevent empty responses
+        if (!latestContent || latestContent.trim().length === 0) {
+          console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} - no content generated yet`);
           return prev.filter(msg => msg.id !== streamingMessageId);
         }
         
-        // If the message has content, mark it as stopped but cancelled
+        // CRITICAL FIX: Preserve the partial content and mark as stopped
+        console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${streamingMessageId}`);
         return prev.map(msg => 
           msg.id === streamingMessageId 
             ? {
                 ...msg,
                 isStreaming: false,
-                content: msg.content,
+                content: latestContent + "\n\n*AI response stopped by user.*", // Show content + stop indicator
                 status: 'stopped',
                 isCancelled: true,
                 isError: false, // Explicitly prevent error state
@@ -773,7 +805,8 @@ export default function ChatPage() {
                   isStreaming: false,
                   isCancelled: true,
                   status: 'stopped',
-                  cancelledByUser: true
+                  cancelledByUser: true,
+                  partialContentLength: latestContent.length // Track how much content was preserved
                 }
               }
             : msg
