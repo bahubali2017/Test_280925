@@ -89,10 +89,10 @@ export function productionCorsMiddleware(req, res, next) {
   if (isProduction) {
     // Production allowed origins with strict regex patterns - NO substring matching
     allowedPatterns = [
-      // Strict regex patterns for Replit preview domains
-      /^https:\/\/[a-z0-9\-]+\.repl\.co$/,
-      /^https:\/\/[a-z0-9\-]+\.replit\.dev$/,
-      /^https:\/\/[a-z0-9\-]+\.replit\.app$/,
+      // Strict regex patterns for Replit preview domains (supports subdomains like spock.replit.dev)
+      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?repl\.co$/,
+      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.dev$/,
+      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.app$/,
       
       // Specific production domains (exact matches only)
       'https://mvp.anamnesis.health',
@@ -111,10 +111,10 @@ export function productionCorsMiddleware(req, res, next) {
   } else {
     // Development - strict patterns for development origins
     allowedPatterns = [
-      // Strict regex patterns for Replit domains
-      /^https:\/\/[a-z0-9\-]+\.repl\.co$/,
-      /^https:\/\/[a-z0-9\-]+\.replit\.dev$/,
-      /^https:\/\/[a-z0-9\-]+\.replit\.app$/,
+      // Strict regex patterns for Replit domains (supports subdomains like spock.replit.dev)
+      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?repl\.co$/,
+      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.dev$/,
+      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.app$/,
       
       // Local development
       'http://localhost:3000',
@@ -142,21 +142,8 @@ export function productionCorsMiddleware(req, res, next) {
   }
   
   if (isAllowed || !isProduction) {
-    // Log successful authorization
-    if (origin) {
-      const matchType = allowedPatterns.find(pattern => {
-        if (pattern instanceof RegExp) return pattern.test(origin);
-        return origin === pattern; // STRICT: Only exact matches, no .includes()
-      });
-      
-      if (matchType instanceof RegExp) {
-        console.log(`[SECURITY] Production CORS: Allowing origin (regex): ${origin}`);
-      } else {
-        console.log(`[SECURITY] Production CORS: Allowing authorized origin: ${origin}`);
-      }
-    } else {
-      console.log(`[SECURITY] Production CORS: Allowing server requests`);
-    }
+    // Removed excessive CORS success logging to reduce spam
+    // Only security violations are logged (see line 136)
     
     // Set CORS headers - SECURITY: Never use wildcard with credentials
     res.header('Access-Control-Allow-Origin', origin || 'null');
