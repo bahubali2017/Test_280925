@@ -1039,6 +1039,7 @@ method: "POST",
 headers: {
 "Content-Type": "application/json",
 "Accept": "text/event-stream",
+"X-Session-Id": options?.sessionId || onStreamingUpdate?.sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`
 },
 body: JSON.stringify({
 message: message,

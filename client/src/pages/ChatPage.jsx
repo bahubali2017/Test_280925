@@ -532,6 +532,7 @@ export default function ChatPage() {
 
       // Phase 7: Enhanced streaming update handler with real-time medical layer feedback
       const handleStreamingUpdate = (content, metadata = {}) => {
+        handleStreamingUpdate.sessionId = sessionId; // Attach sessionId for cancellation
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
         partialContentRef.current = content;
@@ -649,11 +650,11 @@ export default function ChatPage() {
         }
       };
 
-      // Call the enhanced API with streaming support
+      // Call the enhanced API with streaming support  
       const result = await sendMessage(
         newMessage, 
         conversationHistory,
-        {}, // Default options
+        { sessionId }, // Pass sessionId in options
         handleStreamingUpdate // Streaming callback
       );
 
