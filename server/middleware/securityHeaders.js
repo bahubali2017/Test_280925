@@ -17,24 +17,31 @@ export function securityHeadersMiddleware(req, res, next) {
   
   // Content Security Policy (CSP) for Autoscale deployments
   // NOTE: Autoscale deployments require CSP in code, not .replit file
-  if (isProduction) {
-    const cspPolicy = [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline'", // Block external scripts like replit.com
-      "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
-      "img-src 'self' data: https:",
-      "font-src 'self' data: https://fonts.gstatic.com",
-      "connect-src 'self' https://api.deepseek.com https://*.supabase.co wss: ws:",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'"
-    ].join('; ');
-    
-    res.header('Content-Security-Policy', cspPolicy);
-  }
   
-  // Prevent clickjacking
-  res.header('X-Frame-Options', 'DENY');
+  // Allow Replit iframes in development for preview functionality
+  const frameAncestors = isProduction 
+    ? "'none'" 
+    : "'self' https://*.replit.dev https://*.repl.co https://*.replit.app";
+  
+  const cspPolicy = [
+    "default-src 'self'",
+    "script-src 'self' 'unsafe-inline'", // Block external scripts like replit.com
+    "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+    "img-src 'self' data: https:",
+    "font-src 'self' data: https://fonts.gstatic.com",
+    "connect-src 'self' https://api.deepseek.com https://*.supabase.co wss: ws:",
+    `frame-ancestors ${frameAncestors}`,
+    "base-uri 'self'",
+    "form-action 'self'"
+  ].join('; ');
+  
+  res.header('Content-Security-Policy', cspPolicy);
+  
+  // Prevent clickjacking - Allow iframe embedding in development for Replit preview
+  if (isProduction) {
+    res.header('X-Frame-Options', 'DENY');
+  }
+  // In development, don't set X-Frame-Options to allow Replit webpreview iframe
   
   // Prevent MIME type sniffing
   res.header('X-Content-Type-Options', 'nosniff');
@@ -63,6 +70,7 @@ export function productionCorsMiddleware(req, res, next) {
   const origin = req.headers.origin;
   
   // Helper function to check if origin matches allowed patterns
+  // SECURITY: Uses strict matching only - no substring matching to prevent spoofing
   function isOriginAllowed(origin, allowedPatterns) {
     if (!origin) return true; // Allow requests without origin (server-to-server)
     
@@ -70,7 +78,7 @@ export function productionCorsMiddleware(req, res, next) {
       if (pattern instanceof RegExp) {
         return pattern.test(origin);
       } else if (typeof pattern === 'string') {
-        return origin === pattern || origin.includes(pattern);
+        return origin === pattern; // STRICT: Only exact matches, no .includes()
       }
       return false;
     });
@@ -79,22 +87,20 @@ export function productionCorsMiddleware(req, res, next) {
   let allowedPatterns = [];
   
   if (isProduction) {
-    // Production allowed origins with regex patterns for dynamic Replit domains
+    // Production allowed origins with strict regex patterns - NO substring matching
     allowedPatterns = [
-      // Regex patterns for Replit preview domains
-      /^https:\/\/.*\.repl\.co$/,
-      /^https:\/\/.*\.replit\.dev$/,
+      // Strict regex patterns for Replit preview domains
+      /^https:\/\/[a-z0-9\-]+\.repl\.co$/,
+      /^https:\/\/[a-z0-9\-]+\.replit\.dev$/,
+      /^https:\/\/[a-z0-9\-]+\.replit\.app$/,
       
-      // Specific production domains (exact matches)
+      // Specific production domains (exact matches only)
       'https://mvp.anamnesis.health',
       'https://anamnesis-mvp.replit.app',
       'https://admin.anamnesis.health',
       
-      // Legacy Replit domains (string contains for backward compatibility)
-      '.replit.app',
-      
-      // Custom domain patterns
-      'anamnesis.health',
+      // Strict Anamnesis domain pattern - prevents subdomain spoofing
+      /^https:\/\/([a-z0-9\-]+\.)*anamnesis\.health$/,
       
       // Localhost for Replit webview preview
       'http://localhost:3000',
@@ -103,15 +109,24 @@ export function productionCorsMiddleware(req, res, next) {
       'http://127.0.0.1:5000'
     ];
   } else {
-    // Development - allow all common development origins
+    // Development - strict patterns for development origins
     allowedPatterns = [
-      /^https:\/\/.*\.repl\.co$/,
-      /^https:\/\/.*\.replit\.dev$/,
+      // Strict regex patterns for Replit domains
+      /^https:\/\/[a-z0-9\-]+\.repl\.co$/,
+      /^https:\/\/[a-z0-9\-]+\.replit\.dev$/,
+      /^https:\/\/[a-z0-9\-]+\.replit\.app$/,
+      
+      // Local development
       'http://localhost:3000',
       'http://localhost:5000',
       'http://127.0.0.1:3000',
       'http://127.0.0.1:5000',
-      'https://admin.anamnesis.health'
+      
+      // Admin domain
+      'https://admin.anamnesis.health',
+      
+      // Anamnesis domains with strict pattern
+      /^https:\/\/([a-z0-9\-]+\.)*anamnesis\.health$/
     ];
   }
   
@@ -131,11 +146,11 @@ export function productionCorsMiddleware(req, res, next) {
     if (origin) {
       const matchType = allowedPatterns.find(pattern => {
         if (pattern instanceof RegExp) return pattern.test(origin);
-        return origin === pattern || origin.includes(pattern);
+        return origin === pattern; // STRICT: Only exact matches, no .includes()
       });
       
       if (matchType instanceof RegExp) {
-        console.log(`[SECURITY] Production CORS: Allowing Replit preview origin (regex): ${origin}`);
+        console.log(`[SECURITY] Production CORS: Allowing origin (regex): ${origin}`);
       } else {
         console.log(`[SECURITY] Production CORS: Allowing authorized origin: ${origin}`);
       }
@@ -143,14 +158,15 @@ export function productionCorsMiddleware(req, res, next) {
       console.log(`[SECURITY] Production CORS: Allowing server requests`);
     }
     
-    // Set CORS headers
-    res.header('Access-Control-Allow-Origin', origin || '*');
+    // Set CORS headers - SECURITY: Never use wildcard with credentials
+    res.header('Access-Control-Allow-Origin', origin || 'null');
     res.header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS, DELETE');
     res.header('Access-Control-Allow-Headers', 
       'Origin, X-Requested-With, Content-Type, Accept, Authorization, X-Admin-Role, X-Session-ID'
     );
     res.header('Access-Control-Allow-Credentials', 'true');
     res.header('Access-Control-Max-Age', '86400'); // 24 hours
+    res.header('Vary', 'Origin'); // SECURITY: Proper caching behavior
   }
   
   // Handle preflight requests
