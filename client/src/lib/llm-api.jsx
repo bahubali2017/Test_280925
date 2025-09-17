@@ -822,7 +822,7 @@ metadata = { ...metadata, ...data };
 // CRITICAL: Capture server sessionId for cancellation
 if (data.sessionId) {
   currentStream.sessionId = data.sessionId;
-  console.log("Captured server sessionId for cancellation:", data.sessionId);
+  console.debug("[LLM] Captured server sessionId for cancellation:", data.sessionId);
 }
 console.log("Received config:", data);
 } else if (currentEvent === 'error') {
@@ -946,8 +946,14 @@ console.debug('[Cache] Stored layer result for:', message.substring(0, 50) + '..
 * @returns {boolean} Whether a streaming request was aborted
 */
 function stopStreaming(isDelivered = false) {
+  console.debug('[LLM] stopStreaming called', { 
+    hasController: !!currentStream.controller, 
+    sessionId: currentStream.sessionId 
+  });
+  
   // Check if we have an active stream
   if (!currentStream.controller) {
+    console.warn('[LLM] No active stream controller to stop');
     return false;
   }
 
@@ -984,13 +990,15 @@ function stopStreaming(isDelivered = false) {
     fetch(`/api/chat/cancel/${currentStream.sessionId}`, { 
       method: "POST",
       signal: AbortSignal.timeout(2000) // 2 second timeout
+    }).then(() => {
+      console.debug(`[LLM] Server-side AI generation cancel successful for session: ${currentStream.sessionId}`);
     }).catch(error => {
-      console.warn("Failed to cancel server-side generation:", error);
+      console.warn("[LLM] Failed to cancel server-side generation:", error);
       // This is non-critical since client abort triggers req.on('close')
     });
-    console.debug(`Server-side AI generation cancel requested for session: ${currentStream.sessionId}`);
+    console.debug(`[LLM] Server-side AI generation cancel requested for session: ${currentStream.sessionId}`);
   } else {
-    console.debug("No server sessionId available, relying on client abort to trigger req.on('close')");
+    console.warn("[LLM] No server sessionId available, relying on client abort to trigger req.on('close')");
   }
 
   // Clear the stream state
@@ -1238,7 +1246,7 @@ metadata = { ...metadata, ...data };
 // CRITICAL: Capture server sessionId for cancellation
 if (data.sessionId) {
   currentStream.sessionId = data.sessionId;
-  console.log("Captured server sessionId for cancellation:", data.sessionId);
+  console.debug("[LLM] Captured server sessionId for cancellation:", data.sessionId);
 }
 console.log("Received config:", data);
 } else if (currentEvent === 'error') {

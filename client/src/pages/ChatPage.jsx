@@ -764,19 +764,22 @@ export default function ChatPage() {
    * Handles stopping an in-progress AI response
    */
   const handleStopAI = async () => {
+    console.debug('[Chat] Stop AI clicked');
     if (streamingMessageId) {
       setIsStoppingAI(true);
-      console.debug(`Stopping AI response for message: ${streamingMessageId}`);
+      console.debug(`[Chat] Stopping AI response for message: ${streamingMessageId}`);
 
-      // Get the current message status before stopping
-      const currentMessage = messages.find(msg => msg.id === streamingMessageId);
-      const isDelivered = currentMessage?.status === 'delivered';
+      try {
+        // Get the current message status before stopping
+        const currentMessage = messages.find(msg => msg.id === streamingMessageId);
+        const isDelivered = currentMessage?.status === 'delivered';
 
-      // Call stopStreaming - it handles both client and server cancellation
-      const stopped = stopStreaming(isDelivered);
-
-      if (!stopped) {
-        console.warn("Failed to stop streaming - no active stream found");
+        // Call stopStreaming - it handles both client and server cancellation
+        console.debug('[Chat] About to call stopStreaming...');
+        await stopStreaming(isDelivered);
+        console.debug('[Chat] stopStreaming completed');
+      } catch (error) {
+        console.error('[Chat] Error in stopStreaming:', error);
       }
 
       // CRITICAL FIX: Preserve partial content when stopping AI instead of removing it
