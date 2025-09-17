@@ -598,8 +598,9 @@ export function MessageBubble({
 
             {/* Show metadata if available in non-user messages */}
             {/* Show Stop AI button when streaming is active - FIXED: Allow delivered/stopped status during streaming */}
-            {!isUser && isStreaming && status !== 'failed' && onStopAI && (
-              console.debug('[MessageBubble] Rendering Stop AI button', { isStreaming, status, hasHandler: !!onStopAI }),
+            {!isUser && isStreaming && status !== 'failed' && onStopAI && (() => {
+              console.debug('[MessageBubble] Rendering Stop AI button', { isStreaming, status, hasHandler: !!onStopAI });
+              return (
               <div className="mt-2 flex justify-start">
                 <button
                   data-testid="button-stop-ai"
@@ -633,7 +634,8 @@ export function MessageBubble({
                   )}
                 </button>
               </div>
-            )}
+              );
+            })()}
 
             {/* Show response metadata for completed non-error messages */}
             {!isUser && metadata && metadata.requestTime && !isError && !isStreaming && (
