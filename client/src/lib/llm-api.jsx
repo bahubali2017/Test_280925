@@ -1111,13 +1111,16 @@ chunkReceived: true // Track that we're receiving data
 } else if (currentEvent === 'done') {
 // Mark as delivered to prevent any error messages from showing up later
 messageDelivered = true;
+// CRITICAL FIX: Check if message was manually stopped before setting status
+const wasStopped = messageDeliveryState.isStopped === true;
+const finalStatus = wasStopped ? 'stopped' : 'delivered';
 // Capture metadata from the done event with explicit completion flag
 metadata = { 
 ...metadata, 
 ...data,
 isComplete: true, // Explicitly mark as complete to ensure proper status update
 completed: true,
-status: 'delivered', // Explicitly set status to delivered for UI handling
+status: finalStatus, // Respect stopped status if message was manually cancelled
 error: false // Explicitly mark no error to prevent fallback error display
 };
 console.log("Stream completed with metadata:", data);
@@ -1139,7 +1142,7 @@ globalErrorTimeout = null;
 onStreamingUpdate(accumulatedText, { 
 isStreaming: false, 
 isComplete: true,
-status: 'delivered', // Explicitly set status to delivered
+status: finalStatus, // Use the final status (respects stopped state)
 error: false, // Explicitly mark as no error to prevent error display
 queryIntent: extractQueryIntentMetadata(queryIntent),
 ...metadata
