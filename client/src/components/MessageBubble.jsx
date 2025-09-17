@@ -597,8 +597,8 @@ export function MessageBubble({
             {formatMessageContent(message, isStreaming, partialContent, status)}
 
             {/* Show metadata if available in non-user messages */}
-            {/* Show Stop AI button when streaming is active */}
-            {!isUser && isStreaming && status !== 'delivered' && status !== 'failed' && status !== 'stopped' && onStopAI && (
+            {/* Show Stop AI button when streaming is active - FIXED: Allow delivered/stopped status during streaming */}
+            {!isUser && isStreaming && status !== 'failed' && onStopAI && (
               <div className="mt-2 flex justify-start">
                 <button
                   onClick={(e) => onStopAI(e)}
