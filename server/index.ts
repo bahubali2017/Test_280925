@@ -29,9 +29,9 @@ import honeypotRoutes from "./routes/honeypot.js";
 // Load environment variables
 dotenv.config();
 
-// CRITICAL: Override NODE_ENV to development for Replit webpreview compatibility
-// This must happen before any middleware imports/initialization
-process.env.NODE_ENV = "development";
+// CRITICAL: Determine NODE_ENV for proper asset serving
+// For Replit compatibility, we run production mode with built assets
+process.env.NODE_ENV = "production";
 console.log(`[ENV-OVERRIDE] NODE_ENV set to: ${process.env.NODE_ENV}`);
 
 // Create Express app
@@ -82,6 +82,16 @@ app.use((req, res, next) => {
 });
 
 app.use(productionRateLimit);
+
+// Block access to source files to prevent security issues
+app.use((req, res, next) => {
+  // Block direct access to source files
+  if (req.path.startsWith("/src/") || req.path.startsWith("/client/src/")) {
+    console.log(`[SECURITY] Blocked access to source file: ${req.path}`);
+    return res.status(404).json({ error: "Source files not accessible" });
+  }
+  next();
+});
 
 // Honeypot routes (skip for assets)
 app.use((req, res, next) => {
