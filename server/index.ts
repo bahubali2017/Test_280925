@@ -306,29 +306,44 @@ adminWebSocketServer.initialize(httpServer);
     const staticPath = path.resolve(__dirname, "public");
     console.log(`[PRODUCTION] Serving static files from: ${staticPath}`);
 
-    // Serve static files with explicit MIME types
+    // Serve static files with explicit MIME types and cache headers
     app.use(express.static(staticPath, {
       setHeaders: (res, filePath) => {
         if (filePath.endsWith('.js')) {
           res.setHeader('Content-Type', 'application/javascript');
+          // Cache JS files aggressively (they should be hashed)
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         } else if (filePath.endsWith('.css')) {
           res.setHeader('Content-Type', 'text/css');
+          // Cache CSS files aggressively (they should be hashed)
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         } else if (filePath.endsWith('.html')) {
           res.setHeader('Content-Type', 'text/html');
+          // Don't cache HTML files
+          res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+          res.setHeader('Pragma', 'no-cache');
+          res.setHeader('Expires', '0');
+        } else if (filePath.match(/\.(png|jpg|jpeg|gif|ico|svg|woff|woff2|ttf|eot)$/)) {
+          // Cache static assets aggressively
+          res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
         }
       }
     }));
 
-    // Explicit /assets/* handler with MIME types
+    // Explicit /assets/* handler with MIME types and aggressive caching
     app.get("/assets/*", (req, res, next) => {
       const filePath = path.join(staticPath, req.path);
       
-      // Set correct MIME type based on file extension
+      // Set correct MIME type and aggressive cache headers for assets
       if (req.path.endsWith('.js')) {
         res.setHeader('Content-Type', 'application/javascript');
       } else if (req.path.endsWith('.css')) {
         res.setHeader('Content-Type', 'text/css');
       }
+      
+      // Assets should be cached aggressively (they are hashed)
+      res.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
+      res.setHeader('ETag', 'strong');
       
       res.sendFile(filePath, (err) => {
         if (err) {
@@ -338,7 +353,7 @@ adminWebSocketServer.initialize(httpServer);
       });
     });
 
-    // SPA fallback - serve index.html for all non-API routes
+    // SPA fallback - serve index.html with no-cache headers for all non-API routes
     app.get("*", (req, res, next) => {
       // Skip API and admin routes
       if (req.path.startsWith("/api") || req.path.startsWith("/admin")) {
@@ -346,7 +361,13 @@ adminWebSocketServer.initialize(httpServer);
       }
       
       const indexPath = path.join(staticPath, "index.html");
+      
+      // Set no-cache headers for index.html to ensure it's always fresh
       res.setHeader('Content-Type', 'text/html');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Pragma', 'no-cache');
+      res.setHeader('Expires', '0');
+      
       res.sendFile(indexPath, (err) => {
         if (err) {
           console.error(`[PRODUCTION] index.html not found: ${indexPath}`);
