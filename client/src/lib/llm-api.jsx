@@ -966,8 +966,8 @@ function stopStreaming(isDelivered = false) {
     sessionId: currentStream.sessionId 
   });
 
-  // Check if we have an active stream
-  if (!currentStream.controller || !currentStream.isActive) {
+  // Check if we have an active stream - be more lenient to catch edge cases
+  if (!currentStream.controller) {
     console.warn('[LLM] No active stream controller to stop');
     return false;
   }

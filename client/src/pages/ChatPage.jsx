@@ -780,8 +780,8 @@ export default function ChatPage() {
     if (streamingMessageId && messageId === streamingMessageId) {
       return handleStopAI;
     }
-    return null;
-  }, [streamingMessageId]);
+    return undefined; // Use undefined instead of null to prevent conditional rendering issues
+  }, [streamingMessageId, handleStopAI]);
 
   /**
    * Handles stopping an in-progress AI response - Enhanced with proper state management

@@ -937,7 +937,7 @@ router.get("/app-config.json", async (req, res) => {
 
       // Track active session for cancellation support
       activeSessions.set(sessionId, ac);
-      
+
       // ABORT-DEBUG: Log AbortController creation
       console.log(`[${sessionId}] [ABORT-DEBUG] AbortController created:`, !!ac);
       console.log(`[${sessionId}] [ABORT-DEBUG] Signal attached to fetch:`, !!ac.signal);
@@ -1033,7 +1033,7 @@ router.get("/app-config.json", async (req, res) => {
           presence_penalty: 0.1, // Slight penalty to encourage topic completion
           stream: true
         }),
-        signal: ac.signal // CRITICAL FIX: AbortSignal now properly forwarded to DeepSeek API
+        signal: ac.signal // CRITICAL FIX: AbortSignal properly forwarded to DeepSeek API
       });
 
       // Execute upstream fetch with normal streaming
@@ -1190,7 +1190,7 @@ router.get("/app-config.json", async (req, res) => {
             console.log(`[${sessionId}] DeepSeek API call aborted by user`);
             return; // Clean exit, don't send error events
           }
-          
+
           // Only handle other errors if connection wasn't intentionally aborted
           if (!closed && !ac.signal.aborted && apiError.message !== 'aborted') {
             console.error(`[${sessionId}] Streaming error:`, apiError);
@@ -1305,7 +1305,7 @@ router.get("/app-config.json", async (req, res) => {
 
           // End the session in the tracker
           sessionTracker.cancelSession(sessionId, 'user_cancelled');
-          
+
           console.log(`[${sessionId}] Cancellation cleanup completed`);
         } catch (cleanupError) {
           console.error(`[${sessionId}] Background cancellation cleanup error:`, cleanupError);
