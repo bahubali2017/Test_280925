@@ -363,7 +363,6 @@ export default function ChatPage() {
                                    originalMessage?.status === 'stopping';
           
           if (wasManuallyAborted) {
-            console.debug('[ChatPage] Retry message already manually stopped, ignoring error:', currentStreamingId);
             return prev; // Don't add error message, user already stopped it
           }
 
@@ -378,7 +377,6 @@ export default function ChatPage() {
                error.message.includes('Stream aborted by user'))));
                
           if (isAbortError) {
-            console.debug('[ChatPage] Detected abort error for retry message, ignoring:', currentStreamingId);
             // For abort errors, don't add any error message - the user intentionally stopped it
             return prev;
           }
@@ -598,7 +596,6 @@ export default function ChatPage() {
                                    originalMessage?.status === 'stopping';
           
           if (wasManuallyAborted) {
-            console.debug('[ChatPage] Message already manually stopped, ignoring error:', currentStreamingId);
             return prev; // Don't add error message, user already stopped it
           }
 
@@ -613,7 +610,6 @@ export default function ChatPage() {
                error.message.includes('cancelled'))));
                
           if (isAbortError) {
-            console.debug('[ChatPage] Detected abort error for manually stopped message, ignoring:', currentStreamingId);
             // For abort errors, don't add any error message - the user intentionally stopped it
             // The Stop AI handler should have already updated the UI appropriately
             return prev;
@@ -681,18 +677,15 @@ export default function ChatPage() {
   const handleStopAI = useCallback(async () => {
     // CRITICAL FIX: Check if we have an active streaming message
     if (!currentStreamingId) {
-      console.warn('[Chat] handleStopAI called but no streaming message ID found');
       return;
     }
 
     // CRITICAL FIX: Prevent multiple simultaneous stop operations
     if (isStoppingAI) {
-      console.debug('[Chat] handleStopAI called but already stopping');
       return;
     }
 
     setIsStoppingAI(true);
-    console.debug(`[Chat] Stopping AI response for message: ${currentStreamingId}`);
 
     try {
       // Store the current streaming message ID to prevent race conditions
@@ -719,10 +712,8 @@ export default function ChatPage() {
       );
 
       // Get stopStreaming from cached module and call it immediately
-      console.log('[CHAT-PAGE] About to call stopStreaming...');
       const { stopStreaming } = await getLLMApi();
-      const stopped = stopStreaming();
-      console.log('[CHAT-PAGE] stopStreaming result:', stopped);
+      stopStreaming();
 
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
@@ -821,7 +812,6 @@ export default function ChatPage() {
 
   // Show loading while auth is being determined
   if (authLoading) {
-    console.log('[ChatPage] Auth still loading, showing spinner');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -851,11 +841,9 @@ export default function ChatPage() {
   }
 
   if (!user) {
-    console.log('[ChatPage] No user found, returning div');
     return <div>Loading user...</div>;
   }
 
-  console.log('[ChatPage] User authenticated, rendering chat interface for:', user.email);
 
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
