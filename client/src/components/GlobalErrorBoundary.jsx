@@ -5,7 +5,7 @@ import React, { Component } from 'react';
 /**
  *
  */
-export class GlobalErrorBoundary extends Component {
+class GlobalErrorBoundary extends Component {
   /**
    *
    * @param props
@@ -94,3 +94,5 @@ export class GlobalErrorBoundary extends Component {
     return this.props.children;
   }
 }
+
+export default GlobalErrorBoundary;

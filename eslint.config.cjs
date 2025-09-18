@@ -41,7 +41,7 @@ module.exports = [
       'react/react-in-jsx-scope': 'off',
       'react/prop-types': 'off',
       'no-unused-vars': ['error', { 
-        'varsIgnorePattern': 'React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|Comp',
+        'varsIgnorePattern': 'React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|GlobalErrorBoundary|Comp',
         'argsIgnorePattern': '^_' 
       }],
       'jsdoc/require-jsdoc': ['warn', {

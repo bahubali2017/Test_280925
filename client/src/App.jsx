@@ -8,11 +8,12 @@ import LegalPage from './pages/LegalPage.jsx';
 import NotFoundPage from './pages/not-found.jsx';
 import { queryClient } from './lib/queryClient.jsx';
 import { ToastProvider } from './components/ToastProvider.jsx';
-import { GlobalErrorBoundary } from './components/GlobalErrorBoundary.jsx';
+import GlobalErrorBoundary from './components/GlobalErrorBoundary.jsx';
 import './index.css';
 
 /**
- *
+ * Root application component.
+ * @returns {JSX.Element} The rendered application component.
  */
 export default function App() {
   console.log('[App] Rendering main application');
