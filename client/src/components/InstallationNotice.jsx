@@ -211,28 +211,12 @@ export function InstallationNotice() {
    * <button onClick={handleInstall}>Install Now</button>
    */
   const handleInstall = () => {
-    if (platform === 'ios') {
-      // iOS - Show detailed installation instructions
-      if (typeof alert !== 'undefined') {
-        alert('To install Anamnesis on your iPhone/iPad:\n\n1. Tap the Share button (⬆️) at the bottom of Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to install the app'); // eslint-disable-line no-undef
-      }
-    } else {
-      // Android/Desktop - Try to trigger native install prompt
-      const beforeInstallPromptHandler = (e) => {
-        e.preventDefault();
-        e.prompt();
-      };
-      
-      // Check if beforeinstallprompt event is available
-      if (typeof window !== 'undefined' && 'BeforeInstallPromptEvent' in window) {
-        window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler, { once: true });
-      } else {
-        // Fallback instructions for platforms without native prompt
-        const instructions = getInstallationInstructions();
-        if (typeof alert !== 'undefined') {
-          alert(`${instructions.title}\n\n${instructions.steps.join('\n')}`); // eslint-disable-line no-undef
-        }
-      }
+    // Get platform-specific instructions
+    const instructions = getInstallationInstructions();
+    
+    // Always show instructions via alert for all platforms
+    if (typeof alert !== 'undefined') {
+      alert(`${instructions.title}\n\n${instructions.steps.join('\n')}`); // eslint-disable-line no-undef
     }
     
     // Always dismiss the notice after showing instructions
