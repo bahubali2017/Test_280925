@@ -12,6 +12,7 @@ const router = express.Router();
  * @param {string} type - Type of incident
  * @param {object} req - Express request object
  * @param {object} details - Additional details
+ * @returns {object} The logged security incident object
  */
 function logSecurityIncident(type, req, details = {}) {
   const incident = {
@@ -34,9 +35,10 @@ function logSecurityIncident(type, req, details = {}) {
 
 /**
  * Generic honeypot response
- * @param req
- * @param res
- * @param endpointType
+ * @param {import("express").Request} req - Express request object
+ * @param {import("express").Response} res - Express response object
+ * @param {string} endpointType - Type of endpoint being accessed
+ * @returns {void} Sends a JSON response, no return value
  */
 function honeypotResponse(req, res, endpointType) {
   logSecurityIncident('HONEYPOT_TRIGGERED', req, { endpointType });
