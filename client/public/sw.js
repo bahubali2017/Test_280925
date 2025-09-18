@@ -1,9 +1,8 @@
+/* global self, caches */
 // Cache names for different types of resources  
 const CACHE_NAME = 'anamnesis-v2.2.0';
-const STATIC_CACHE = 'anamnesis-static-v1.1.0';
-const DYNAMIC_CACHE = 'anamnesis-dynamic-v1.1.0';
-// Cache version - increment when you want to force cache refresh
-const CACHE_VERSION = 'v2025.1.18.2';
+// Critical assets to cache
+const CRITICAL_ASSETS = ["/", "/index.html"];
 // Install event
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker installing...');

@@ -95,4 +95,7 @@ class GlobalErrorBoundary extends Component {
   }
 }
 
+/**
+ *
+ */
 export default GlobalErrorBoundary;
