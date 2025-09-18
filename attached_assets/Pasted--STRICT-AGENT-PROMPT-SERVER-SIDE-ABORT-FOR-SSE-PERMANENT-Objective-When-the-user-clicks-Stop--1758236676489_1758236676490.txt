@@ -1,0 +1,125 @@
+🔧 STRICT AGENT PROMPT — SERVER-SIDE ABORT FOR SSE (PERMANENT)
+Objective
+
+When the user clicks Stop AI, the DeepSeek (upstream) generation must terminate immediately. Server logs must show “aborted by client”, not “completed”. No UI/system error should be emitted.
+
+Scope
+
+Edit only server/routes.js (SSE /api/chat/stream) and the cancel endpoint.
+Do not add new files, features, or debugging noise. No code duplication.
+
+Required Changes
+1) Create a per-session abort bundle and store it
+
+Inside the SSE handler (right after you derive sessionId), build two controllers and one combined signal:
+
+// Controllers
+const clientAbort = new AbortController();      // fired by client socket close
+const adminAbort  = new AbortController();      // fired by /api/chat/cancel/:sessionId
+
+// Combine to one signal usable everywhere
+const combinedSignal = AbortSignal.any([clientAbort.signal, adminAbort.signal]);
+
+// Expose a single abort() for this session (used by cancel endpoint)
+activeSessions.set(sessionId, {
+  abort() {
+    adminAbort.abort();
+  },
+  startedAt: Date.now()
+});
+
+2) Wire client disconnect → abort upstream
+
+Add both listeners before you start upstream fetch:
+
+req.on('aborted', onClientGone);
+req.on('close',   onClientGone);
+
+function onClientGone() {
+  if (!clientAbort.signal.aborted) {
+    clientAbort.abort();              // stop upstream
+  }
+  try { res.end(); } catch {}
+}
+
+3) Pass the combined signal to the upstream provider call
+
+Where you call DeepSeek (or your LLM fetch), pass the signal and keep a handle to the response/reader:
+
+const upstreamResponse = await fetch(providerUrl, {
+  method: 'POST',
+  headers,
+  body: JSON.stringify(payload),
+  signal: combinedSignal,          // ← critical
+});
+
+const reader = upstreamResponse.body?.getReader?.();
+
+4) In the streaming loop, cooperate with aborts
+
+Immediately exit cleanly when aborted; also cancel the reader:
+
+while (true) {
+  if (combinedSignal.aborted) break;
+  const { value, done } = await reader.read();
+  if (combinedSignal.aborted || done) break;
+  // write SSE chunk…
+}
+// ensure stream is canceled if we broke early
+try { await reader.cancel(); } catch {}
+
+5) Treat AbortError as normal stop, not failure
+
+Wrap upstream fetch/loop in try/catch:
+
+} catch (err) {
+  if (err?.name === 'AbortError' || combinedSignal.aborted) {
+    console.log(`[SSE] ${sessionId} aborted by client/cancel`);
+    try { res.end(); } catch {}
+    return; // no error message, no “completed”
+  }
+  // … real error handling/logging …
+}
+
+6) Cleanup in finally
+
+Always remove from activeSessions and detach listeners:
+
+} finally {
+  activeSessions.delete(sessionId);
+  req.off('aborted', onClientGone);
+  req.off('close',   onClientGone);
+}
+
+7) Make the cancel endpoint actually abort this session
+
+In /api/chat/cancel/:sessionId:
+
+const entry = activeSessions.get(req.params.sessionId);
+if (entry) {
+  entry.abort();                     // triggers adminAbort
+  return res.status(200).json({ ok: true, cancelled: true });
+}
+return res.status(404).json({ ok: false, reason: 'not_found' });
+
+8) Shorten server timeouts (keeps sockets from lingering)
+
+(If not already present in index.ts):
+
+httpServer.requestTimeout = 10_000;
+httpServer.headersTimeout = 12_000;
+httpServer.keepAliveTimeout = 5_000;
+
+Acceptance Criteria
+
+Click Stop AI → upstream generation halts immediately.
+
+Server logs show: "[SSE] <sessionId> aborted by client/cancel" (no “completed”).
+
+No system error message is produced on stop.
+
+No token burn after stop (provider request terminates).
+
+Cancel endpoint halts active session deterministically.
+
+No new files; no duplication; minimal edits only in server/routes.js and cancel handler.

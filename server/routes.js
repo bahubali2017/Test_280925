@@ -963,83 +963,33 @@ router.get("/app-config.json", async (req, res) => {
       // Send the request to DeepSeek API with streaming enabled
       const deepSeekUrl = "https://api.deepseek.com/v1/chat/completions";
 
-      // Create AbortController for immediate cancellation
-      const ac = new AbortController();
+      // 1) Create per-session abort bundle with combined signal
+      const clientAbort = new AbortController();      // fired by client socket close
+      const adminAbort = new AbortController();       // fired by /api/chat/cancel/:sessionId
+      const combinedSignal = AbortSignal.any([clientAbort.signal, adminAbort.signal]);
+      
       let closed = false;
 
-      // Track active session for cancellation support
-      activeSessions.set(sessionId, ac);
+      // Expose single abort() for this session (used by cancel endpoint)
+      activeSessions.set(sessionId, {
+        abort() {
+          adminAbort.abort();
+        },
+        startedAt: Date.now()
+      });
 
-      // ABORT-DEBUG: Log AbortController creation
-      console.log(`[${sessionId}] [ABORT-DEBUG] AbortController created:`, !!ac);
-      console.log(`[${sessionId}] [ABORT-DEBUG] Signal attached to fetch:`, !!ac.signal);
 
-      // Unified abort handler - triggers on user Stop AI or connection close
-      const handleAbort = (reason) => {
-        if (closed) return; // Guard against multiple calls
-        closed = true;
-
-        // IMMEDIATE upstream abort - highest priority to stop AI generation
-        ac.abort();
-
-        console.log(`[${sessionId}] [SSE] STOPPED_BY_USER - upstream aborted immediately - ${new Date().toISOString()}`);
-
-        // Immediate socket destruction for instant Network tab cancellation
-        try {
-          if (res.socket && !res.socket.destroyed) {
-            res.socket.destroy();
-          }
-        } catch (socketError) {
-          console.debug(`[${sessionId}] Socket destroy error:`, socketError.message);
+      // 2) Wire client disconnect → abort upstream
+      function onClientGone() {
+        if (!clientAbort.signal.aborted) {
+          clientAbort.abort();              // stop upstream
         }
+        try { res.end(); } catch {}
+      }
 
-        // Quick client notification (non-blocking)
-        try {
-          if (!res.destroyed && !res.closed && !res.writableEnded) {
-            res.write(`event: STOPPED_BY_USER\ndata: ${JSON.stringify({
-              stopped: true,
-              reason: reason,
-              timestamp: new Date().toISOString()
-            })}\n\n`);
-
-            // Immediate flush and end
-            if (res.flush) res.flush();
-            res.end();
-          }
-        } catch {
-          // Silent fail - connection might already be closed
-        }
-
-        // Remove from active sessions map
-        activeSessions.delete(sessionId);
-
-        // Background session cleanup (non-blocking)
-        process.nextTick(() => {
-          try {
-            sessionTracker.updateSession(sessionId, Date.now() - startTime, false);
-            sessionTracker.endSession(sessionId, 'stopped');
-          } catch {
-            // Silent fail - session tracking is not critical
-          }
-        });
-      };
-
-      // IMMEDIATE client abort handlers - triggers on user Stop AI
-      req.on("close", () => {
-        console.log(`[${sessionId}] [SSE] Client closed – triggering immediate abort`);
-        handleAbort('connection_close');
-      });
-
-      req.on("aborted", () => {
-        console.log(`[${sessionId}] [SSE] Stream aborted by client`);
-        handleAbort('connection_aborted');
-      });
-
-      // Additional handler for connection errors that might not trigger close/aborted
-      res.on("error", () => {
-        console.log(`[${sessionId}] [SSE] Response error – triggering immediate abort`);
-        handleAbort('response_error');
-      });
+      // Add both listeners before starting upstream fetch
+      req.on('aborted', onClientGone);
+      req.on('close', onClientGone);
 
       res.on("finish", () => {
         // Response finished normally or was ended
@@ -1048,7 +998,7 @@ router.get("/app-config.json", async (req, res) => {
         }
       });
 
-      // Create fire-and-forget upstream fetch (detached from SSE lifecycle)
+      // 3) Pass the combined signal to the upstream provider call
       const upstreamFetch = () => fetch(deepSeekUrl, {
         method: "POST",
         headers: {
@@ -1058,14 +1008,14 @@ router.get("/app-config.json", async (req, res) => {
         body: JSON.stringify({
           model: config.model || "deepseek-chat",
           messages: promptMessages,
-          temperature: 0.2, // Lower temperature for more consistent, complete responses
-          max_tokens: 4096, // Maximum tokens for complete medical explanations
-          top_p: 0.95, // High top_p for comprehensive coverage
-          frequency_penalty: 0.1, // Slight penalty to encourage varied language
-          presence_penalty: 0.1, // Slight penalty to encourage topic completion
+          temperature: 0.2,
+          max_tokens: 4096,
+          top_p: 0.95,
+          frequency_penalty: 0.1,
+          presence_penalty: 0.1,
           stream: true
         }),
-        signal: ac.signal // CRITICAL FIX: AbortSignal properly forwarded to DeepSeek API
+        signal: combinedSignal          // ← critical
       });
 
       // Execute upstream fetch with normal streaming
@@ -1092,14 +1042,11 @@ router.get("/app-config.json", async (req, res) => {
 
         // Read the stream chunk by chunk with abort signal checking
         try {
+          // 4) In the streaming loop, cooperate with aborts
           while (true) {
-            // Check abort signal before each read
-            if (ac.signal.aborted || closed) throw new Error('aborted');
+            if (combinedSignal.aborted) break;
             const { done, value } = await reader.read();
-
-            if (done) {
-              break;
-            }
+            if (combinedSignal.aborted || done) break;
 
             // Decode the chunk
             buffer += decoder.decode(value, { stream: true });
@@ -1109,11 +1056,7 @@ router.get("/app-config.json", async (req, res) => {
             buffer = lines.pop() || ''; // Keep the last partial line in the buffer
 
             for (const line of lines) {
-              // Check abort signal during line processing for immediate termination
-              if (ac.signal.aborted || closed) {
-                console.log(`[${sessionId}] [SSE] Abort detected during token processing - stopping immediately`);
-                throw new Error('aborted');
-              }
+              if (combinedSignal.aborted) break;
 
               // Skip empty lines and :keep-alive comments
               if (!line || line.trim() === '' || line.startsWith(':')) {
@@ -1141,13 +1084,10 @@ router.get("/app-config.json", async (req, res) => {
                     responseText += cleanedContent;
 
                     // Send the cleaned chunk to the client using event-based format for SSE
-                    if (!closed && !res.writableEnded && !ac.signal.aborted) {
+                    if (!closed && !res.writableEnded && !combinedSignal.aborted) {
                       res.write(`event: chunk\ndata: ${JSON.stringify({ text: cleanedContent })}\n\n`);
                       // Flush to ensure immediate delivery
                       if (res.flush) res.flush();
-                    } else if (closed || ac.signal.aborted) {
-                      // Stop processing if connection is closed or aborted
-                      throw new Error('aborted');
                     }
                   }
                 } catch (error) {
@@ -1157,27 +1097,23 @@ router.get("/app-config.json", async (req, res) => {
             }
           }
         } finally {
-          // Fire-and-forget upstream cleanup - do NOT await
-          try { 
-            // Cancel through the reader, not the stream directly to avoid ERR_INVALID_STATE
-            reader.cancel(); 
-          } catch { /* ignore cleanup errors */ }
-          // Don't call deepSeekResponse.body.cancel() as reader.cancel() handles it
+          // ensure stream is canceled if we broke early
+          try { await reader.cancel(); } catch {}
         }
 
         // Early exit check - don't process anything if connection was aborted
-        if (!closed && !ac.signal.aborted) {
+        if (!closed && !combinedSignal.aborted) {
           // Finalize the streaming response and apply final processing
           responseText = await processAIResponse(responseText, sessionId);
           const requestDuration = Date.now() - startTime;
           // Only log completion if client is still connected
-          if (!closed && !ac.signal.aborted) {
+          if (!closed && !combinedSignal.aborted) {
             console.log(`[${sessionId}] [SSE] STREAM_ENDED - completed in ${requestDuration}ms - ${new Date().toISOString()}`);
           }
 
           // Save the messages to the database only if not aborted
           try {
-            if (userId !== "anonymous" && responseText && !closed && !ac.signal.aborted) {
+            if (userId !== "anonymous" && responseText && !closed && !combinedSignal.aborted) {
               await storage.saveMessage(userId, message, responseText);
             }
           } catch (dbError) {
@@ -1185,7 +1121,7 @@ router.get("/app-config.json", async (req, res) => {
           }
 
           // Send configuration data for the client only if not aborted
-          if (!closed && !ac.signal.aborted) {
+          if (!closed && !combinedSignal.aborted) {
             res.write(`event: config\ndata: ${JSON.stringify({
               model: config.model || "deepseek-chat",
               sessionId: sessionId,
@@ -1195,7 +1131,7 @@ router.get("/app-config.json", async (req, res) => {
           }
 
           // Send completion event only if not aborted
-          if (!closed && !ac.signal.aborted) {
+          if (!closed && !combinedSignal.aborted) {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: true,
               requestTime: requestDuration
@@ -1203,7 +1139,7 @@ router.get("/app-config.json", async (req, res) => {
           }
 
           // Update session with completion metrics only if not aborted
-          if (!closed && !ac.signal.aborted) {
+          if (!closed && !combinedSignal.aborted) {
             sessionTracker.updateSession(sessionId, requestDuration, false);
             sessionTracker.endSession(sessionId, 'completed');
           }
@@ -1212,27 +1148,27 @@ router.get("/app-config.json", async (req, res) => {
           activeSessions.delete(sessionId);
 
           // End the response safely only if not aborted
-          if (!res.writableEnded && !closed && !ac.signal.aborted) {
+          if (!res.writableEnded && !closed && !combinedSignal.aborted) {
             res.end();
           }
         } else {
           // Connection was aborted - clean exit
           console.log(`[${sessionId}] [SSE] Stream processing skipped - connection aborted`);
         }
-        } catch (apiError) {
-          // Handle AbortError specifically
-          if (apiError.name === 'AbortError' || ac.signal.aborted) {
-            console.log(`[${sessionId}] DeepSeek API call aborted by user`);
-            return; // Clean exit, don't send error events
+        // 5) Treat AbortError as normal stop, not failure
+        } catch (err) {
+          if (err?.name === 'AbortError' || combinedSignal.aborted) {
+            console.log(`[${sessionId}] [SSE] ${sessionId} aborted by client/cancel`);
+            try { res.end(); } catch {}
+            return; // no error message, no "completed"
           }
-
-          // Only handle other errors if connection wasn't intentionally aborted
-          if (!closed && !ac.signal.aborted && apiError.message !== 'aborted') {
-            console.error(`[${sessionId}] Streaming error:`, apiError);
+          // ... real error handling/logging ...
+          if (!closed && !combinedSignal.aborted && err.message !== 'aborted') {
+            console.error(`[${sessionId}] Streaming error:`, err);
             // Send error event with proper SSE formatting
             try {
               res.write(`event: error\ndata: ${JSON.stringify({
-                error: apiError.message,
+                error: err.message,
                 code: 'streaming_error'
               })}\n\n`);
 
@@ -1251,14 +1187,14 @@ router.get("/app-config.json", async (req, res) => {
             } catch (writeError) {
               console.debug(`[${sessionId}] Could not send error event:`, writeError.message);
             }
-          } else if (apiError.message === 'aborted') {
+          } else if (err.message === 'aborted') {
             console.log(`[${sessionId}] [SSE] Stream processing aborted as expected`);
           }
         }
       } catch (fetchError) {
         // Handle fetch/connection errors
-        if (fetchError.name === 'AbortError' || ac.signal.aborted) {
-          console.log(`[${sessionId}] DeepSeek API fetch aborted by user - upstream termination successful`);
+        if (fetchError.name === 'AbortError' || combinedSignal.aborted) {
+          console.log(`[${sessionId}] [SSE] ${sessionId} aborted by client/cancel`);
         } else {
           console.error(`[${sessionId}] Fetch error:`, fetchError.message);
         }
@@ -1305,60 +1241,24 @@ router.get("/app-config.json", async (req, res) => {
 
         res.end();
       }
+    } finally {
+      // 6) Cleanup in finally
+      activeSessions.delete(sessionId);
+      req.off('aborted', onClientGone);
+      req.off('close', onClientGone);
     }
   });
 
   /**
-   * Chat cancellation endpoint - Enhanced with immediate termination
+   * 7) Make the cancel endpoint actually abort this session
    */
   router.post('/chat/cancel/:sessionId', async (req, res) => {
-    const { sessionId } = req.params;
-    console.log(`[${sessionId}] IMMEDIATE CANCELLATION requested`);
-
-    try {
-      // IMMEDIATE RESPONSE: Send success immediately to prevent client timeout
-      res.json({
-        success: true,
-        sessionId: sessionId,
-        message: 'Stream cancellation initiated',
-        timestamp: new Date().toISOString()
-      });
-
-      // BACKGROUND CLEANUP: Process actual cancellation asynchronously
-      process.nextTick(() => {
-        try {
-          // Find and abort the active session controller
-          const controller = activeSessions.get(sessionId);
-          if (controller) {
-            console.log(`[${sessionId}] Aborting active session controller immediately`);
-            controller.abort('user_cancelled_immediate'); // This signals the fetch request to stop
-            activeSessions.delete(sessionId); // Remove from active sessions
-            console.log(`[${sessionId}] Session controller aborted and removed from active sessions`);
-          } else {
-            console.warn(`[${sessionId}] No active session controller found for cancellation`);
-          }
-
-          // End the session in the tracker
-          sessionTracker.cancelSession(sessionId, 'user_cancelled');
-
-          console.log(`[${sessionId}] Cancellation cleanup completed`);
-        } catch (cleanupError) {
-          console.error(`[${sessionId}] Background cancellation cleanup error:`, cleanupError);
-        }
-      });
-
-    } catch (error) {
-      console.error(`[${sessionId}] Cancellation error:`, error);
-      // Still try to send a response if headers haven't been sent
-      if (!res.headersSent) {
-        res.status(500).json({
-          success: false,
-          message: 'Cancellation failed',
-          sessionId: sessionId,
-          error: error.message
-        });
-      }
+    const entry = activeSessions.get(req.params.sessionId);
+    if (entry) {
+      entry.abort();                     // triggers adminAbort
+      return res.status(200).json({ ok: true, cancelled: true });
     }
+    return res.status(404).json({ ok: false, reason: 'not_found' });
   });
 
   /**
