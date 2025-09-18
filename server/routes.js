@@ -1240,8 +1240,6 @@ router.get("/app-config.json", async (req, res) => {
 
         res.end();
       }
-    } finally {
-      activeSessions.delete(sessionId);
     }
   });
 
