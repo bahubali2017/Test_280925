@@ -460,6 +460,7 @@ export async function sendMessage(message, history = [], options = {}) {
 }
 
 // Global session ID for current active session
+/** @type {string|null} */
 let currentSessionId = null;
 
 /**
