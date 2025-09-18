@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabaseClient } from '../lib/supabase.js';
+import config from '../lib/config.js';
 
 /**
  * @typedef {object} User
@@ -48,6 +49,23 @@ export function AuthProvider({ children }) {
     const initAuth = async () => {
       try {
         console.log('[Auth] Initializing authentication...');
+        
+        // Auto-authenticate guest user in development mode for immediate chat access
+        if (config.app.isDevelopment) {
+          console.log('[Auth] Development mode detected - auto-authenticating guest user');
+          /** @type {User} */
+          const guestUser = {
+            id: 'dev-guest-user',
+            email: 'guest@development.local',
+            role: 'guest'
+          };
+          
+          setUser(guestUser);
+          setIsLoading(false);
+          console.log('[Auth] Guest user authenticated automatically for development');
+          return; // Skip Supabase checks in development
+        }
+        
         const { data: { session } } = await supabaseClient.auth.getSession();
 
         if (session?.user && isMounted) {
