@@ -63,8 +63,6 @@ function calculateHealthStatus() {
  */
 async function measureAILatency() {
   try {
-    const startTime = Date.now();
-    
     // Simple ping to DeepSeek API health endpoint (if available)
     // For now, we'll simulate based on recent session metrics
     const metrics = sessionTracker.getSystemMetrics();
