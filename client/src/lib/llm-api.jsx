@@ -636,7 +636,7 @@ return promptParts.join("\n\n");
 * @param {Function} [onStreamingUpdate=null] - Callback for streaming updates
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
-export async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
+async function sendMessage(message, history = [], options = {}, onStreamingUpdate = null) {
 // Validate input
 if (!message || typeof message !== "string" || message.trim() === "") {
 throw createAPIError("validation", "Message cannot be empty");
@@ -894,6 +894,26 @@ let currentStream = {
   lastActivity: null
 };
 
+// Reset stream state on module load to prevent conflicts
+function resetStreamState() {
+  if (currentStream.controller) {
+    try {
+      currentStream.controller.abort();
+    } catch (e) {
+      // Ignore abort errors during reset
+    }
+  }
+  currentStream = {
+    controller: null,
+    sessionId: null,
+    messageId: null,
+    isActive: false
+  };
+}
+
+// Call reset on module initialization
+resetStreamState();
+
 /**
 * @type {ReadableStreamDefaultReader|null}
 */
@@ -1052,7 +1072,7 @@ function stopStreaming(isDelivered = false) {
 /**
 * Handles streaming request with real-time updates
 * @param {string} message - User message
-* @param {Array<{role: string, content: string}>} history - Conversation history
+* @param {Array<Message>} history - Conversation history
 * @param {QueryIntent} queryIntent - Query intent analysis
 * @param {Function} onStreamingUpdate - Callback for streaming updates
 * @param {number} startTime - Request start timestamp

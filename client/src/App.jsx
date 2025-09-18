@@ -1,72 +1,37 @@
-import React, { useEffect } from "react";
-import { Switch, Route, useLocation } from "wouter";
-import { QueryClientProvider } from "@tanstack/react-query";
-import { queryClient } from "./lib/queryClient";
-import { AuthProvider } from "./hooks/useAuth";
-import { ProtectedRoute } from "./components/ProtectedRoute";
-import { ToastProvider } from "./components/ToastProvider";
-import { useAuthAvailability } from './contexts/AuthAvailabilityContext.jsx';
-// eslint-disable-next-line no-unused-vars
-import SupabaseDownBanner from './components/SupabaseDownBanner.jsx';
-// import { initializeVersionChecking } from './lib/versionChecker';
-import LoginPage from "./pages/LoginPage";
-import ChatPage from "./pages/ChatPage";
-import LegalPage from "./pages/LegalPage";
-import NotFound from "./pages/not-found";
+import React from 'react';
+import { Router, Route, Switch, Redirect } from 'wouter';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { AuthProvider } from './hooks/useAuth.jsx';
+import { ProtectedRoute } from './components/ProtectedRoute.jsx';
+import ChatPage from './pages/ChatPage.jsx';
+import LoginPage from './pages/LoginPage.jsx';
+import LegalPage from './pages/LegalPage.jsx';
+import NotFoundPage from './pages/not-found.jsx';
+import { queryClient } from './lib/queryClient.jsx';
+import { ToastProvider } from './components/ToastProvider.jsx';
+import { GlobalErrorBoundary } from './components/GlobalErrorBoundary.jsx';
+import './index.css';
 
-/**
- * Router component that handles application routing
- * @returns {JSX.Element} The Router component
- */
-function Router() {
-  const [location, setLocation] = useLocation();
-
-  // Redirect to login if at root path
-  if (location === '/') {
-    setLocation('/login');
-    return <div>Redirecting...</div>;
-  }
-
-  return (
-    <Switch location={location}>
-        {/* Login route */}
-        <Route path="/login" component={LoginPage} />
-        
-        {/* Protected chat route */}
-        <Route path="/chat">
-          <ProtectedRoute>
-            <ChatPage />
-          </ProtectedRoute>
-        </Route>
-        
-        {/* Legal page route */}
-        <Route path="/legal" component={LegalPage} />
-        
-        {/* 404 route */}
-        <Route component={NotFound} />
-      </Switch>
-    );
-}
-
-/**
- * Main application component
- * Sets up providers and renders the Router
- * @returns {JSX.Element} The App component
- */
 export default function App() {
-  const { supabaseUp } = useAuthAvailability();
-
-
   return (
-    <>
-      {!supabaseUp && <SupabaseDownBanner />}
+    <GlobalErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProvider>
-            <Router />
+            <Router>
+              <Switch>
+                <Route path="/login" component={LoginPage} />
+                <Route path="/legal" component={LegalPage} />
+                <ProtectedRoute path="/chat" component={ChatPage} />
+                <Route path="/">
+                  <Redirect to="/chat" />
+                </Route>
+                <Route component={NotFoundPage} />
+              </Switch>
+            </Router>
           </AuthProvider>
         </ToastProvider>
       </QueryClientProvider>
-    </>
+    </GlobalErrorBoundary>
   );
 }

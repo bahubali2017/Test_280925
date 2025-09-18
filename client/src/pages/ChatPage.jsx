@@ -83,8 +83,16 @@ export default function ChatPage() {
   /** @type {[Array<string>, React.Dispatch<React.SetStateAction<Array<string>>>]} */
   const [starterQuestions, setStarterQuestions] = useState([]);
 
-  const { user, logout } = useAuth();
+  const { user, logout, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
+
+  // Add error boundary state
+  const [hasError, setHasError] = useState(false);
+
+  // Reset error state when user changes
+  useEffect(() => {
+    setHasError(false);
+  }, [user]);
 
   /** @type {React.RefObject<HTMLDivElement>} */
   const messagesEndRef = useRef(null);
@@ -132,6 +140,8 @@ export default function ChatPage() {
       }
     } catch (error) {
       console.error('Failed to fetch message history:', error);
+      // Set hasError to true if fetching history fails
+      setHasError(true);
     } finally {
       setIsFetchingHistory(false);
     }
@@ -231,8 +241,8 @@ export default function ChatPage() {
         if (!msg.isError) return true;
 
         // Safely handle timestamp comparison
-        const msgTime = msg.timestamp instanceof Date ? 
-          msg.timestamp.getTime() : 
+        const msgTime = msg.timestamp instanceof Date ?
+          msg.timestamp.getTime() :
           new Date(msg.timestamp).getTime();
 
         return msgTime < (currentTime - 30000);
@@ -302,9 +312,9 @@ export default function ChatPage() {
         // Update the existing placeholder message with streaming content
         if (content && content.trim().length > 0) {
           // CRITICAL FIX: Update message content incrementally on every streaming update
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === `${retryId}_response` 
+          setMessages(prev =>
+            prev.map(msg =>
+              msg.id === `${retryId}_response`
                 ? {
                     ...msg,
                     content: content // Update with latest content
@@ -321,9 +331,9 @@ export default function ChatPage() {
           // Only finalize if we have actual content and the message was added
           if (messageAdded && content && content.trim().length > 0) {
             // Update the message with final content and metadata
-            setMessages(prev => 
-              prev.map(msg => 
-                msg.id === `${retryId}_response` 
+            setMessages(prev =>
+              prev.map(msg =>
+                msg.id === `${retryId}_response`
                   ? {
                       ...msg,
                       content: content,
@@ -353,7 +363,7 @@ export default function ChatPage() {
 
       // Call the enhanced API with streaming support
       const result = await sendMessage(
-        messageContent, 
+        messageContent,
         conversationHistory,
         {}, // Default options
         handleStreamingUpdate // Streaming callback
@@ -380,10 +390,10 @@ export default function ChatPage() {
           // Check if this was a deliberate abort/stop action
           /** @type {boolean} */
           const isManualAbort = Boolean(
-            error && 
-            ((typeof error === 'object' && 'name' in error && error.name === 'AbortError') || 
-             (typeof error === 'object' && 'message' in error && 
-              typeof error.message === 'string' && 
+            error &&
+            ((typeof error === 'object' && 'name' in error && error.name === 'AbortError') ||
+             (typeof error === 'object' && 'message' in error &&
+              typeof error.message === 'string' &&
               error.message.includes('Request aborted')))
           );
           if (isManualAbort) {
@@ -394,8 +404,8 @@ export default function ChatPage() {
             const partialContent = originalMessage?.content || partialContentRef.current || '';
 
             // Add a cancellation notice to the content
-            return prev.map(msg => 
-              msg.id === streamingMessageId 
+            return prev.map(msg =>
+              msg.id === streamingMessageId
                 ? {
                     ...msg,
                     content: partialContent + "\n\n*AI response cancelled by user.*",
@@ -409,8 +419,8 @@ export default function ChatPage() {
           }
 
           // Otherwise, convert it to an error
-          return prev.map(msg => 
-            msg.id === streamingMessageId 
+          return prev.map(msg =>
+            msg.id === streamingMessageId
               ? {
                   ...msg,
                   content: errorMessage,
@@ -459,9 +469,9 @@ export default function ChatPage() {
      * @returns {err is APIErrorResponse} Whether it's an API error response
      */
     const isApiErrorResponse = (err) => {
-      return typeof err === 'object' && 
-             err !== null && 
-             'type' in err && 
+      return typeof err === 'object' &&
+             err !== null &&
+             'type' in err &&
              typeof err.type === 'string';
     };
 
@@ -560,10 +570,10 @@ export default function ChatPage() {
       const handleStreamingUpdate = (content, metadata = {}) => {
         handleStreamingUpdate.messageId = assistantMessageId; // Store for reference
         handleStreamingUpdate.sessionId = sessionId; // Attach sessionId for cancellation
-        
+
         // CRITICAL DEBUG: Log streaming updates
         console.debug(`[Chat] Streaming update received: ${content.length} chars, streaming: ${metadata.isStreaming}, complete: ${metadata.isComplete}`);
-        
+
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
         partialContentRef.current = content;
@@ -571,9 +581,9 @@ export default function ChatPage() {
         // Update the existing placeholder message with streaming content
         if (content && content.trim().length > 0) {
           // CRITICAL FIX: Update message content incrementally on every streaming update
-          setMessages((prev) => 
-            prev.map(msg => 
-              msg.id === assistantMessageId 
+          setMessages((prev) =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
                 ? {
                     ...msg,
                     content: content, // Update with latest content
@@ -589,9 +599,9 @@ export default function ChatPage() {
           console.debug(`[Medical Layer] Status update: ${metadata.layerStatus}`);
 
           // Update message with layer processing status
-          setMessages((prev) => 
-            prev.map(msg => 
-              msg.id === assistantMessageId 
+          setMessages((prev) =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
                 ? {
                     ...msg,
                     metadata: {
@@ -609,9 +619,9 @@ export default function ChatPage() {
 
         // Phase 7: Handle dynamic disclaimer updates based on streaming content (only if message has been added)
         if (messageAdded && metadata.dynamicDisclaimers) {
-          setMessages((prev) => 
-            prev.map(msg => 
-              msg.id === assistantMessageId 
+          setMessages((prev) =>
+            prev.map(msg =>
+              msg.id === assistantMessageId
                 ? {
                     ...msg,
                     metadata: {
@@ -634,9 +644,9 @@ export default function ChatPage() {
           // Only finalize if we have actual content and the message was added
           if (messageAdded && content && content.trim().length > 0) {
             // Update the message with final content and metadata
-            setMessages((prev) => 
-              prev.map(msg => 
-                msg.id === assistantMessageId 
+            setMessages((prev) =>
+              prev.map(msg =>
+                msg.id === assistantMessageId
                   ? {
                       ...msg,
                       content: content,
@@ -665,9 +675,9 @@ export default function ChatPage() {
         }
       };
 
-      // Call the enhanced API with streaming support  
+      // Call the enhanced API with streaming support
       const result = await sendMessage(
-        newMessage, 
+        newMessage,
         conversationHistory,
         { sessionId, assistantMessageId }, // Pass sessionId and assistantMessageId in options
         handleStreamingUpdate // Streaming callback
@@ -703,8 +713,8 @@ export default function ChatPage() {
             const partialContent = originalMessage?.content || partialContentRef.current || '';
 
             // Add a cancellation notice to the content
-            return prev.map(msg => 
-              msg.id === streamingMessageId 
+            return prev.map(msg =>
+              msg.id === streamingMessageId
                 ? {
                     ...msg,
                     content: partialContent + "\n\n*AI response cancelled by user.*",
@@ -718,8 +728,8 @@ export default function ChatPage() {
           }
 
           // Otherwise, convert it to an error
-          return prev.map(msg => 
-            msg.id === streamingMessageId 
+          return prev.map(msg =>
+            msg.id === streamingMessageId
               ? {
                   ...msg,
                   content: errorMessage,
@@ -790,7 +800,7 @@ export default function ChatPage() {
     console.debug('[Chat] handleStopAI invoked');
     console.log('[STOP-DEBUG] Button clicked, streamingId:', streamingMessageId);
     console.log('[STOP-DEBUG] Stop function called:', !!handleStopAI);
-    
+
     // CRITICAL FIX: Check if we have an active streaming message
     if (!streamingMessageId) {
       console.warn('[Chat] handleStopAI called but no streaming message ID found');
@@ -809,15 +819,15 @@ export default function ChatPage() {
     try {
       // Store the current streaming message ID to prevent race conditions
       const currentStreamingId = streamingMessageId;
-      
+
       // Get the current message status before stopping
       const currentMessage = messages.find(msg => msg.id === currentStreamingId);
       const isDelivered = currentMessage?.status === 'delivered';
 
       // IMMEDIATE UI UPDATE: Mark message as stopping
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === currentStreamingId 
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === currentStreamingId
             ? {
                 ...msg,
                 isStreaming: false,
@@ -841,7 +851,7 @@ export default function ChatPage() {
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
         const targetMessage = prev.find(msg => msg.id === currentStreamingId);
-        
+
         if (!targetMessage) {
           console.debug(`[Stop AI] Message ${currentStreamingId} not found in state`);
           return prev;
@@ -858,8 +868,8 @@ export default function ChatPage() {
 
         // Preserve the partial content and mark as stopped
         console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${currentStreamingId}`);
-        return prev.map(msg => 
-          msg.id === currentStreamingId 
+        return prev.map(msg =>
+          msg.id === currentStreamingId
             ? {
                 ...msg,
                 isStreaming: false,
@@ -883,11 +893,11 @@ export default function ChatPage() {
 
     } catch (error) {
       console.error('[Chat] Error in stopStreaming:', error);
-      
+
       // Error handling: Mark message as failed to stop
-      setMessages(prev => 
-        prev.map(msg => 
-          msg.id === streamingMessageId 
+      setMessages(prev =>
+        prev.map(msg =>
+          msg.id === streamingMessageId
             ? {
                 ...msg,
                 isStreaming: false,
@@ -921,6 +931,40 @@ export default function ChatPage() {
     setLocation('/login');
   };
 
+  // Show loading while auth is being determined
+  if (authLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Handle error state
+  if (hasError) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center max-w-md mx-auto p-6">
+          <h2 className="text-xl font-semibold mb-2 text-destructive">Something went wrong</h2>
+          <p className="text-muted-foreground mb-4">The application encountered an error.</p>
+          <button
+            onClick={() => window.location.reload()}
+            className="bg-primary text-primary-foreground px-4 py-2 rounded-md hover:bg-primary/90"
+          >
+            Reload Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
       {/* PWA Update Notification */}
@@ -937,7 +981,7 @@ export default function ChatPage() {
             <div className="flex items-start justify-between">
               {/* Logo and Brand */}
               <div className="flex items-center space-x-3">
-                <AnimatedNeuralLogo 
+                <AnimatedNeuralLogo
                   size={48}
                   className=""
                   alt="Anamnesis Medical AI Assistant Logo"
@@ -970,7 +1014,7 @@ export default function ChatPage() {
           <div className="hidden sm:flex justify-between items-center">
             {/* Logo and Brand */}
             <div className="flex items-center space-x-3">
-              <AnimatedNeuralLogo 
+              <AnimatedNeuralLogo
                 size={56}
                 className=""
                 alt="Anamnesis Medical AI Assistant Logo"
@@ -1009,7 +1053,7 @@ export default function ChatPage() {
 
       {/* Chat Container */}
       <main className="flex-1 container-xl p-3 sm:p-4 flex flex-col overflow-hidden">
-        <div 
+        <div
           className="flex-1 overflow-y-auto p-3 sm:p-4 rounded-lg border border-border mb-4 bg-card shadow-sm dark:shadow-md transition-all duration-300"
           aria-live="polite"
           aria-atomic="false"
@@ -1066,11 +1110,11 @@ export default function ChatPage() {
                 const isLast = !nextMsg || nextMsg.isUser !== msg.isUser;
 
                 // Only show follow-up suggestions for the last AI message in the chat
-                const isLastAiMessage = !msg.isUser && 
+                const isLastAiMessage = !msg.isUser &&
                   (index === messages.length - 1 || messages.slice(index + 1).every(m => m.isUser));
 
                 return (
-                  <MessageBubble 
+                  <MessageBubble
                     key={msg.id}
                     message={msg.content}
                     isUser={msg.isUser}
@@ -1138,8 +1182,8 @@ export default function ChatPage() {
               }
             }}
           />
-          <button 
-            type="submit" 
+          <button
+            type="submit"
             disabled={isLoading || isFetchingHistory || !newMessage.trim()}
             aria-label="Send message"
             className="h-12 sm:h-14 px-5 sm:px-6 rounded-full bg-primary hover:bg-primary-900 focus:ring-2 focus:ring-primary/20 focus:ring-offset-2 transition-all duration-200 text-primary-foreground font-medium"

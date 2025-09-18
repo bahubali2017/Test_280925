@@ -92,7 +92,7 @@ export function AuthProvider({ children }) {
   async function login(email, password) {
     try {
       setIsLoading(true);
-      
+
       // Allow test users for demo purposes (works in all environments)
       if ((email === 'test@example.com' && password === 'testpass123') ||
           (email === 'demo@example.com' && password === 'password')) {
@@ -173,7 +173,7 @@ export function AuthProvider({ children }) {
             }
           }
         );
-        
+
         // Store reference for cleanup
         tempAuthListener = authListener;
       });
@@ -254,5 +254,17 @@ export function AuthProvider({ children }) {
  * @returns {AuthContextType} Authentication context with user data and auth methods
  */
 export function useAuth() {
-  return useContext(AuthContext);
+  const context = useContext(AuthContext);
+  if (!context) {
+    // Provide fallback instead of throwing error to prevent app crashes
+    console.warn('useAuth used outside AuthProvider, providing fallback');
+    return {
+      user: null,
+      login: async () => ({ success: false, error: 'Authentication not available' }),
+      register: async () => ({ success: false, error: 'Authentication not available' }),
+      logout: async () => {},
+      isLoading: false
+    };
+  }
+  return context;
 }
