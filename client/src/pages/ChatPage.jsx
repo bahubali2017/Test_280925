@@ -555,13 +555,15 @@ export default function ChatPage() {
            */
           onStreamingUpdate: (chunk, info) => {
             // Update the message content in real-time as chunks arrive
+            console.log(`🔄 STREAMING: Got chunk "${chunk.substring(0, 20)}..." - Full length: ${info.fullContent?.length || 0}`);
             setMessages(prev => prev.map(msg =>
               msg.id === assistantMessageId
                 ? {
                     ...msg,
                     content: info.fullContent || msg.content + chunk,
                     isStreaming: true,
-                    status: 'streaming'
+                    status: 'streaming',
+                    _updateCount: (msg._updateCount || 0) + 1 // Force React to detect changes
                   }
                 : msg
             ));
