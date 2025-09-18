@@ -1,11 +1,10 @@
+import crypto from "crypto";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../hooks/useAuth';
 import { MessageBubble } from '../components/MessageBubble';
 import AnimatedNeuralLogo from '../components/AnimatedNeuralLogo.jsx'; // eslint-disable-line no-unused-vars
 import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-line no-unused-vars
-import { InstallationNotice } from '../components/InstallationNotice.jsx';
-import { UpdateNotification } from '../components/UpdateNotification.jsx';
 import { apiRequest } from '../lib/queryClient';
 import { getRandomStarterQuestions } from '../lib/suggestions';
 
@@ -973,11 +972,6 @@ export default function ChatPage() {
 
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
-      {/* PWA Update Notification */}
-      <UpdateNotification />
-
-      {/* PWA Installation Notice Popup */}
-      <InstallationNotice />
 
       {/* Header */}
       <header className="bg-card dark:bg-sidebar-background py-3 px-4 md:px-6 shadow-md border-b border-border transition-colors duration-300">
