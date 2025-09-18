@@ -774,10 +774,22 @@ export default function ChatPage() {
   };
 
   /**
+   * Create stable reference for onStopAI prop to prevent race conditions
+   */
+  const getStopHandler = useCallback((messageId) => {
+    if (streamingMessageId && messageId === streamingMessageId) {
+      return handleStopAI;
+    }
+    return null;
+  }, [streamingMessageId]);
+
+  /**
    * Handles stopping an in-progress AI response - Enhanced with proper state management
    */
   const handleStopAI = useCallback(async () => {
     console.debug('[Chat] handleStopAI invoked');
+    console.log('[STOP-DEBUG] Button clicked, streamingId:', streamingMessageId);
+    console.log('[STOP-DEBUG] Stop function called:', !!handleStopAI);
     
     // CRITICAL FIX: Check if we have an active streaming message
     if (!streamingMessageId) {
@@ -1072,11 +1084,13 @@ export default function ChatPage() {
                     showFollowUps={isLastAiMessage}
                     isFirst={isFirst}
                     isLast={isLast}
-                    onStopAI={!msg.isUser && (msg.id === streamingMessageId || msg.status === 'pending' || msg.isStreaming) ? handleStopAI : undefined}
+                    onStopAI={getStopHandler(msg.id)}
                     isStoppingAI={isStoppingAI}
                     isStreaming={msg.id === streamingMessageId || msg.isStreaming}
                     partialContent={msg.id === streamingMessageId ? partialContent : ''}
                     status={msg.status || 'sent'}
+                    messageId={msg.id}
+                    streamingMessageId={streamingMessageId}
                   />
                 );
               })

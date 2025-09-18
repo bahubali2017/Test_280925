@@ -238,16 +238,37 @@ export function MessageBubble({
   status = 'sent',
   sessionId = '',
   messageId = '',
+  streamingMessageId = '',
   userQuery = '',
   userRole = 'general_public'
 }) {
   // Add console log to verify this component is rendering
-  console.log("🟨 ACTIVE MESSAGE COMPONENT", { isUser, status });
+  console.log("🟨 ACTIVE MESSAGE COMPONENT", { isUser, status, messageId, streamingMessageId });
   
   // State for feedback status
   const [feedbackStatus, setFeedbackStatus] = React.useState('');
   const [feedbackType, setFeedbackType] = React.useState('');
   
+  // Add local button state for immediate UI feedback
+  const [isStoppingLocal, setIsStoppingLocal] = React.useState(false);
+
+  // Button render debugging
+  React.useEffect(() => {
+    if (messageId === streamingMessageId) {
+      console.log('[BUTTON-DEBUG] Stop button should render for:', messageId);
+      console.log('[BUTTON-DEBUG] onStopAI available:', !!onStopAI);
+    }
+  }, [messageId, streamingMessageId, onStopAI]);
+  
+  // Create stop click handler with immediate UI feedback
+  const handleStopClick = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsStoppingLocal(true); // Immediate UI feedback
+    console.debug('[Chat] Stop AI clicked');
+    onStopAI?.(e);
+  };
+
   // Create simple feedback handler
   const handleFeedback = async (type) => {
     console.log(`[Feedback] Button clicked: ${type}`);
@@ -598,28 +619,23 @@ export function MessageBubble({
 
             {/* Show metadata if available in non-user messages */}
             {/* CRITICAL FIX: Always show Stop AI button when streaming is active - no conditional hiding */}
-            {!isUser && (isStreaming || status === 'pending' || status === 'stopping') && typeof onStopAI === 'function' && (
+            {!isUser && streamingMessageId && messageId === streamingMessageId && typeof onStopAI === 'function' && (
               <div className="mt-2 flex justify-start">
                 <button
                   data-testid="button-stop-ai"
                   type="button"
-                  onClick={(e) => {
-                    e.preventDefault();
-                    e.stopPropagation();
-                    console.debug('[Chat] Stop AI clicked');
-                    onStopAI?.(e);
-                  }}
-                  disabled={isStoppingAI || status === 'stopping'}
+                  onClick={handleStopClick}
+                  disabled={isStoppingAI || isStoppingLocal || status === 'stopping'}
                   className={cn(
                     "flex items-center text-xs py-1.5 px-3 rounded-md font-medium transition-all duration-200",
-                    isStoppingAI || status === 'stopping'
-                      ? "bg-amber-100 text-amber-700 border border-amber-300 cursor-not-allowed opacity-75"
+                    (isStoppingAI || isStoppingLocal || status === 'stopping')
+                      ? "bg-amber-100 text-amber-700 cursor-not-allowed opacity-75 border border-amber-300"
                       : "bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 hover:border-red-400 active:scale-95 cursor-pointer"
                   )}
-                  title={isStoppingAI || status === 'stopping' ? "Stopping AI response..." : "Stop the AI response"}
-                  aria-label={isStoppingAI || status === 'stopping' ? "Stopping AI response" : "Stop AI response"}
+                  title={(isStoppingAI || isStoppingLocal || status === 'stopping') ? "Stopping AI response..." : "Stop the AI response"}
+                  aria-label={(isStoppingAI || isStoppingLocal || status === 'stopping') ? "Stopping AI response" : "Stop AI response"}
                 >
-                  {isStoppingAI || status === 'stopping' ? (
+                  {(isStoppingAI || isStoppingLocal || status === 'stopping') ? (
                     <span className="flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 animate-spin">
                         <circle cx="12" cy="12" r="10"></circle>

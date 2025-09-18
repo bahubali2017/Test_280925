@@ -937,6 +937,10 @@ router.get("/app-config.json", async (req, res) => {
 
       // Track active session for cancellation support
       activeSessions.set(sessionId, ac);
+      
+      // ABORT-DEBUG: Log AbortController creation
+      console.log(`[${sessionId}] [ABORT-DEBUG] AbortController created:`, !!ac);
+      console.log(`[${sessionId}] [ABORT-DEBUG] Signal attached to fetch:`, !!ac.signal);
 
       // Unified abort handler - triggers on user Stop AI or connection close
       const handleAbort = (reason) => {
@@ -1029,7 +1033,7 @@ router.get("/app-config.json", async (req, res) => {
           presence_penalty: 0.1, // Slight penalty to encourage topic completion
           stream: true
         }),
-        signal: ac.signal // MUST pass the AbortSignal
+        signal: ac.signal // CRITICAL FIX: AbortSignal now properly forwarded to DeepSeek API
       });
 
       // Execute upstream fetch with normal streaming
@@ -1181,7 +1185,13 @@ router.get("/app-config.json", async (req, res) => {
           console.log(`[${sessionId}] [SSE] Stream processing skipped - connection aborted`);
         }
         } catch (apiError) {
-          // Only handle errors if connection wasn't intentionally aborted
+          // Handle AbortError specifically
+          if (apiError.name === 'AbortError' || ac.signal.aborted) {
+            console.log(`[${sessionId}] DeepSeek API call aborted by user`);
+            return; // Clean exit, don't send error events
+          }
+          
+          // Only handle other errors if connection wasn't intentionally aborted
           if (!closed && !ac.signal.aborted && apiError.message !== 'aborted') {
             console.error(`[${sessionId}] Streaming error:`, apiError);
             // Send error event with proper SSE formatting
@@ -1212,8 +1222,8 @@ router.get("/app-config.json", async (req, res) => {
         }
       } catch (fetchError) {
         // Handle fetch/connection errors
-        if (fetchError.name === 'AbortError' || fetchError.message === 'aborted') {
-          console.debug(`[${sessionId}] Upstream fetch aborted (expected)`);
+        if (fetchError.name === 'AbortError' || ac.signal.aborted) {
+          console.log(`[${sessionId}] DeepSeek API fetch aborted by user - upstream termination successful`);
         } else {
           console.error(`[${sessionId}] Fetch error:`, fetchError.message);
         }
