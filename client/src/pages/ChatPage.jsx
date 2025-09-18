@@ -316,6 +316,22 @@ export default function ChatPage() {
 
       // Log API metadata for monitoring/debugging
       console.info("Retry API response metadata:", result.metadata);
+
+      // CRITICAL FIX: Update the placeholder message with the actual AI response
+      if (result && result.content) {
+        setMessages(prev => prev.map(msg =>
+          msg.id === `${retryId}_response`
+            ? {
+                ...msg,
+                content: result.content,
+                isStreaming: false,
+                status: 'delivered',
+                metadata: { ...msg.metadata, ...result.metadata }
+              }
+            : msg
+        ));
+        setCurrentStreamingId(null);
+      }
     } catch (error) {
       console.error('Error during retry:', error);
 
@@ -521,7 +537,21 @@ export default function ChatPage() {
       // Log API metadata for monitoring/debugging
       console.info("API response metadata:", result.metadata);
 
-      // No need to manually save messages, as the enhanced API already handles persistence
+      // CRITICAL FIX: Update the placeholder message with the actual AI response
+      if (result && result.content) {
+        setMessages(prev => prev.map(msg =>
+          msg.id === assistantMessageId
+            ? {
+                ...msg,
+                content: result.content,
+                isStreaming: false,
+                status: 'delivered',
+                metadata: { ...msg.metadata, ...result.metadata }
+              }
+            : msg
+        ));
+        setCurrentStreamingId(null);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       
