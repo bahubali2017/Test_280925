@@ -12,26 +12,26 @@
     <meta name="theme-color" content="#06b6d4" />
     <meta name="msapplication-TileColor" content="#06b6d4" />
     <meta name="msapplication-config" content="/browserconfig.xml" />
-    
+
     <!-- PWA Manifest -->
     <link rel="manifest" href="/manifest.json?v=2.1.0" />
-    
+
     <!-- Large, visible favicon without background -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2.1.0" />
     <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16x16.png?v=2.1.0" />
     <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32x32.png?v=2.1.0" />
     <link rel="icon" type="image/png" sizes="64x64" href="/favicon-64x64.png?v=2.1.0" />
-    
+
     <!-- PWA iOS Support -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Anamnesis" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=2.1.0" />
-    
+
     <!-- Essential PWA Icons -->
     <link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192x192.png" />
     <link rel="icon" type="image/png" sizes="512x512" href="/icons/icon-512x512.png" />
-    
+
     <!-- Enhanced Open Graph / Social Media SEO -->
     <meta property="og:title" content="Anamnesis Medical AI Assistant - Intelligent Healthcare Support" />
     <meta property="og:description" content="Professional medical AI assistant providing intelligent healthcare guidance, symptom analysis, and personalized medical information with advanced AI technology." />
@@ -41,23 +41,23 @@
     <meta property="og:image:height" content="512" />
     <meta property="og:site_name" content="Anamnesis Medical AI" />
     <meta property="og:locale" content="en_US" />
-    
+
     <!-- Twitter Card SEO -->
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="Anamnesis Medical AI Assistant - Intelligent Healthcare Support" />
     <meta name="twitter:description" content="Professional medical AI assistant providing intelligent healthcare guidance with advanced AI technology." />
     <meta name="twitter:image" content="/icons/icon-512x512.png" />
-    
+
     <!-- Additional SEO Meta Tags -->
     <meta name="application-name" content="Anamnesis Medical AI" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Anamnesis Medical AI" />
-    
+
     <!-- Canonical URL - will be set dynamically -->
     <!-- <link rel="canonical" href="https://anamnesis-medical-ai.replit.app/" /> -->
-    
+
     <!-- Structured Data for SEO -->
     <script type="application/ld+json">
     {
@@ -95,7 +95,7 @@
   <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
-    
+
     <!-- PWA Service Worker Registration -->
     <script>
       // Force cache refresh for favicon and manifest  
@@ -107,7 +107,7 @@
           favicon.href = '';
           setTimeout(() => { favicon.href = href + '?t=' + Date.now(); }, 50);
         });
-        
+
         // Clear manifest cache
         const manifest = document.querySelector('link[rel="manifest"]');
         if (manifest) {
@@ -115,7 +115,7 @@
           manifest.href = '';
           setTimeout(() => { manifest.href = href + '&t=' + Date.now(); }, 50);
         }
-        
+
         // Force browser to reload favicon
         const head = document.head;
         const newFavicon = document.createElement('link');
@@ -130,11 +130,11 @@
         window.addEventListener('load', async () => {
           try {
             // Force service worker update by adding cache-busting parameter
-            const registration = await navigator.serviceWorker.register('/sw.js?v=2.1.5', {
+            const registration = await navigator.serviceWorker.register('/sw.js?v=2.2.0', {
               scope: '/',
               updateViaCache: 'none'
             });
-            
+
             // Check for existing registration and force update
             const existingRegistration = await navigator.serviceWorker.getRegistration('/');
             if (existingRegistration) {
@@ -142,7 +142,7 @@
               console.log('🔄 Service Worker updated');
             }
             console.log('✅ Service Worker registered successfully:', registration.scope);
-            
+
             // Check for updates
             registration.addEventListener('updatefound', () => {
               const newWorker = registration.installing;
@@ -163,7 +163,7 @@
         console.log('Service Worker not supported in this browser');
       }
     </script>
-    
+
     <!-- Replit dev banner completely removed for production -->
     <!-- Dev banner removed to prevent CSP violations on custom domains -->
   </body>

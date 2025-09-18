@@ -957,6 +957,10 @@ function stopStreaming(isDelivered = false) {
     return false;
   }
 
+  // Store controller reference before clearing (CRITICAL FIX)
+  const controllerToAbort = currentStream.controller;
+  const sessionToCancel = currentStream.sessionId;
+
   // Update our message delivery state - CRITICAL: Mark as clean stop, not error  
   messageDeliveryState.messageDelivered = isDelivered;
   messageDeliveryState.isStopped = true;
@@ -980,28 +984,32 @@ function stopStreaming(isDelivered = false) {
     }
   }
 
-  // Abort the client-side streaming request first (CRITICAL: this must happen IMMEDIATELY)
-  currentStream.controller.abort(isDelivered ? 'message_complete' : 'user_cancelled');
-  console.debug("STOP_AI: Streaming request manually aborted", isDelivered ? "(message already delivered)" : "");
+  // Abort the client-side streaming request using stored reference (CRITICAL FIX)
+  try {
+    controllerToAbort.abort(isDelivered ? 'message_complete' : 'user_cancelled');
+    console.debug("STOP_AI: Streaming request manually aborted", isDelivered ? "(message already delivered)" : "");
+  } catch (error) {
+    console.warn("STOP_AI: Error aborting controller:", error);
+  }
 
   // Cancel server-side generation if we have the sessionId
-  if (currentStream.sessionId) {
+  if (sessionToCancel) {
     // Fire-and-forget server cancellation with timeout
-    fetch(`/api/chat/cancel/${currentStream.sessionId}`, { 
+    fetch(`/api/chat/cancel/${sessionToCancel}`, { 
       method: "POST",
       signal: AbortSignal.timeout(2000) // 2 second timeout
     }).then(() => {
-      console.debug(`[LLM] Server-side AI generation cancel successful for session: ${currentStream.sessionId}`);
+      console.debug(`[LLM] Server-side AI generation cancel successful for session: ${sessionToCancel}`);
     }).catch(error => {
       console.warn("[LLM] Failed to cancel server-side generation:", error);
       // This is non-critical since client abort triggers req.on('close')
     });
-    console.debug(`[LLM] Server-side AI generation cancel requested for session: ${currentStream.sessionId}`);
+    console.debug(`[LLM] Server-side AI generation cancel requested for session: ${sessionToCancel}`);
   } else {
     console.warn("[LLM] No server sessionId available, relying on client abort to trigger req.on('close')");
   }
 
-  // Clear the stream state
+  // Clear the stream state AFTER using the references (CRITICAL FIX)
   currentStream.controller = null;
   currentStream.sessionId = null;
   currentStream.messageId = null;

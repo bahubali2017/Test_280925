@@ -368,10 +368,24 @@ adminWebSocketServer.initialize(httpServer);
       });
     });
 
+    // Service Worker route - must come before SPA fallback
+    app.get("/sw.js", (req, res) => {
+      const swPath = path.join(staticPath, "sw.js");
+      res.setHeader('Content-Type', 'application/javascript');
+      res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+      res.setHeader('Service-Worker-Allowed', '/');
+      res.sendFile(swPath, (err) => {
+        if (err) {
+          console.error(`[PRODUCTION] Service Worker not found: ${swPath}`);
+          res.status(404).send('Service Worker not found');
+        }
+      });
+    });
+
     // SPA fallback - serve index.html with no-cache headers for all non-API routes
     app.get("*", (req, res, next) => {
-      // Skip API and admin routes
-      if (req.path.startsWith("/api") || req.path.startsWith("/admin")) {
+      // Skip API, admin, and service worker routes
+      if (req.path.startsWith("/api") || req.path.startsWith("/admin") || req.path === "/sw.js") {
         return next();
       }
       
