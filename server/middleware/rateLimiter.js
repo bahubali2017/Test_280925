@@ -307,13 +307,22 @@ export function selectiveRateLimit(req, res, next) {
     return next();
   }
   
+  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
+  const isLocalhost = clientIP === '127.0.0.1' || clientIP === '::1' || clientIP === 'localhost' || clientIP.includes('127.0.0.1');
+  
+  // For localhost, be VERY permissive - bypass ALL API endpoints
+  if (isLocalhost && req.path.startsWith('/api/')) {
+    console.log(`[RATE-LIMIT] Bypassing rate limit for localhost API request: ${req.path} from ${clientIP}`);
+    return next();
+  }
+  
   // Critical endpoints that should NEVER be rate limited
   const criticalEndpoints = [
-    { path: '/api/auth/', exact: false }, // All authentication endpoints (prefix)
-    { path: '/api/chat', exact: true }, // AI chat endpoint (exact)
-    { path: '/api/chat/', exact: false }, // AI chat sub-endpoints (prefix)
+    { path: '/api/auth', exact: false }, // All authentication endpoints (prefix)
+    { path: '/api/chat', exact: false }, // ALL AI chat endpoints (prefix) - FIXED to include all chat routes
     { path: '/api/health', exact: true }, // Health checks (exact)
-    { path: '/api/app-config.json', exact: true } // App configuration (exact)
+    { path: '/api/app-config.json', exact: true }, // App configuration (exact)
+    { path: '/api/feedback', exact: false } // Feedback endpoints (prefix)
   ];
   
   // Check if this is a critical endpoint with precise matching
@@ -325,11 +334,10 @@ export function selectiveRateLimit(req, res, next) {
   }
   
   const isProduction = process.env.NODE_ENV === 'production';
-  const clientIP = req.ip || req.connection.remoteAddress || 'unknown';
   
-  if (isProduction) {
-    // Reasonable limits for production (non-critical endpoints only)
-    if (!rateLimiter.checkIPLimit(clientIP, 200, 300000)) { // 200 requests per 5 minutes
+  if (isProduction && !isLocalhost) {
+    // Reasonable limits for production (non-critical endpoints only, non-localhost only)
+    if (!rateLimiter.checkIPLimit(clientIP, 1000, 300000)) { // Increased to 1000 requests per 5 minutes for production
       console.warn(`[RATE-LIMIT] Production rate limit exceeded for IP ${clientIP} on ${req.path}`);
       return res.status(429).json({
         success: false,
@@ -338,12 +346,12 @@ export function selectiveRateLimit(req, res, next) {
       });
     }
   } else {
-    // Very lenient limits for development
-    if (!rateLimiter.checkIPLimit(clientIP, 2000, 60000)) { // 2000 requests per minute in dev
-      console.warn(`[RATE-LIMIT] Development rate limit exceeded for IP ${clientIP} on ${req.path}`);
+    // Very lenient limits for development or localhost
+    if (!rateLimiter.checkIPLimit(clientIP, 10000, 60000)) { // 10000 requests per minute for dev/localhost
+      console.warn(`[RATE-LIMIT] Development/localhost rate limit exceeded for IP ${clientIP} on ${req.path}`);
       return res.status(429).json({
         success: false,
-        message: 'Rate limit exceeded (development mode).',
+        message: 'Rate limit exceeded (development/localhost mode).',
         retryAfter: 60
       });
     }
