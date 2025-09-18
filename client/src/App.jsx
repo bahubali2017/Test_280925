@@ -9,6 +9,7 @@ import NotFoundPage from './pages/not-found.jsx';
 import { queryClient } from './lib/queryClient.jsx';
 import { ToastProvider } from './components/ToastProvider.jsx';
 import GlobalErrorBoundary from './components/GlobalErrorBoundary.jsx';
+import { InstallationNotice } from './components/InstallationNotice.jsx';
 import './index.css';
 
 /**
@@ -23,6 +24,7 @@ export default function App() {
       <QueryClientProvider client={queryClient}>
         <ToastProvider>
           <AuthProvider>
+            <InstallationNotice />
             <Router>
               <Switch>
                 <Route path="/login" component={LoginPage} />
