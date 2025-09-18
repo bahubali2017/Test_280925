@@ -132,10 +132,10 @@ class AdminLogger {
                 logs.push(entry);
               }
             } catch (parseError) {
-              console.warn('[ADMIN-LOGGER] Failed to parse log entry:', line);
+              console.warn('[ADMIN-LOGGER] Failed to parse log entry:', line, parseError.message);
             }
           }
-        } catch (fileError) {
+        } catch {
           // Log file doesn't exist for this date, skip
           continue;
         }
