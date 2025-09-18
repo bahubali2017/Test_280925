@@ -88,19 +88,20 @@ export function AuthProvider({ children }) {
           }
           
           console.log('[Auth] Development mode verified on safe environment:', currentHostname);
-          console.log('[Auth] Auto-authenticating guest user for development');
+          // DISABLED: Auto-authentication bypass - now using normal login flow
+          // console.log('[Auth] Auto-authenticating guest user for development');
           
-          /** @type {User} */
-          const guestUser = {
-            id: 'dev-guest-user',
-            email: 'guest@development.local',
-            role: 'guest'
-          };
+          // /** @type {User} */
+          // const guestUser = {
+          //   id: 'dev-guest-user',
+          //   email: 'guest@development.local',
+          //   role: 'guest'
+          // };
           
-          setUser(guestUser);
-          setIsLoading(false);
-          console.log('[Auth] Guest user authenticated automatically for development');
-          return; // Skip Supabase checks in development
+          // setUser(guestUser);
+          // setIsLoading(false);
+          // console.log('[Auth] Guest user authenticated automatically for development');
+          // return; // Skip Supabase checks in development
         }
         
         const { data: { session } } = await supabaseClient.auth.getSession();
