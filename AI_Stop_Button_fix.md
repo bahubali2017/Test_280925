@@ -303,16 +303,228 @@ The Stop AI button fails because of a multi-layered state synchronization proble
 
 ---
 
+## NEW ROOT CAUSE ANALYSIS (After Previous Fix Attempts Failed)
+
+### **CRITICAL DISCOVERY: State Race Conditions & Missing Server Abort Signal**
+
+After the previous fix attempts failed, deeper investigation reveals two fundamental issues:
+
+#### 1. **React State Race Condition in Button Visibility**
+The Stop AI button disappears/reappears due to timing issues between:
+- `streamingMessageId` state updates
+- Message `isStreaming` flag updates  
+- Component re-renders with conditional `onStopAI` prop
+
+**Evidence**: The button renders briefly then disappears, even though streaming is active.
+
+#### 2. **Server-Side AbortSignal Not Properly Forwarded**
+**CRITICAL FINDING**: The server fetch to DeepSeek API doesn't include the AbortSignal:
+
+```javascript
+// CURRENT CODE - Missing abort signal
+const deepSeekResponse = await fetch(deepSeekUrl, {
+  method: "POST",
+  headers: { ... },
+  body: JSON.stringify({ ... }),
+  // signal: ac.signal  <-- MISSING!
+});
+```
+
+**This means**: Even when client aborts, server continues calling DeepSeek API until completion.
+
+### **COMPREHENSIVE SOLUTION V2.0**
+
+#### **Phase A: Fix Server-Side Abort Propagation (CRITICAL)**
+
+**Target File**: `server/routes.js` - Line ~580 in streaming endpoint
+
+1. **Add AbortSignal to DeepSeek API call**:
+```javascript
+const deepSeekResponse = await fetch(deepSeekUrl, {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "Authorization": `Bearer ${config.apiKey}`
+  },
+  body: JSON.stringify({
+    model: config.model || "deepseek-chat",
+    messages: promptMessages,
+    temperature: 0.2,
+    max_tokens: 4096,
+    top_p: 0.95,
+    frequency_penalty: 0.1,
+    presence_penalty: 0.1,
+    stream: true
+  }),
+  signal: ac.signal  // <-- CRITICAL FIX
+});
+```
+
+2. **Add proper AbortError handling**:
+```javascript
+} catch (apiError) {
+  // Handle AbortError specifically
+  if (apiError.name === 'AbortError' || ac.signal.aborted) {
+    console.log(`[${sessionId}] DeepSeek API call aborted by user`);
+    return; // Clean exit, don't send error events
+  }
+  // ... handle other errors
+}
+```
+
+#### **Phase B: Fix Client-Side State Race Conditions**
+
+**Target Files**: 
+- `client/src/pages/ChatPage.jsx`
+- `client/src/components/MessageBubble.jsx`
+
+1. **Stabilize onStopAI Prop Logic** (ChatPage.jsx):
+```jsx
+// REPLACE conditional logic with stable reference
+const getStopHandler = useCallback((messageId) => {
+  if (streamingMessageId && messageId === streamingMessageId) {
+    return handleStopAI;
+  }
+  return null;
+}, [streamingMessageId, handleStopAI]);
+
+// In message rendering:
+onStopAI={getStopHandler(msg.id)}
+```
+
+2. **Always Show Button During Stream** (MessageBubble.jsx):
+```jsx
+// REPLACE complex conditional with simple check
+{!isUser && streamingMessageId && messageId === streamingMessageId && (
+  <button ... />
+)}
+```
+
+3. **Add Message ID Prop Passing**:
+```jsx
+// In ChatPage.jsx - pass message ID to MessageBubble
+<MessageBubble 
+  // ... existing props
+  messageId={msg.id}
+  streamingMessageId={streamingMessageId}
+/>
+```
+
+#### **Phase C: Add Immediate UI Feedback**
+
+**Target File**: `client/src/components/MessageBubble.jsx`
+
+1. **Add Local Button State**:
+```jsx
+const [isStoppingLocal, setIsStoppingLocal] = useState(false);
+
+const handleStopClick = (e) => {
+  e.preventDefault();
+  setIsStoppingLocal(true); // Immediate UI feedback
+  onStopAI?.(e);
+};
+```
+
+2. **Visual State Indicators**:
+```jsx
+className={cn(
+  "flex items-center text-xs py-1.5 px-3 rounded-md font-medium transition-all duration-200",
+  (isStoppingAI || isStoppingLocal) 
+    ? "bg-amber-100 text-amber-700 cursor-not-allowed opacity-75"
+    : "bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 hover:border-red-400 active:scale-95 cursor-pointer"
+)}
+```
+
+#### **Phase D: Debug Logging & Monitoring**
+
+1. **Add Comprehensive Logging**:
+```javascript
+// In server streaming endpoint
+console.log(`[${sessionId}] [ABORT-DEBUG] AbortController created:`, !!ac);
+console.log(`[${sessionId}] [ABORT-DEBUG] Signal attached to fetch:`, !!ac.signal);
+
+// In client handleStopAI
+console.log('[STOP-DEBUG] Button clicked, streamingId:', streamingMessageId);
+console.log('[STOP-DEBUG] Stop function called:', !!onStopAI);
+```
+
+2. **Add Button Render Logging**:
+```jsx
+// In MessageBubble.jsx
+useEffect(() => {
+  if (messageId === streamingMessageId) {
+    console.log('[BUTTON-DEBUG] Stop button should render for:', messageId);
+    console.log('[BUTTON-DEBUG] onStopAI available:', !!onStopAI);
+  }
+}, [messageId, streamingMessageId, onStopAI]);
+```
+
+### **EXPECTED RESULTS AFTER V2.0 FIX**
+
+#### Immediate Improvements:
+- **Server**: DeepSeek API calls stop within 1-2 seconds of abort signal
+- **Client**: Button remains visible throughout streaming lifecycle  
+- **UX**: Immediate visual feedback when Stop AI is clicked
+- **Network**: Connection properly cancelled in browser Network tab
+
+#### Success Metrics:
+- Stop AI delay: <2 seconds (down from current 5-20 seconds)
+- Button visibility: 100% uptime during streaming
+- False negatives: 0% (button always appears when needed)
+- User satisfaction: Significant improvement in control/responsiveness
+
+### **RISK ASSESSMENT V2.0**
+
+**Low Risk Changes**:
+- Adding AbortSignal to server fetch (standard practice)
+- Logging additions (non-functional)
+
+**Medium Risk Changes**:
+- Client state management refactoring (could affect message flow)
+- Button rendering logic changes (could affect UI stability)
+
+**Mitigation Strategy**:
+1. Implement server-side fix first (highest impact, lowest risk)
+2. Test abort functionality before client changes
+3. Add logging before refactoring client logic
+4. Keep rollback commits available
+
+---
+
+## IMPLEMENTATION PRIORITY ORDER
+
+### **IMMEDIATE (1-2 Hours)**
+1. Fix server-side AbortSignal propagation
+2. Add debug logging throughout pipeline
+3. Test basic abort functionality
+
+### **SHORT-TERM (2-4 Hours)**  
+1. Refactor client state management for button visibility
+2. Add immediate UI feedback mechanisms
+3. Comprehensive testing across scenarios
+
+### **VALIDATION (1 Hour)**
+1. End-to-end abort testing
+2. Button visibility regression testing
+3. Performance impact assessment
+
+---
+
 ## Conclusion
 
-The Stop AI button issue is a complex multi-layered problem involving client-server state synchronization, React component lifecycle management, and network request handling. The fix requires coordinated changes across multiple files but should follow the phased approach outlined above to minimize risk and ensure thorough testing.
+The Stop AI button issue is a **dual-layer problem**: 
+1. **Server**: Missing AbortSignal propagation to DeepSeek API
+2. **Client**: State race conditions causing button visibility issues
 
-**Estimated Total Fix Time**: 8-10 hours
+The previous fixes addressed symptoms but missed these root causes. This V2.0 solution targets the core issues with surgical precision while maintaining system stability.
+
+**Estimated Total Fix Time**: 6-8 hours
 **Priority Level**: Critical
 **Business Impact**: High (affects core user interaction)
+**Confidence Level**: High (addresses proven root causes)
 
 ---
 
 *Document Created*: $(date)  
 *Last Updated*: $(date)  
-*Status*: Ready for Implementation
+*Status*: Updated with V2.0 Root Cause Analysis - Ready for Implementation
