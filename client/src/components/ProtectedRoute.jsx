@@ -1,9 +1,7 @@
-import React, { useEffect, useState } from 'react';
+/* global setTimeout */
+import React, { useEffect } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../hooks/useAuth';
-// Use native timeout functions directly
-const safeSetTimeout = window.setTimeout;
-const safeClearTimeout = window.clearTimeout;
 
 /**
  * Loading spinner component shown during authentication checks
