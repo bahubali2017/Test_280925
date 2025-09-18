@@ -214,7 +214,7 @@ async function processStream(stream, onUpdate, abortSignal) {
   } finally {
     try {
       reader.releaseLock();
-    } catch (e) {
+    } catch {
       // Reader already released or error releasing
     }
   }
