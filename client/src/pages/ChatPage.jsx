@@ -1,3 +1,4 @@
+/* global setTimeout */
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../hooks/useAuth';
@@ -44,7 +45,12 @@ const generateUUID = () => {
  * @property {object} [metadata] - Message metadata
  */
 
-// APIErrorResponse type defined above
+/**
+ * @typedef {object} APIErrorResponse
+ * @property {string} type - Type of error (network, timeout, validation, api)
+ * @property {string} [message] - Error message
+ * @property {string} [details] - Error details
+ */
 
 // Cache for llm-api module to avoid repeated dynamic imports
 /** @type {Promise<typeof import('../lib/llm-api')> | null} */
@@ -78,6 +84,8 @@ export default function ChatPage() {
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
+  const [streamingMessageId, setStreamingMessageId] = useState(/** @type {string|null} */(null));
+  /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
   const [currentStreamingId, setCurrentStreamingId] = useState(/** @type {string|null} */(null));
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isStoppingAI, setIsStoppingAI] = useState(false);
@@ -99,8 +107,6 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   /** @type {React.RefObject<HTMLInputElement>} */
   const inputRef = useRef(null);
-  /** @type {React.MutableRefObject<AbortController|null>} */
-  const abortControllerRef = useRef(/** @type {AbortController|null} */(null));
 
   /**
    * Scrolls to the bottom of the chat container
@@ -297,64 +303,9 @@ export default function ChatPage() {
       // Set as current streaming message for display
       setCurrentStreamingId(`${retryId}_response`);
 
-      // Track if we've added the message to the array yet
-      let messageAdded = true; // Already added above
 
-      // Streaming update handler
-      const handleStreamingUpdate = (content = '', metadata = {}) => {
-        // Update the partial content for display AND the ref for latest state
-        // Update message content directly in the state
 
-        // Update the existing placeholder message with streaming content
-        if (content && content.trim().length > 0) {
-          // CRITICAL FIX: Update message content incrementally on every streaming update
-          setMessages(prev =>
-            prev.map(msg =>
-              msg.id === `${retryId}_response`
-                ? {
-                    ...msg,
-                    content: content // Update with latest content
-                  }
-                : msg
-            )
-          );
-        }
-
-        // If this is the final update (streaming complete)
-        if (metadata && typeof metadata === 'object' && 'isComplete' in metadata && metadata.isComplete) {
-          console.debug(`[Chat] Stream complete for retry message ${`${retryId}_response`}, updating status to delivered`);
-
-          // Only finalize if we have actual content and the message was added
-          if (messageAdded && content && content.trim().length > 0) {
-            // Update the message with final content and metadata
-            setMessages(prev =>
-              prev.map(msg =>
-                msg.id === `${retryId}_response`
-                  ? {
-                      ...msg,
-                      content: content,
-                      isStreaming: false,
-                      status: 'delivered', // Ensure delivered status is set
-                      metadata: {
-                        ...(msg.metadata && typeof msg.metadata === 'object' ? msg.metadata : {}),
-                        ...(metadata && typeof metadata === 'object' ? metadata : {}),
-                        isRetry: true,
-                        isStreaming: false,
-                        status: 'delivered' // Also set in metadata for consistency
-                      }
-                    }
-                  : msg
-              )
-            );
-          } else {
-            // No content received - don't add empty message to history
-            console.debug(`[Chat] Stream completed but no content for retry ${`${retryId}_response`}, not adding to message history`);
-          }
-
-          // Clear streaming state immediately to prevent any lingering animations
-          setCurrentStreamingId(null);
-        }
-      };
+      // Note: Streaming handled internally by sendMessageClientSide
 
       // Call the enhanced API with streaming support
       const result = await sendMessageClientSide(
@@ -395,14 +346,14 @@ export default function ChatPage() {
 
             // Get the original message so we can extract any partial content already delivered
             const originalMessage = prev.find(msg => msg.id === currentStreamingId);
-            const partialContent = originalMessage?.content || '';
+            const currentPartialContent = originalMessage?.content || '';
 
             // Add a cancellation notice to the content
             return prev.map(msg =>
               msg.id === currentStreamingId
                 ? {
                     ...msg,
-                    content: partialContent + "\n\n*AI response cancelled by user.*",
+                    content: currentPartialContent + "\n\n*AI response cancelled by user.*",
                     isStreaming: false,
                     status: 'stopped',
                     isCancelled: true,
@@ -556,40 +507,9 @@ export default function ChatPage() {
       // Set as current streaming message for display using stable assistantMessageId
       setCurrentStreamingId(assistantMessageId);
 
-      // Track if we've added the message to the array yet
-      let messageAdded = true; // Already added above
+
 
       // Note: streaming handled internally by sendMessageClientSide
-
-        // Phase 7: Handle dynamic disclaimer updates based on streaming content (only if message has been added)
-        if (messageAdded && metadata && typeof metadata === 'object' && 'dynamicDisclaimers' in metadata && metadata.dynamicDisclaimers) {
-          setMessages((prev) =>
-            prev.map(msg =>
-              msg.id === assistantMessageId
-                ? {
-                    ...msg,
-                    metadata: {
-                      ...(msg.metadata && typeof msg.metadata === 'object' ? msg.metadata : {}),
-                      queryIntent: {
-                        ...(msg.metadata && typeof msg.metadata === 'object' && 'queryIntent' in msg.metadata && typeof msg.metadata.queryIntent === 'object' ? msg.metadata.queryIntent : {}),
-                        disclaimers: 'dynamicDisclaimers' in metadata ? metadata.dynamicDisclaimers : undefined
-                      }
-                    }
-                  }
-                : msg
-            )
-          );
-        }
-
-        // If this is the final update (streaming complete)
-        if (metadata && typeof metadata === 'object' && 'isComplete' in metadata && metadata.isComplete) {
-          console.debug(`[Chat] Stream complete for message ${assistantMessageId}, updating status to delivered`);
-
-          // Only finalize if we have actual content and the message was added
-      // Clear streaming state
-      setCurrentStreamingId(null);
-
-      };
 
       // Call the enhanced API with streaming support
       const result = await sendMessageClientSide(
@@ -604,6 +524,8 @@ export default function ChatPage() {
       // No need to manually save messages, as the enhanced API already handles persistence
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      const typedError = /** @type {Error|unknown} */ (error);
       console.error('Error details:', {
         name: error && typeof error === 'object' && 'name' in error ? error.name : 'unknown',
         message: error && typeof error === 'object' && 'message' in error ? error.message : String(error),
@@ -612,7 +534,7 @@ export default function ChatPage() {
       });
 
       // Get appropriate user-friendly error message
-      const errorMessage = getErrorMessage(error);
+      const errorMessage = getErrorMessage(typedError);
 
       // If we have a streaming message in progress, check if it was already delivered
       if (streamingMessageId) {
@@ -633,14 +555,14 @@ export default function ChatPage() {
 
             // Get the original message so we can extract any partial content already delivered
             const originalMessage = prev.find(msg => msg.id === currentStreamingId);
-            const partialContent = originalMessage?.content || '';
+            const currentPartialContent = originalMessage?.content || '';
 
             // Add a cancellation notice to the content
             return prev.map(msg =>
               msg.id === currentStreamingId
                 ? {
                     ...msg,
-                    content: partialContent + "\n\n*AI response cancelled by user.*",
+                    content: currentPartialContent + "\n\n*AI response cancelled by user.*",
                     isStreaming: false,
                     status: 'stopped',
                     isCancelled: true,
@@ -804,6 +726,8 @@ export default function ChatPage() {
 
     } catch (error) {
       console.error('[Chat] Error in stopStreaming:', error);
+      
+      const typedError = /** @type {Error|unknown} */ (error);
 
       // Error handling: Mark message as failed to stop
       setMessages(prev =>
@@ -819,7 +743,7 @@ export default function ChatPage() {
                   ...msg.metadata,
                   isStreaming: false,
                   status: 'failed',
-                  stopError: error.message
+                  stopError: typedError && typeof typedError === 'object' && 'message' in typedError ? typedError.message : String(typedError)
                 }
               }
             : msg
@@ -837,7 +761,7 @@ export default function ChatPage() {
   /**
    * Create stable reference for onStopAI prop to prevent race conditions
    */
-  const getStopHandler = useCallback((messageId) => {
+  const getStopHandler = useCallback(/** @param {string} messageId */ (messageId) => {
     if (streamingMessageId && messageId === streamingMessageId) {
       return handleStopAI;
     }
@@ -884,8 +808,8 @@ export default function ChatPage() {
   }
 
   if (!user) {
-    console.log('[ChatPage] No user found, returning null');
-    return null;
+    console.log('[ChatPage] No user found, returning div');
+    return <div>Loading user...</div>;
   }
 
   console.log('[ChatPage] User authenticated, rendering chat interface for:', user.email);
@@ -1040,7 +964,7 @@ export default function ChatPage() {
                     isUser={msg.isUser}
                     timestamp={msg.timestamp}
                     isError={msg.isError}
-                    isHighRisk={Boolean(msg.isHighRisk || (msg.metadata && msg.metadata.isHighRisk))}
+                    isHighRisk={Boolean(msg.isHighRisk || (msg.metadata && typeof msg.metadata === 'object' && 'isHighRisk' in msg.metadata && msg.metadata.isHighRisk))}
                     metadata={msg.metadata}
                     originalMessage={msg.originalMessage}
                     onRetry={handleRetryMessage}
@@ -1053,6 +977,9 @@ export default function ChatPage() {
                     isStreaming={msg.status === 'streaming'}
                     status={msg.status || 'sent'}
                     streamingMessageId={currentStreamingId}
+                    sessionId={msg.sessionId || ''}
+                    userQuery={msg.content || ''}
+                    userRole={'user'}
                   />
                 );
               })
