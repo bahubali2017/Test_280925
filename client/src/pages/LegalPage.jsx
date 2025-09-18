@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft, Download, FileText, Shield } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 
 /**
- *
+ * Legal information page with terms and conditions.
+ * @returns {JSX.Element} The rendered Legal page component
  */
 export default function LegalPage() {
   const [termsContent, setTermsContent] = useState('');
