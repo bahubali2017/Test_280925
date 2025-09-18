@@ -268,7 +268,8 @@ export function MessageBubble({
   const handleStopClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    console.debug('[Chat] Stop AI clicked');
+    console.log('[STOP-DEBUG] Stop AI button clicked!');
+    console.log('[STOP-DEBUG] onStopAI available:', !!onStopAI);
     onStopAI?.(e);
   };
 
@@ -622,13 +623,14 @@ export function MessageBubble({
 
             {/* Show metadata if available in non-user messages */}
             {/* Show Stop AI button when streaming is active */}
+            {console.log('[BUTTON-DEBUG] Button conditions:', { isUser, isStreaming, status, onStopAI: !!onStopAI })}
             {!isUser && isStreaming && status === 'streaming' && onStopAI && (
               <div className="mt-2 flex justify-start">
                 <button
                   data-testid="button-stop-ai"
                   type="button"
                   onClick={handleStopClick}
-                  disabled={isStoppingAI || status === 'stopping' || status === 'streaming'}
+                  disabled={isStoppingAI || status === 'stopping'}
                   className={cn(
                     "flex items-center text-xs py-1 px-2.5 rounded-full font-medium transition-all duration-300 shadow-sm",
                     (isStoppingAI || status === 'stopping')

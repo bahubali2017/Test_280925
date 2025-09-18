@@ -691,17 +691,19 @@ export default function ChatPage() {
    * Handles stopping an in-progress AI response - Enhanced with proper state management
    */
   const handleStopAI = useCallback(async () => {
-    console.debug('[Chat] handleStopAI invoked');
+    console.log('[STOP-DEBUG] handleStopAI invoked!');
+    console.log('[STOP-DEBUG] currentStreamingId:', currentStreamingId);
+    console.log('[STOP-DEBUG] isStoppingAI:', isStoppingAI);
 
     // CRITICAL FIX: Check if we have an active streaming message
     if (!currentStreamingId) {
-      console.warn('[Chat] handleStopAI called but no streaming message ID found');
+      console.warn('[STOP-DEBUG] handleStopAI called but no streaming message ID found');
       return;
     }
 
     // CRITICAL FIX: Prevent multiple simultaneous stop operations
     if (isStoppingAI) {
-      console.debug('[Chat] handleStopAI called but already stopping');
+      console.log('[STOP-DEBUG] handleStopAI called but already stopping');
       return;
     }
 
@@ -733,10 +735,10 @@ export default function ChatPage() {
       );
 
       // Get stopStreaming from cached module and call it immediately
-      console.debug('[Chat] About to call stopStreaming...');
+      console.log('[STOP-DEBUG] About to call stopStreaming...');
       const { stopStreaming } = await getLLMApi();
       const wasAborted = stopStreaming();
-      console.debug('[Chat] stopStreaming completed:', { wasAborted });
+      console.log('[STOP-DEBUG] stopStreaming completed:', { wasAborted });
 
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
