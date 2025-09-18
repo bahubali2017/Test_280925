@@ -1,4 +1,5 @@
 /* eslint-env browser */
+/* global AbortController, setTimeout, clearTimeout, navigator, caches, URL */
 /**
  * @file Version Checking Utility
  * @description Client-side version checking to detect server updates and force cache refresh

@@ -1,8 +1,7 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-// DISABLED: Version checking system causing infinite reload loops
-// import { initializeVersionChecking } from './lib/versionChecker.js';
+import { initializeVersionChecking } from './lib/versionChecker.js';
 
 /**
  * Main entry point for the application
@@ -14,11 +13,10 @@ if (!rootElement) {
   throw new Error('Root element not found');
 }
 
-// DISABLED: Version checking system causing infinite reload loops
 // Initialize version checking system before rendering the app
 // This ensures we catch version mismatches as early as possible
-// console.log('[App] Initializing version checking system...');
-// initializeVersionChecking();
+console.log('[App] Initializing version checking system...');
+initializeVersionChecking();
 
 ReactDOM.createRoot(rootElement).render(
   <App />
