@@ -338,17 +338,10 @@ export function InstallationNotice() {
                   {instructions.title}
                 </h3>
                 
-                {/* Desktop: Show all steps in one line */}
-                <div className="hidden sm:block">
-                  <p className="text-xs text-cyan-700 dark:text-cyan-300 leading-relaxed">
-                    {instructions.steps.join(' • ')}
-                  </p>
-                </div>
-                
-                {/* Mobile: Show simplified message */}
-                <div className="sm:hidden">
+                {/* Simple message for all devices */}
+                <div>
                   <p className="text-xs text-cyan-700 dark:text-cyan-300">
-                    Get faster access and work offline
+                    Get faster access and work offline with the app
                   </p>
                 </div>
               </div>
