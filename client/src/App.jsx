@@ -56,41 +56,6 @@ function Router() {
 export default function App() {
   const { supabaseUp } = useAuthAvailability();
 
-  // Service worker registration with update forcing (prevents stale bundles)
-  useEffect(() => {
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/sw.js")
-        .then(registration => {
-          console.log("[SW] Service worker registered:", registration);
-          
-          // Force update check on app load to prevent stale bundles
-          registration.update();
-          
-          // Listen for new service worker installations
-          registration.addEventListener("updatefound", () => {
-            const newWorker = registration.installing;
-            if (newWorker) {
-              newWorker.addEventListener("statechange", () => {
-                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
-                  // New service worker is available, reload to activate it
-                  console.log("[SW] New service worker available, reloading...");
-                  window.location.reload();
-                }
-              });
-            }
-          });
-          
-          // Handle controller changes (when new SW becomes active)
-          navigator.serviceWorker.addEventListener("controllerchange", () => {
-            console.log("[SW] Service worker controller changed, reloading...");
-            window.location.reload();
-          });
-        })
-        .catch(error => {
-          console.error("[SW] Service worker registration failed:", error);
-        });
-    }
-  }, []);
 
   return (
     <>
