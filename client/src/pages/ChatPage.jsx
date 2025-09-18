@@ -808,7 +808,7 @@ export default function ChatPage() {
       );
     } finally {
       // CRITICAL FIX: Always clear streaming state, even if there was an error
-      setStreamingMessageId(null);
+      setCurrentStreamingId(null);
 
       setIsStoppingAI(false);
       setIsLoading(false);

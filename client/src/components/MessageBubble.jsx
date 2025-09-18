@@ -621,8 +621,8 @@ export function MessageBubble({
             {formatMessageContent(message, isStreaming, partialContent, status)}
 
             {/* Show metadata if available in non-user messages */}
-            {/* CRITICAL FIX: Always show Stop AI button when streaming is active - simplified condition */}
-            {!isUser && messageId === streamingMessageId && onStopAI && (
+            {/* Show Stop AI button when streaming is active */}
+            {!isUser && isStreaming && status === 'streaming' && onStopAI && (
               <div className="mt-2 flex justify-start">
                 <button
                   data-testid="button-stop-ai"
@@ -630,17 +630,17 @@ export function MessageBubble({
                   onClick={handleStopClick}
                   disabled={isStoppingAI || status === 'stopping' || status === 'streaming'}
                   className={cn(
-                    "flex items-center text-xs py-1.5 px-3 rounded-md font-medium transition-all duration-200",
+                    "flex items-center text-xs py-1 px-2.5 rounded-full font-medium transition-all duration-300 shadow-sm",
                     (isStoppingAI || status === 'stopping')
-                      ? "bg-amber-100 text-amber-700 cursor-not-allowed opacity-75 border border-amber-300"
-                      : "bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 hover:border-red-400 active:scale-95 cursor-pointer"
+                      ? "bg-amber-50 text-amber-600 cursor-not-allowed opacity-70 border border-amber-200"
+                      : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 hover:shadow-md active:scale-95 cursor-pointer"
                   )}
                   title={(isStoppingAI || status === 'stopping') ? "Stopping AI response..." : "Stop the AI response"}
                   aria-label={(isStoppingAI || status === 'stopping') ? "Stopping AI response" : "Stop AI response"}
                 >
                   {(isStoppingAI || status === 'stopping') ? (
                     <span className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 animate-spin">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 animate-spin">
                         <circle cx="12" cy="12" r="10"></circle>
                         <path d="M12 6v6l4 2"></path>
                       </svg>
@@ -648,7 +648,7 @@ export function MessageBubble({
                     </span>
                   ) : (
                     <span className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
                         <rect x="6" y="6" width="12" height="12"></rect>
                       </svg>
                       Stop AI
