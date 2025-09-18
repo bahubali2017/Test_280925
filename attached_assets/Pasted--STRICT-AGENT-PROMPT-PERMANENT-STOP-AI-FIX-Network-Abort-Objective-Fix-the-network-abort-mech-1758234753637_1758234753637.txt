@@ -1,0 +1,80 @@
+🔧 STRICT AGENT PROMPT — PERMANENT STOP AI FIX (Network Abort)
+Objective
+
+Fix the network abort mechanism so that when users click Stop AI, the fetch/SSE request is actually terminated and the server recognizes the abort (logs should show aborted instead of completed).
+
+Fix Strategy
+
+Centralize AbortController
+
+In client/src/lib/llm-api.jsx, ensure a single activeAbortController is created per request and stored globally.
+
+Reset it at the start of makeAPIRequest() or processStream().
+
+let activeAbortController = null;
+
+export function makeAPIRequest(endpoint, options) {
+  if (activeAbortController) {
+    activeAbortController.abort();
+  }
+  activeAbortController = new AbortController();
+  const { signal } = activeAbortController;
+
+  return fetch(endpoint, { ...options, signal });
+}
+
+
+Stop Function
+
+Ensure stopStreaming() calls .abort() on the same controller created by the active request.
+
+Do NOT create a new controller inside stopStreaming().
+
+export function stopStreaming() {
+  if (activeAbortController) {
+    activeAbortController.abort();
+    activeAbortController = null;
+  }
+}
+
+
+Error Handling (AbortError Special Case)
+
+In handleStreamingResponseSSE() catch block:
+
+If err.name === "AbortError", treat it as a clean cancellation, not as an error.
+
+} catch (err) {
+  if (err.name === 'AbortError') {
+    console.info('[LLM] Request aborted by user');
+    return; // Clean exit
+  }
+  throw err; // Real errors still propagate
+}
+
+
+Server Cleanup
+
+In server/routes.js (or streaming handler):
+
+Add req.on('aborted', ...) or req.on('close', ...) to detect client disconnects and cancel AI generation.
+
+req.on('aborted', () => {
+  console.log(`[SSE] Stream aborted by client`);
+  controller.abort(); // properly stops AI generation
+});
+
+
+Remove Duplicate System Message
+
+Ensure ChatPage.jsx does not enqueue a system error message if manuallyAborted === true.
+
+Only show "AI response stopped by user.".
+
+Acceptance Criteria
+
+✅ Stop AI immediately cancels the network request (verified in DevTools → request disappears).
+✅ Server logs show [SSE] Stream aborted by client instead of completed.
+✅ No duplicate system error message appears.
+✅ Only "AI response stopped by user." remains visible.
+✅ No more wasted credits.

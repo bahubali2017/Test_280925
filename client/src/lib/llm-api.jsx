@@ -205,9 +205,10 @@ async function processStream(stream, onUpdate, abortSignal) {
     
     return fullContent;
   } catch (error) {
-    // Enhanced abort error handling
-    if (abortSignal?.aborted || (error instanceof Error && error.message.includes('aborted'))) {
-      throw new Error('Stream aborted by user');
+    // Handle AbortError as clean cancellation
+    if (error instanceof Error && error.name === 'AbortError') {
+      console.info('[LLM] Request aborted by user');
+      return ''; // Clean exit
     }
     throw error;
   } finally {
@@ -219,55 +220,34 @@ async function processStream(stream, onUpdate, abortSignal) {
   }
 }
 
+// Global AbortController for active streaming requests
+/** @type {AbortController|null} */
+let activeAbortController = null;
+
 /**
  * Makes API request to the chat endpoint
  * @param {string} endpoint - API endpoint (/api/chat or /api/chat/stream)
  * @param {object} requestBody - Request payload
- * @param {AbortSignal} [abortSignal] - Abort signal
  * @returns {Promise<Response>} Fetch response
  */
-async function makeAPIRequest(endpoint, requestBody, abortSignal) {
-  
-  try {
-    const response = await fetch(endpoint, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(requestBody),
-      signal: abortSignal,
-    });
-    
-    // Check if aborted immediately after fetch
-    if (abortSignal?.aborted) {
-      throw new Error('Request was cancelled');
-    }
-    
-    if (!response.ok) {
-      let errorMessage;
-      try {
-        const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
-      } catch {
-        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
-      }
-      
-      throw createAPIError(
-        response.status >= 500 ? 'server' : 'api',
-        errorMessage,
-        { status: response.status }
-      );
-    }
-    
-    return response;
-  } catch (error) {
-    // Handle abort errors specifically
-    if (abortSignal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
-      throw createAPIError('abort', 'Request was cancelled', { originalError: error });
-    }
-    throw error;
+export function makeAPIRequest(endpoint, requestBody) {
+  // Reset active controller and create new one for this request
+  if (activeAbortController) {
+    activeAbortController.abort();
   }
+  activeAbortController = new AbortController();
+  const { signal } = activeAbortController;
+  
+  return fetch(endpoint, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(requestBody),
+    signal,
+  });
 }
+    
 
 /**
  * Main function to send messages to the AI assistant
@@ -284,7 +264,6 @@ export async function sendMessage(message, history = [], options = {}) {
   }
 
   const {
-    abortSignal,
     onStreamingUpdate,
     region = 'US',
     demographics = {},
@@ -295,10 +274,7 @@ export async function sendMessage(message, history = [], options = {}) {
   const isHighRisk = containsHighRiskTerms(message);
   const isStreaming = typeof onStreamingUpdate === 'function';
 
-  // Create and store AbortController for stopping functionality
-  if (isStreaming) {
-    activeAbortController = createAbortController();
-  }
+  // AbortController is created automatically in makeAPIRequest
 
   try {
     // Prepare request body
@@ -318,8 +294,29 @@ export async function sendMessage(message, history = [], options = {}) {
     // Choose endpoint based on streaming requirement
     const endpoint = isStreaming ? '/api/chat/stream' : '/api/chat';
     
-    // Make API request  
-    const response = await makeAPIRequest(endpoint, requestBody, activeAbortController?.signal || abortSignal);
+    // Make API request using the global controller
+    const response = await makeAPIRequest(endpoint, requestBody);
+    
+    // Check if aborted immediately after fetch
+    if (activeAbortController?.signal.aborted) {
+      throw new Error('Request was cancelled');
+    }
+    
+    if (!response.ok) {
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      throw createAPIError(
+        response.status >= 500 ? 'server' : 'api',
+        errorMessage,
+        { status: response.status }
+      );
+    }
     
     let content;
     let metadata = {
@@ -343,7 +340,7 @@ export async function sendMessage(message, history = [], options = {}) {
       content = await processStream(
         response.body,
         onStreamingUpdate,
-        activeAbortController?.signal || abortSignal
+        activeAbortController?.signal
       );
       
     } else {
@@ -425,6 +422,7 @@ export async function sendMessage(message, history = [], options = {}) {
   } catch (error) {
     // Handle different error types
     if (isAbortError(error)) {
+      console.info('[LLM] Request aborted by user');
       throw createAPIError('abort', 'Request was cancelled', { originalError: error });
     }
     
@@ -449,30 +447,16 @@ export async function sendMessage(message, history = [], options = {}) {
   }
 }
 
-// Global AbortController for active streaming requests
-/** @type {AbortController|null} */
-let activeAbortController = null;
-
 /**
  * Stops any active streaming request
  * @returns {boolean} Whether a stream was stopped
  */
 export function stopStreaming() {
-  
   if (activeAbortController) {
-    try {
-      // Abort with a specific reason that can be detected
-      activeAbortController.abort('Stream stopped by user');
-      
-      // Set to null immediately to prevent duplicate aborts
-      activeAbortController = null;
-      return true;
-    } catch (error) {
-      activeAbortController = null;
-      return false;
-    }
+    activeAbortController.abort();
+    activeAbortController = null;
+    return true;
   }
-  
   return false;
 }
 

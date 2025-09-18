@@ -607,11 +607,13 @@ export default function ChatPage() {
               (error.message.includes('Request was cancelled') ||
                error.message.includes('Stream stopped by user') ||
                error.message.includes('Stream aborted by user') ||
+               error.message.includes('Request aborted by user') ||
                error.message.includes('cancelled'))));
                
           if (isAbortError) {
             // For abort errors, don't add any error message - the user intentionally stopped it
             // The Stop AI handler should have already updated the UI appropriately
+            console.info('[ChatPage] Abort error detected - no error message will be shown');
             return prev;
           }
 

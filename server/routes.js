@@ -1031,7 +1031,7 @@ router.get("/app-config.json", async (req, res) => {
       });
 
       req.on("aborted", () => {
-        console.log(`[${sessionId}] [SSE] Request aborted – triggering immediate abort`);
+        console.log(`[${sessionId}] [SSE] Stream aborted by client`);
         handleAbort('connection_aborted');
       });
 
