@@ -1036,32 +1036,6 @@ export default function ChatPage() {
           </div>
         </div>
 
-        {/* GLOBAL STOP AI BUTTON (Backup) - Appears when streaming */}
-        {streamingMessageId && (
-          <div className="flex justify-center mb-4">
-            <Button
-              onClick={handleStopAI}
-              disabled={isStoppingAI}
-              variant="outline"
-              data-testid="global-stop-ai-button"
-              className="px-6 py-2 bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300 text-red-700 hover:text-red-800 dark:bg-red-950/50 dark:hover:bg-red-950/70 dark:border-red-800 dark:hover:border-red-700 dark:text-red-300 dark:hover:text-red-200 font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200"
-            >
-              {isStoppingAI ? (
-                <>
-                  <div className="inline-block w-4 h-4 mr-2 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
-                  Stopping AI...
-                </>
-              ) : (
-                <>
-                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
-                  </svg>
-                  Stop AI Response
-                </>
-              )}
-            </Button>
-          </div>
-        )}
 
         {/* Message Input */}
         <form onSubmit={handleSendMessage} className="flex space-x-2 relative">
