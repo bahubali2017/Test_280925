@@ -76,10 +76,11 @@ function cleanMarkdownFormatting(text) {
  * @param {string} content - The message content
  * @param {boolean} [isStreaming=false] - Whether content is being streamed
  * @param {string} [partialContent=''] - Partial content for streaming display
+ * @param _partialContent
  * @param status
  * @returns {JSX.Element|null} Formatted content with line breaks and bold titles
  */
-function formatMessageContent(content, isStreaming = false, partialContent = '', status = 'sent') {
+function formatMessageContent(content, isStreaming = false, _partialContent = '', status = 'sent') {
   // For streaming, always show the content as it updates in real-time
   const rawContent = content;
 
@@ -228,9 +229,10 @@ function formatTimestamp(date) {
  * @param {string} [props.partialContent] - Partial content during streaming
  * @param {string} [props.status] - Message status (sent, delivered, failed)
  * @param props.sessionId
- * @param props.streamingMessageId
+ * @param props._streamingMessageId
  * @param props.userQuery
  * @param props.userRole
+ * @param props._partialContent
  * @returns {JSX.Element} The rendered message bubble component
  */
 export function MessageBubble({
@@ -250,11 +252,11 @@ export function MessageBubble({
   isLast = false,
   className,
   isStreaming = false,
-  partialContent = '',
+  _partialContent = '',
   status = 'sent',
   sessionId = '',
   messageId = '',
-  streamingMessageId = '',
+  _streamingMessageId = '',
   userQuery = '',
   userRole = 'general_public'
 }) {
@@ -420,7 +422,7 @@ export function MessageBubble({
             )}
             data-bubble-status={bubbleStatus}
           >
-            {formatMessageContent(message, isStreaming, partialContent, status)}
+            {formatMessageContent(message, isStreaming, _partialContent, status)}
 
             {(timestamp || status !== 'sent') && (
               <div className="text-xs opacity-80 mt-1 text-right flex items-center justify-end gap-1">
@@ -617,7 +619,7 @@ export function MessageBubble({
               </div>
             )}
 
-            {formatMessageContent(message, isStreaming, partialContent, status)}
+            {formatMessageContent(message, isStreaming, _partialContent, status)}
 
             {/* Show metadata if available in non-user messages */}
             {/* Show Stop AI button when streaming is active */}

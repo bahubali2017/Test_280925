@@ -141,7 +141,7 @@ function parseSSEData(data) {
     
     // Handle direct JSON
     return JSON.parse(data);
-  } catch (error) {
+  } catch {
     return null;
   }
 }
@@ -160,7 +160,9 @@ async function processStream(stream, onUpdate, abortSignal) {
   
   try {
     while (true) {
+      // Check abort signal before each iteration for faster response
       if (abortSignal?.aborted) {
+        console.debug('[LLM-API] Stream processing aborted by signal');
         throw new Error('Stream aborted by user');
       }
       
@@ -168,11 +170,23 @@ async function processStream(stream, onUpdate, abortSignal) {
       
       if (done) break;
       
+      // Check abort signal after reading data
+      if (abortSignal?.aborted) {
+        console.debug('[LLM-API] Stream processing aborted after read');
+        throw new Error('Stream aborted by user');
+      }
+      
       const chunk = decoder.decode(value, { stream: true });
       const lines = chunk.split('\n');
       
       for (const line of lines) {
         if (!line.trim()) continue;
+        
+        // Check abort signal during line processing for immediate response
+        if (abortSignal?.aborted) {
+          console.debug('[LLM-API] Stream processing aborted during line processing');
+          throw new Error('Stream aborted by user');
+        }
         
         const data = parseSSEData(line);
         if (!data) continue;
@@ -193,8 +207,19 @@ async function processStream(stream, onUpdate, abortSignal) {
     }
     
     return fullContent;
+  } catch (error) {
+    // Enhanced abort error handling
+    if (abortSignal?.aborted || (error instanceof Error && error.message.includes('aborted'))) {
+      console.debug('[LLM-API] Stream processing was aborted');
+      throw new Error('Stream aborted by user');
+    }
+    throw error;
   } finally {
-    reader.releaseLock();
+    try {
+      reader.releaseLock();
+    } catch (e) {
+      console.debug('[LLM-API] Reader already released or error releasing:', e.message);
+    }
   }
 }
 
@@ -206,32 +231,50 @@ async function processStream(stream, onUpdate, abortSignal) {
  * @returns {Promise<Response>} Fetch response
  */
 async function makeAPIRequest(endpoint, requestBody, abortSignal) {
-  const response = await fetch(endpoint, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(requestBody),
-    signal: abortSignal,
-  });
+  // Log the signal state for debugging
+  console.debug('[LLM-API] Making request to:', endpoint, 'with abort signal:', !!abortSignal);
   
-  if (!response.ok) {
-    let errorMessage;
-    try {
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
-    } catch {
-      errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+  try {
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(requestBody),
+      signal: abortSignal,
+    });
+    
+    // Check if aborted immediately after fetch
+    if (abortSignal?.aborted) {
+      console.debug('[LLM-API] Request was aborted after fetch');
+      throw new Error('Request was cancelled');
     }
     
-    throw createAPIError(
-      response.status >= 500 ? 'server' : 'api',
-      errorMessage,
-      { status: response.status }
-    );
+    if (!response.ok) {
+      let errorMessage;
+      try {
+        const errorData = await response.json();
+        errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
+      } catch {
+        errorMessage = `HTTP ${response.status}: ${response.statusText}`;
+      }
+      
+      throw createAPIError(
+        response.status >= 500 ? 'server' : 'api',
+        errorMessage,
+        { status: response.status }
+      );
+    }
+    
+    return response;
+  } catch (error) {
+    // Handle abort errors specifically
+    if (abortSignal?.aborted || (error instanceof Error && error.name === 'AbortError')) {
+      console.debug('[LLM-API] Request was aborted:', error.message);
+      throw createAPIError('abort', 'Request was cancelled', { originalError: error });
+    }
+    throw error;
   }
-  
-  return response;
 }
 
 /**
@@ -263,8 +306,6 @@ export async function sendMessage(message, history = [], options = {}) {
   // Create and store AbortController for stopping functionality
   if (isStreaming) {
     activeAbortController = createAbortController();
-    console.log('[API] Created AbortController for streaming request');
-    console.log('[API] AbortController signal:', activeAbortController.signal);
   }
 
   try {
@@ -418,6 +459,7 @@ export async function sendMessage(message, history = [], options = {}) {
 }
 
 // Global AbortController for active streaming requests
+/** @type {AbortController|null} */
 let activeAbortController = null;
 
 /**
@@ -425,17 +467,26 @@ let activeAbortController = null;
  * @returns {boolean} Whether a stream was stopped
  */
 export function stopStreaming() {
-  console.log('[API] stopStreaming called');
-  console.log('[API] activeAbortController exists:', !!activeAbortController);
+  console.debug('[LLM-API] stopStreaming called, activeAbortController exists:', !!activeAbortController);
   
   if (activeAbortController) {
-    console.log('[API] Aborting active streaming request');
-    activeAbortController.abort(new Error('Stream stopped by user'));
-    activeAbortController = null;
-    return true;
+    try {
+      // Abort with a specific reason that can be detected
+      console.debug('[LLM-API] Aborting active request');
+      activeAbortController.abort(new Error('Stream stopped by user'));
+      
+      // Set to null immediately to prevent duplicate aborts
+      activeAbortController = null;
+      console.debug('[LLM-API] Active request aborted successfully');
+      return true;
+    } catch (error) {
+      console.warn('[LLM-API] Error aborting request:', error);
+      activeAbortController = null;
+      return false;
+    }
   }
   
-  console.log('[API] No active streaming request to stop');
+  console.debug('[LLM-API] No active request to stop');
   return false;
 }
 

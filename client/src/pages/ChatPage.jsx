@@ -354,42 +354,33 @@ export default function ChatPage() {
       // If we have a streaming message in progress, convert it to an error
       if (currentStreamingId) {
         setMessages((prev) => {
-          // Enhanced status checking logic
-          // Instead of using this variable directly, we use it as part of commented code below
-          // const streamingMessage = prev.find(msg => msg.id === currentStreamingId);
-          // Check delivery status for debugging purposes
-          // const isDelivered = prev.find(msg => msg.id === currentStreamingId)?.status === 'delivered';
-          // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
+          // Check if this message was already manually stopped by user (for retry case)
+          const originalMessage = prev.find(msg => msg.id === currentStreamingId);
+          const wasManuallyAborted = originalMessage?.metadata?.manuallyAborted || 
+                                   originalMessage?.metadata?.cancelledByUser ||
+                                   originalMessage?.isCancelled || 
+                                   originalMessage?.status === 'stopped' ||
+                                   originalMessage?.status === 'stopping';
+          
+          if (wasManuallyAborted) {
+            console.debug('[ChatPage] Retry message already manually stopped, ignoring error:', currentStreamingId);
+            return prev; // Don't add error message, user already stopped it
+          }
 
-          // Check if this was a deliberate abort/stop action
-          /** @type {boolean} */
-          const isManualAbort = Boolean(
-            error &&
-            ((typeof error === 'object' && 'name' in error && error.name === 'AbortError') ||
+          // Check if this was a deliberate abort/stop action (from AbortController)
+          const isAbortError = error &&
+            ((typeof error === 'object' && 'type' in error && error.type === 'abort') ||
+             (typeof error === 'object' && 'name' in error && error.name === 'AbortError') ||
              (typeof error === 'object' && 'message' in error &&
               typeof error.message === 'string' &&
-              error.message.includes('Request aborted')))
-          );
-          if (isManualAbort) {
-            console.debug(`Message ${currentStreamingId} was manually aborted, adding cancellation message`);
-
-            // Get the original message so we can extract any partial content already delivered
-            const originalMessage = prev.find(msg => msg.id === currentStreamingId);
-            const currentPartialContent = originalMessage?.content || '';
-
-            // Add a cancellation notice to the content
-            return prev.map(msg =>
-              msg.id === currentStreamingId
-                ? {
-                    ...msg,
-                    content: currentPartialContent + "\n\n*AI response cancelled by user.*",
-                    isStreaming: false,
-                    status: 'stopped',
-                    isCancelled: true,
-                    isError: false // Explicitly mark as not an error
-                  }
-                : msg
-            );
+              (error.message.includes('Request was cancelled') ||
+               error.message.includes('Stream stopped by user') ||
+               error.message.includes('Stream aborted by user'))));
+               
+          if (isAbortError) {
+            console.debug('[ChatPage] Detected abort error for retry message, ignoring:', currentStreamingId);
+            // For abort errors, don't add any error message - the user intentionally stopped it
+            return prev;
           }
 
           // Otherwise, convert it to an error
@@ -598,50 +589,34 @@ export default function ChatPage() {
       // If we have a streaming message in progress, check if it was already delivered
       if (currentStreamingId) {
         setMessages((prev) => {
-          // Enhanced status checking logic
-          // Variable commented out to avoid unused variable warning
-          // const streamingMessage = prev.find(msg => msg.id === currentStreamingId);
-          // Status flags for debugging purposes (commented to avoid unused var warnings)
-          // const isDelivered = prev.find(msg => msg.id === currentStreamingId)?.status === 'delivered';
-          // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
-
           // Check if this message was already manually stopped by user  
           const originalMessage = prev.find(msg => msg.id === currentStreamingId);
           const wasManuallyAborted = originalMessage?.metadata?.manuallyAborted || 
+                                   originalMessage?.metadata?.cancelledByUser ||
                                    originalMessage?.isCancelled || 
-                                   originalMessage?.status === 'stopped';
+                                   originalMessage?.status === 'stopped' ||
+                                   originalMessage?.status === 'stopping';
           
           if (wasManuallyAborted) {
-            console.debug(`Message ${currentStreamingId} was already manually stopped, ignoring error`);
+            console.debug('[ChatPage] Message already manually stopped, ignoring error:', currentStreamingId);
             return prev; // Don't add error message, user already stopped it
           }
 
-          // Check if this was a deliberate abort/stop action
-          const isManualAbort = error && typeof error === 'object' && 
-            (('name' in error && error.name === 'AbortError') || 
+          // Check if this was a deliberate abort/stop action (from AbortController)
+          const isAbortError = error && typeof error === 'object' && 
+            (('type' in error && error.type === 'abort') ||
+             ('name' in error && error.name === 'AbortError') || 
              ('message' in error && typeof error.message === 'string' && 
-              (error.message.includes('Request aborted') || 
+              (error.message.includes('Request was cancelled') ||
                error.message.includes('Stream stopped by user') ||
+               error.message.includes('Stream aborted by user') ||
                error.message.includes('cancelled'))));
-          if (isManualAbort) {
-            console.debug(`Message ${currentStreamingId} was manually aborted, adding cancellation message`);
-
-            // Get the original message so we can extract any partial content already delivered
-            const currentPartialContent = originalMessage?.content || '';
-
-            // Add a cancellation notice to the content
-            return prev.map(msg =>
-              msg.id === currentStreamingId
-                ? {
-                    ...msg,
-                    content: currentPartialContent + "\n\n*AI response cancelled by user.*",
-                    isStreaming: false,
-                    status: 'stopped',
-                    isCancelled: true,
-                    isError: false // Explicitly mark as not an error
-                  }
-                : msg
-            );
+               
+          if (isAbortError) {
+            console.debug('[ChatPage] Detected abort error for manually stopped message, ignoring:', currentStreamingId);
+            // For abort errors, don't add any error message - the user intentionally stopped it
+            // The Stop AI handler should have already updated the UI appropriately
+            return prev;
           }
 
           // Otherwise, convert it to an error
@@ -744,17 +719,14 @@ export default function ChatPage() {
       );
 
       // Get stopStreaming from cached module and call it immediately
-      console.debug('[Chat] About to call stopStreaming...');
       const { stopStreaming } = await getLLMApi();
-      const wasAborted = stopStreaming();
-      console.debug('[Chat] stopStreaming completed:', { wasAborted });
+      stopStreaming();
 
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
         const targetMessage = prev.find(msg => msg.id === activeStreamingId);
 
         if (!targetMessage) {
-          console.debug(`[Stop AI] Message ${activeStreamingId} not found in state`);
           return prev;
         }
 
@@ -763,12 +735,10 @@ export default function ChatPage() {
 
         // If there's no content at all (stream just started), remove the message
         if (!latestContent || latestContent.trim().length === 0) {
-          console.debug(`[Stop AI] Removing empty assistant message ${currentStreamingId} - no content generated yet`);
           return prev.filter(msg => msg.id !== currentStreamingId);
         }
 
         // Preserve the partial content and mark as stopped
-        console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${currentStreamingId}`);
         return prev.map(msg =>
           msg.id === currentStreamingId
             ? {
@@ -794,7 +764,6 @@ export default function ChatPage() {
       });
 
     } catch (error) {
-      console.error('[Chat] Error in stopStreaming:', error);
       
       const typedError = /** @type {Error|unknown} */ (error);
 
@@ -832,7 +801,7 @@ export default function ChatPage() {
    * @param {string} messageId - The message ID to check for stop handler
    * @returns {Function | undefined} Stop handler function or undefined
    */
-  const getStopHandler = useCallback(/** @param {string} messageId */ (messageId) => {
+  const getStopHandler = useCallback(/** @param {string} messageId @returns {Function | undefined} */ (messageId) => {
     if (currentStreamingId && messageId === currentStreamingId) {
       return handleStopAI;
     }
@@ -841,6 +810,7 @@ export default function ChatPage() {
 
   /**
    * Handles user logout
+   * @returns {void}
    */
   const handleLogout = () => {
     logout();
