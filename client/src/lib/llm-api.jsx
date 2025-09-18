@@ -119,6 +119,7 @@ function addMedicalDisclaimers(content, isHighRisk) {
  * @typedef {object} SSEData
  * @property {boolean} [done] - Whether the stream is complete
  * @property {string} [content] - Content chunk
+ * @property {string} [text] - Content chunk (alternative format)
  * @property {string} [error] - Error message if any
  */
 
@@ -179,9 +180,11 @@ async function processStream(stream, onUpdate, abortSignal) {
         
         if (data.done) return fullContent;
         
-        if (data.content) {
-          fullContent += data.content;
-          onUpdate(data.content, { streaming: true, fullContent });
+        // Handle both 'content' and 'text' properties for compatibility
+        const chunkContent = data.content || data.text || '';
+        if (chunkContent) {
+          fullContent += chunkContent;
+          onUpdate(chunkContent, { streaming: true, fullContent });
         }
         
         if (data.error) {
