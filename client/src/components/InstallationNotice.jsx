@@ -63,10 +63,8 @@ import React, { useState, useEffect } from 'react';
  * </div>
  */
 export function InstallationNotice() {
-  console.log('[InstallationNotice] COMPONENT FUNCTION CALLED - Component is being initialized');
-  
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} Controls banner visibility */
-  const [isVisible, setIsVisible] = useState(true); // TEMP: Force visible immediately for testing
+  const [isVisible, setIsVisible] = useState(false);
   
   /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} Detected user platform */
   const [platform, setPlatform] = useState('desktop');
@@ -88,24 +86,12 @@ export function InstallationNotice() {
    * @returns {Function} Cleanup function for timeout
    */
   useEffect(() => {
-    console.log('[InstallationNotice] Component initializing...');
-    
-    // TEMP: Clear localStorage for debugging (remove once fixed)
-    if (typeof window !== 'undefined' && window.location.hostname.includes('replit')) {
-      console.log('[InstallationNotice] TEMP: Clearing localStorage for debugging...');
-      localStorage.removeItem('anamnesis-install-notice-dismissed');
-    }
-    
     // Check if user has previously dismissed this notice
     const dismissed = localStorage.getItem('anamnesis-install-notice-dismissed');
-    console.log('[InstallationNotice] localStorage dismissed value:', dismissed);
     if (dismissed === 'true') {
-      console.log('[InstallationNotice] Component dismissed by user preference - not showing');
       setIsDismissed(true);
       return;
     }
-    
-    console.log('[InstallationNotice] Not dismissed, continuing with checks...');
 
     /**
      * Checks if the PWA is currently installed/running in standalone mode
@@ -121,54 +107,29 @@ export function InstallationNotice() {
      * }
      */
     const checkIfInstalled = () => {
-      console.log('[InstallationNotice] Checking PWA installation status...');
-      
-      // Check if we're in Replit development environment
-      const isReplit = typeof window !== 'undefined' && (
-        window.location.hostname.includes('replit.com') ||
-        window.location.hostname.includes('replit.dev') ||
-        window.location.hostname.includes('repl.co') ||
-        window.location.hostname.includes('mvp-anamnesis-health')
-      );
-      console.log('[InstallationNotice] Replit environment detected:', isReplit);
-      
-      // In Replit development, always show the install notice for testing
-      if (isReplit && (window.location.hostname.includes('replit') || window.location.hostname.includes('repl'))) {
-        console.log('[InstallationNotice] Skipping PWA detection in Replit dev environment');
-        return false;
-      }
-      
       // Check for standalone display mode (most browsers)
       const standaloneMatch = window.matchMedia('(display-mode: standalone)').matches;
-      console.log('[InstallationNotice] display-mode: standalone check:', standaloneMatch);
       
       if (standaloneMatch) {
-        console.log('[InstallationNotice] PWA detected as installed via display-mode: standalone');
         setIsInstalled(true);
         return true;
       }
       
       // Check for iOS Safari standalone mode
       const iosStandalone = typeof window !== 'undefined' && window.navigator && 'standalone' in window.navigator && window.navigator.standalone === true;
-      console.log('[InstallationNotice] iOS standalone check:', iosStandalone);
       
       if (iosStandalone) {
-        console.log('[InstallationNotice] PWA detected as installed via iOS standalone');
         setIsInstalled(true);
         return true;
       }
       
-      console.log('[InstallationNotice] PWA not detected as installed');
       return false;
     };
 
     // Exit early if PWA is already installed
     if (checkIfInstalled()) {
-      console.log('[InstallationNotice] Exiting because PWA is installed');
       return;
     }
-    
-    console.log('[InstallationNotice] PWA not installed, continuing with platform detection...');
 
     /**
      * Detect user's operating system and device type
@@ -200,7 +161,6 @@ export function InstallationNotice() {
     }
 
     setPlatform(detectedPlatform);
-    console.log('[InstallationNotice] Detected platform:', detectedPlatform);
     
     /**
      * Delayed visibility timer for smooth user experience
@@ -209,9 +169,7 @@ export function InstallationNotice() {
      * 
      * @type {NodeJS.Timeout} timer - Timeout reference for cleanup
      */
-    console.log('[InstallationNotice] Setting 2-second timer for visibility...');
     const timer = (typeof setTimeout !== 'undefined') ? setTimeout(() => { // eslint-disable-line no-undef
-      console.log('[InstallationNotice] Timer completed - setting visible to true');
       setIsVisible(true);
     }, 2000) : null;
 
@@ -300,17 +258,8 @@ export function InstallationNotice() {
    */
   // Check if component should be hidden
   if (isInstalled || isDismissed || !isVisible) {
-    if (isInstalled) {
-      console.log('[InstallationNotice] Not rendering - PWA is installed');
-    } else if (isDismissed) {
-      console.log('[InstallationNotice] Not rendering - user dismissed');
-    } else if (!isVisible) {
-      console.log('[InstallationNotice] Not rendering - not visible yet (timer pending)');
-    }
     return null;
   }
-  
-  console.log('[InstallationNotice] Rendering component with platform:', platform);
 
   /**
    * Generates platform-specific installation instructions
@@ -391,10 +340,6 @@ export function InstallationNotice() {
 
   return (
     <div className={`fixed top-0 left-0 right-0 z-50 transform transition-transform duration-500 ease-out translate-y-0`}>
-      {/* TEMP DEBUG: Bright red banner to test visibility */}
-      <div style={{backgroundColor: 'red', color: 'white', padding: '10px', textAlign: 'center', fontSize: '18px', fontWeight: 'bold'}}>
-        🚨 INSTALLATION NOTICE DEBUG MODE - Component is rendering! 🚨
-      </div>
       <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/50 dark:to-blue-950/50 border-b border-cyan-200 dark:border-cyan-800/50 shadow-md">
         <div className="max-w-7xl mx-auto px-4 py-3">
           <div className="flex items-start justify-between gap-4">

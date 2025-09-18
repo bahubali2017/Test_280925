@@ -247,8 +247,6 @@ export function MessageBubble({
   userQuery = '',
   userRole = 'general_public'
 }) {
-  // Add console log to verify this component is rendering
-  console.log("🟨 ACTIVE MESSAGE COMPONENT", { isUser, status, messageId, streamingMessageId });
   
   // State for feedback status
   const [feedbackStatus, setFeedbackStatus] = React.useState('');
@@ -257,13 +255,6 @@ export function MessageBubble({
   // Add local button state for immediate UI feedback
   const [isStoppingLocal, setIsStoppingLocal] = React.useState(false);
 
-  // Button render debugging
-  React.useEffect(() => {
-    if (messageId === streamingMessageId) {
-      console.log('[BUTTON-DEBUG] Stop button should render for:', messageId);
-      console.log('[BUTTON-DEBUG] onStopAI available:', !!onStopAI);
-    }
-  }, [messageId, streamingMessageId, onStopAI]);
   
   // Create stop click handler with immediate UI feedback
   const handleStopClick = (e) => {

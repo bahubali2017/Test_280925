@@ -820,8 +820,6 @@ export default function ChatPage() {
    */
   const handleStopAI = useCallback(async () => {
     console.debug('[Chat] handleStopAI invoked');
-    console.log('[STOP-DEBUG] Button clicked, streamingId:', streamingMessageId);
-    console.log('[STOP-DEBUG] Stop function called:', !!handleStopAI);
 
     // CRITICAL FIX: Check if we have an active streaming message
     if (!streamingMessageId) {
