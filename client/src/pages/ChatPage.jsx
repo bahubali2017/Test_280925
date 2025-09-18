@@ -719,8 +719,10 @@ export default function ChatPage() {
       );
 
       // Get stopStreaming from cached module and call it immediately
+      console.log('[CHAT-PAGE] About to call stopStreaming...');
       const { stopStreaming } = await getLLMApi();
-      stopStreaming();
+      const stopped = stopStreaming();
+      console.log('[CHAT-PAGE] stopStreaming result:', stopped);
 
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
