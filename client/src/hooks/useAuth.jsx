@@ -103,6 +103,7 @@ export function AuthProvider({ children }) {
           role: 'user'
         };
         setUser(testUser);
+        setIsLoading(false);
         // For test users, return immediately since we set the user state directly
         return { success: true, error: null };
       }
@@ -138,6 +139,9 @@ export function AuthProvider({ children }) {
           if (timeout) {
             clearTimeout(timeout);
           }
+
+          // Always clear loading state
+          setIsLoading(false);
 
           if (isSuccess) {
             resolve(result);
@@ -179,12 +183,11 @@ export function AuthProvider({ children }) {
       });
 
     } catch (err) {
+      setIsLoading(false);
       return { 
         success: false, 
         error: err instanceof Error ? err.message : 'Unknown login error' 
       };
-    } finally {
-      setIsLoading(false);
     }
   }
 

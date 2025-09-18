@@ -36,6 +36,9 @@ export function ProtectedRoute({ children }) {
       redirectTimeout = safeSetTimeout(() => {
         setLocation('/login');
       }, 100);
+    } else if (!isLoading && isAuthenticated) {
+      // Clear redirecting state if user becomes authenticated
+      setIsRedirecting(false);
     }
     return () => {
       if (redirectTimeout) safeClearTimeout(redirectTimeout);

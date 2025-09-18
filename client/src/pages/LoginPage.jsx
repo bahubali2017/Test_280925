@@ -135,12 +135,16 @@ export default function LoginPage() {
         const result = await login(email, password);
         const { success, error } = result;
         if (success) {
+          console.log('Login successful, redirecting to chat...');
           toast({
             title: "Login successful",
             description: "Welcome back to Anamnesis!",
             variant: "success"
           });
-          setLocation('/chat');
+          // Use setTimeout to ensure state updates have processed
+          setTimeout(() => {
+            setLocation('/chat');
+          }, 100);
         } else {
           setError(error || 'Invalid credentials');
         }
