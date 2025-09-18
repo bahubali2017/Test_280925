@@ -842,8 +842,11 @@ router.get("/app-config.json", async (req, res) => {
       // Start timing the request for analytics
       const startTime = Date.now();
 
-      // Generate a unique session ID if not provided
-      const sessionId = req.headers['x-session-id'] || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      // Frontend-generated sessionId must be passed via request headers
+      const sessionId = req.headers["x-session-id"];
+      if (!sessionId) {
+        return res.status(400).json({ error: "Missing sessionId" });
+      }
 
       // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors
       if (req.body && Array.isArray(req.body.conversationHistory)) {
@@ -963,36 +966,22 @@ router.get("/app-config.json", async (req, res) => {
       // Send the request to DeepSeek API with streaming enabled
       const deepSeekUrl = "https://api.deepseek.com/v1/chat/completions";
 
-      // 1) Create per-session abort bundle with combined signal
-      const clientAbort = new AbortController();      // fired by client socket close
-      const adminAbort = new AbortController();       // fired by /api/chat/cancel/:sessionId
-      // eslint-disable-next-line no-undef
-      const combinedSignal = AbortSignal.any([clientAbort.signal, adminAbort.signal]);
+      // Store AbortController for this session
+      const controller = new AbortController();
+      activeSessions.set(sessionId, controller);
       
       let closed = false;
 
-      // Expose single abort() for this session (used by cancel endpoint)
-      activeSessions.set(sessionId, {
-        abort() {
-          adminAbort.abort();
-        },
-        startedAt: Date.now()
+
+      // Wire client disconnect handlers
+      req.on('aborted', () => {
+        controller.abort();
+        try { res.end(); } catch { /* ignore */ }
       });
-
-
-      // 2) Wire client disconnect → abort upstream
-      function onClientGone() {
-        if (!clientAbort.signal.aborted) {
-          clientAbort.abort();              // stop upstream
-        }
-        try { res.end(); } catch {
-          // Ignore errors when ending response - connection might already be closed
-        }
-      }
-
-      // Add both listeners before starting upstream fetch
-      req.on('aborted', onClientGone);
-      req.on('close', onClientGone);
+      req.on('close', () => {
+        controller.abort();
+        try { res.end(); } catch { /* ignore */ }
+      });
 
       res.on("finish", () => {
         // Response finished normally or was ended
@@ -1018,7 +1007,7 @@ router.get("/app-config.json", async (req, res) => {
           presence_penalty: 0.1,
           stream: true
         }),
-        signal: combinedSignal          // ← critical
+        signal: controller.signal
       });
 
       // Execute upstream fetch with normal streaming
@@ -1045,11 +1034,14 @@ router.get("/app-config.json", async (req, res) => {
 
         // Read the stream chunk by chunk with abort signal checking
         try {
-          // 4) In the streaming loop, cooperate with aborts
           while (true) {
-            if (combinedSignal.aborted) break;
+            if (controller.signal.aborted) {
+              console.log(`[SSE] ${sessionId} aborted by client`);
+              await reader.cancel();
+              break;
+            }
             const { done, value } = await reader.read();
-            if (combinedSignal.aborted || done) break;
+            if (controller.signal.aborted || done) break;
 
             // Decode the chunk
             buffer += decoder.decode(value, { stream: true });
@@ -1059,7 +1051,7 @@ router.get("/app-config.json", async (req, res) => {
             buffer = lines.pop() || ''; // Keep the last partial line in the buffer
 
             for (const line of lines) {
-              if (combinedSignal.aborted) break;
+              if (controller.signal.aborted) break;
 
               // Skip empty lines and :keep-alive comments
               if (!line || line.trim() === '' || line.startsWith(':')) {
@@ -1087,7 +1079,7 @@ router.get("/app-config.json", async (req, res) => {
                     responseText += cleanedContent;
 
                     // Send the cleaned chunk to the client using event-based format for SSE
-                    if (!closed && !res.writableEnded && !combinedSignal.aborted) {
+                    if (!closed && !res.writableEnded && !controller.signal.aborted) {
                       res.write(`event: chunk\ndata: ${JSON.stringify({ text: cleanedContent })}\n\n`);
                       // Flush to ensure immediate delivery
                       if (res.flush) res.flush();
@@ -1107,18 +1099,18 @@ router.get("/app-config.json", async (req, res) => {
         }
 
         // Early exit check - don't process anything if connection was aborted
-        if (!closed && !combinedSignal.aborted) {
+        if (!closed && !controller.signal.aborted) {
           // Finalize the streaming response and apply final processing
           responseText = await processAIResponse(responseText, sessionId);
           const requestDuration = Date.now() - startTime;
           // Only log completion if client is still connected
-          if (!closed && !combinedSignal.aborted) {
+          if (!closed && !controller.signal.aborted) {
             console.log(`[${sessionId}] [SSE] STREAM_ENDED - completed in ${requestDuration}ms - ${new Date().toISOString()}`);
           }
 
           // Save the messages to the database only if not aborted
           try {
-            if (userId !== "anonymous" && responseText && !closed && !combinedSignal.aborted) {
+            if (userId !== "anonymous" && responseText && !closed && !controller.signal.aborted) {
               await storage.saveMessage(userId, message, responseText);
             }
           } catch (dbError) {
@@ -1126,7 +1118,7 @@ router.get("/app-config.json", async (req, res) => {
           }
 
           // Send configuration data for the client only if not aborted
-          if (!closed && !combinedSignal.aborted) {
+          if (!closed && !controller.signal.aborted) {
             res.write(`event: config\ndata: ${JSON.stringify({
               model: config.model || "deepseek-chat",
               sessionId: sessionId,
@@ -1136,7 +1128,7 @@ router.get("/app-config.json", async (req, res) => {
           }
 
           // Send completion event only if not aborted
-          if (!closed && !combinedSignal.aborted) {
+          if (!closed && !controller.signal.aborted) {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: true,
               requestTime: requestDuration
@@ -1144,7 +1136,7 @@ router.get("/app-config.json", async (req, res) => {
           }
 
           // Update session with completion metrics only if not aborted
-          if (!closed && !combinedSignal.aborted) {
+          if (!closed && !controller.signal.aborted) {
             sessionTracker.updateSession(sessionId, requestDuration, false);
             sessionTracker.endSession(sessionId, 'completed');
           }
@@ -1153,7 +1145,7 @@ router.get("/app-config.json", async (req, res) => {
           activeSessions.delete(sessionId);
 
           // End the response safely only if not aborted
-          if (!res.writableEnded && !closed && !combinedSignal.aborted) {
+          if (!res.writableEnded && !closed && !controller.signal.aborted) {
             res.end();
           }
         } else {
@@ -1162,7 +1154,7 @@ router.get("/app-config.json", async (req, res) => {
         }
         // 5) Treat AbortError as normal stop, not failure
         } catch (err) {
-          if (err?.name === 'AbortError' || combinedSignal.aborted) {
+          if (err?.name === 'AbortError' || controller.signal.aborted) {
             console.log(`[${sessionId}] [SSE] ${sessionId} aborted by client/cancel`);
             try { res.end(); } catch {
               // Ignore errors when ending response - connection might already be closed
@@ -1170,7 +1162,7 @@ router.get("/app-config.json", async (req, res) => {
             return; // no error message, no "completed"
           }
           // ... real error handling/logging ...
-          if (!closed && !combinedSignal.aborted && err.message !== 'aborted') {
+          if (!closed && !controller.signal.aborted && err.message !== 'aborted') {
             console.error(`[${sessionId}] Streaming error:`, err);
             // Send error event with proper SSE formatting
             try {
@@ -1200,7 +1192,7 @@ router.get("/app-config.json", async (req, res) => {
         }
       } catch (fetchError) {
         // Handle fetch/connection errors
-        if (fetchError.name === 'AbortError' || combinedSignal.aborted) {
+        if (fetchError.name === 'AbortError' || controller.signal.aborted) {
           console.log(`[${sessionId}] [SSE] ${sessionId} aborted by client/cancel`);
         } else {
           console.error(`[${sessionId}] Fetch error:`, fetchError.message);
@@ -1248,19 +1240,26 @@ router.get("/app-config.json", async (req, res) => {
 
         res.end();
       }
+    } finally {
+      activeSessions.delete(sessionId);
     }
   });
 
   /**
-   * 7) Make the cancel endpoint actually abort this session
+   * Cancel endpoint to abort active session
    */
-  router.post('/chat/cancel/:sessionId', async (req, res) => {
-    const entry = activeSessions.get(req.params.sessionId);
-    if (entry) {
-      entry.abort();                     // triggers adminAbort
-      return res.status(200).json({ ok: true, cancelled: true });
+  router.post('/chat/cancel/:sessionId', (req, res) => {
+    const { sessionId } = req.params;
+    const controller = activeSessions.get(sessionId);
+
+    if (controller) {
+      controller.abort();
+      activeSessions.delete(sessionId);
+      console.log(`[SSE] Cancel request received for ${sessionId}`);
+      return res.json({ success: true });
     }
-    return res.status(404).json({ ok: false, reason: 'not_found' });
+
+    return res.status(404).json({ success: false, message: "Session not found" });
   });
 
   /**

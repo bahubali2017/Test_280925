@@ -1,0 +1,118 @@
+🚨 STRICT AGENT PROMPT — FIX STOP AI SERVER-SIDE ABORT WITH CONSISTENT SESSION IDS
+
+Objective:
+Ensure Stop AI cancels DeepSeek API calls both client-side and server-side. Session IDs must always match between frontend and backend.
+
+🔧 Required Backend Changes (server/routes.js)
+
+Active Sessions Map (top of file):
+
+const activeSessions = new Map();
+
+
+When Streaming Starts:
+
+The frontend-generated sessionId must be passed via request headers (e.g., X-Session-Id).
+
+Use this sessionId instead of generating a new one.
+
+Store an AbortController for this session.
+
+const sessionId = req.headers["x-session-id"];
+if (!sessionId) {
+  return res.status(400).json({ error: "Missing sessionId" });
+}
+
+const controller = new AbortController();
+activeSessions.set(sessionId, controller);
+
+const response = await fetch(DEEPSEEK_URL, {
+  method: "POST",
+  headers,
+  body,
+  signal: controller.signal,
+});
+
+
+During Streaming Loop:
+
+if (controller.signal.aborted) {
+  console.log(`[SSE] ${sessionId} aborted by client`);
+  await reader.cancel();
+  break;
+}
+
+
+Cancel Endpoint:
+
+app.post("/api/chat/cancel/:sessionId", (req, res) => {
+  const { sessionId } = req.params;
+  const controller = activeSessions.get(sessionId);
+
+  if (controller) {
+    controller.abort();
+    activeSessions.delete(sessionId);
+    console.log(`[SSE] Cancel request received for ${sessionId}`);
+    return res.json({ success: true });
+  }
+
+  return res.status(404).json({ success: false, message: "Session not found" });
+});
+
+
+Cleanup Always:
+
+finally {
+  activeSessions.delete(sessionId);
+}
+
+🔧 Required Frontend Changes (client/src/pages/ChatPage.jsx + client/src/lib/llm-api.jsx)
+
+Session ID Generation (frontend only):
+
+Generate a stable sessionId before sending a message:
+
+const sessionId = `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+
+
+Pass Session ID in Request Header:
+
+const response = await fetch("/api/chat/stream", {
+  method: "POST",
+  headers: {
+    "Content-Type": "application/json",
+    "X-Session-Id": sessionId,
+  },
+  body: JSON.stringify({ ...payload }),
+  signal: abortSignal,
+});
+
+
+Stop AI Button (handleStopAI):
+Call both client-side and server-side abort:
+
+stopStreaming(); // frontend abort
+
+await fetch(`/api/chat/cancel/${sessionId}`, { method: "POST" });
+
+✅ Acceptance Criteria
+
+One sessionId per request (frontend-generated, passed via X-Session-Id).
+
+Server logs show [SSE] {sessionId} aborted by client immediately after Stop AI.
+
+DeepSeek API is aborted → no full completions, tokens saved.
+
+No mismatches (session_... IDs must be identical in logs and client).
+
+UI still shows “AI response stopped by user.” with no duplicate system error.
+
+No new ESLint/TS errors introduced.
+
+⚡ Important:
+
+Do not regenerate session IDs in backend. Always trust the one from frontend.
+
+Remove any leftover legacy sessionId generation logic.
+
+Do not duplicate code. Only update existing paths.

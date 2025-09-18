@@ -228,9 +228,10 @@ let activeAbortController = null;
  * Makes API request to the chat endpoint
  * @param {string} endpoint - API endpoint (/api/chat or /api/chat/stream)
  * @param {object} requestBody - Request payload
+ * @param {string} [sessionId] - Session ID to include in headers
  * @returns {Promise<Response>} Fetch response
  */
-export function makeAPIRequest(endpoint, requestBody) {
+export function makeAPIRequest(endpoint, requestBody, sessionId) {
   // Reset active controller and create new one for this request
   if (activeAbortController) {
     activeAbortController.abort();
@@ -238,11 +239,18 @@ export function makeAPIRequest(endpoint, requestBody) {
   activeAbortController = new AbortController();
   const { signal } = activeAbortController;
   
+  const headers = {
+    'Content-Type': 'application/json',
+  };
+  
+  // Add session ID if provided
+  if (sessionId) {
+    headers['X-Session-Id'] = sessionId;
+  }
+  
   return fetch(endpoint, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
+    headers,
     body: JSON.stringify(requestBody),
     signal,
   });
@@ -269,6 +277,10 @@ export async function sendMessage(message, history = [], options = {}) {
     demographics = {},
     sessionId
   } = options;
+  
+  // Generate session ID if not provided
+  const currentSession = sessionId || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+  currentSessionId = currentSession;
 
   const startTime = Date.now();
   const isHighRisk = containsHighRiskTerms(message);
@@ -294,8 +306,8 @@ export async function sendMessage(message, history = [], options = {}) {
     // Choose endpoint based on streaming requirement
     const endpoint = isStreaming ? '/api/chat/stream' : '/api/chat';
     
-    // Make API request using the global controller
-    const response = await makeAPIRequest(endpoint, requestBody);
+    // Make API request using the global controller with session ID
+    const response = await makeAPIRequest(endpoint, requestBody, currentSession);
     
     // Check if aborted immediately after fetch
     if (activeAbortController?.signal.aborted) {
@@ -447,17 +459,34 @@ export async function sendMessage(message, history = [], options = {}) {
   }
 }
 
+// Global session ID for current active session
+let currentSessionId = null;
+
 /**
- * Stops any active streaming request
- * @returns {boolean} Whether a stream was stopped
+ * Stops any active streaming request (both client and server)
+ * @returns {Promise<boolean>} Whether a stream was stopped
  */
-export function stopStreaming() {
+export async function stopStreaming() {
+  let stopped = false;
+  
+  // Client-side abort
   if (activeAbortController) {
     activeAbortController.abort();
     activeAbortController = null;
-    return true;
+    stopped = true;
   }
-  return false;
+  
+  // Server-side cancel
+  if (currentSessionId) {
+    try {
+      await fetch(`/api/chat/cancel/${currentSessionId}`, { method: "POST" });
+    } catch (error) {
+      console.warn('Failed to cancel server session:', error);
+    }
+    currentSessionId = null;
+  }
+  
+  return stopped;
 }
 
 /**
