@@ -261,7 +261,8 @@ export function decrementWebSocketConnections(token) {
  */
 export function chatEndpointRateLimit(req, res, next) {
   // Chat endpoints should have unlimited availability for optimal user experience
-  console.log(`[RATE-LIMIT] Allowing unlimited access to chat endpoint: ${req.path}`);
+  console.log(`[RATE-LIMIT] Chat request from IP ${req.ip}: ${req.path}`);
+  console.log(`[RATE-LIMIT] Request headers:`, req.headers['content-type']);
   next();
 }
 

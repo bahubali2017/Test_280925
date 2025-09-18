@@ -608,10 +608,12 @@ router.get("/app-config.json", async (req, res) => {
       const config = getDeepSeekConfig();
 
       if (!config.apiKey) {
-        console.error("Missing DeepSeek API key");
+        console.error("Missing DeepSeek API key - API will be unresponsive");
+        console.error("Environment check - DEEPSEEK_API_KEY:", process.env.DEEPSEEK_API_KEY ? 'SET' : 'MISSING');
         return res.status(500).json({
           success: false,
           message: "DeepSeek API key is missing. Please set the DEEPSEEK_API_KEY environment variable.",
+          error_type: "configuration"
         });
       }
 
@@ -861,10 +863,12 @@ router.get("/app-config.json", async (req, res) => {
       const config = getDeepSeekConfig();
 
       if (!config.apiKey) {
-        console.error("Missing DeepSeek API key");
+        console.error("Missing DeepSeek API key - API will be unresponsive");
+        console.error("Environment check - DEEPSEEK_API_KEY:", process.env.DEEPSEEK_API_KEY ? 'SET' : 'MISSING');
         return res.status(500).json({
           success: false,
           message: "DeepSeek API key is missing. Please set the DEEPSEEK_API_KEY environment variable.",
+          error_type: "configuration"
         });
       }
 

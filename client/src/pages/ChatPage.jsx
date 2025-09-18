@@ -691,6 +691,12 @@ export default function ChatPage() {
       // No need to manually save messages, as the enhanced API already handles persistence
     } catch (error) {
       console.error('Error sending message:', error);
+      console.error('Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack,
+        type: error.type || 'unknown'
+      });
 
       // Get appropriate user-friendly error message
       const errorMessage = getErrorMessage(error);
