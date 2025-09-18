@@ -982,27 +982,17 @@ router.get("/app-config.json", async (req, res) => {
 
       // 2) Wire client disconnect → abort upstream
       function onClientGone() {
-        console.log(`[${sessionId}] [ABORT-DEBUG] onClientGone() called - aborting upstream`);
         if (!clientAbort.signal.aborted) {
           clientAbort.abort();              // stop upstream
-          console.log(`[${sessionId}] [ABORT-DEBUG] clientAbort.abort() called`);
         }
         try { res.end(); } catch {
           // Ignore errors when ending response - connection might already be closed
         }
       }
 
-      // Add both listeners before starting upstream fetch - WITH DEBUG LOGGING
-      req.on('aborted', () => {
-        console.log(`[${sessionId}] [ABORT-DEBUG] req.on('aborted') triggered`);
-        onClientGone();
-      });
-      req.on('close', () => {
-        console.log(`[${sessionId}] [ABORT-DEBUG] req.on('close') triggered`);
-        onClientGone();
-      });
-      
-      console.log(`[${sessionId}] [ABORT-DEBUG] Abort handlers registered for client disconnect`);
+      // Add both listeners before starting upstream fetch
+      req.on('aborted', onClientGone);
+      req.on('close', onClientGone);
 
       res.on("finish", () => {
         // Response finished normally or was ended
@@ -1035,7 +1025,6 @@ router.get("/app-config.json", async (req, res) => {
       (async () => {
         try {
           console.log(`[${sessionId}] [SSE] STREAM_STARTED - ${new Date().toISOString()}`);
-          console.log(`[${sessionId}] [ABORT-DEBUG] Combined signal aborted at start: ${combinedSignal.aborted}`);
           const deepSeekResponse = await upstreamFetch();
           if (closed || !deepSeekResponse) return; // Don't process if already closed
 
