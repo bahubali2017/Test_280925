@@ -1,3 +1,4 @@
+/* global setTimeout */
 import React from 'react';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
