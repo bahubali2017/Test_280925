@@ -1,3 +1,4 @@
+/* global setTimeout, clearTimeout */
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabaseClient } from '../lib/supabase.js';
 import config from '../lib/config.js';
