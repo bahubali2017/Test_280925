@@ -1,3 +1,4 @@
+/* global sessionStorage */
 // client/src/components/GlobalErrorBoundary.jsx
 import React, { Component } from 'react';
 
