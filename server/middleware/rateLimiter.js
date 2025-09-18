@@ -243,13 +243,24 @@ function getTierLimits(tier = 'free') {
   return RATE_LIMIT_TIERS[tier] || RATE_LIMIT_TIERS.free;
 }
 
+// Track logged messages to prevent spam
+const loggedMessages = new Set();
+
 /**
- * Log rate limiting action with context
+ * Log rate limiting action with context (reduced verbosity in beta mode)
  * @param {string} action - Type of rate limiting action
  * @param {string} details - Additional details about the action
  */
 function logRateLimitAction(action, details) {
   const mode = isRateLimitingDisabled() ? 'BETA-MODE' : 'PRODUCTION-MODE';
+  
+  // In beta mode, only log unique messages once to prevent console spam
+  if (mode === 'BETA-MODE') {
+    const messageKey = `${action}:${details.split(' ')[0]}`;
+    if (loggedMessages.has(messageKey)) return;
+    loggedMessages.add(messageKey);
+  }
+  
   console.log(`[RATE-LIMIT] [${mode}] ${action}: ${details}`);
 }
 
