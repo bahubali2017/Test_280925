@@ -1,4 +1,3 @@
-import crypto from "crypto";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../hooks/useAuth';
@@ -10,6 +9,38 @@ import { getRandomStarterQuestions } from '../lib/suggestions';
 
 // Use native timeout function directly
 const safeSetTimeout = window.setTimeout;
+
+/**
+ * Generate a UUID v4 compatible ID using browser crypto API with fallback
+ * @returns {string} A unique identifier
+ */
+const generateUUID = () => {
+  // Check if browser supports crypto.randomUUID (modern browsers)
+  if (window.crypto && window.crypto.randomUUID) {
+    return window.crypto.randomUUID();
+  }
+  
+  // Fallback for older browsers using crypto.getRandomValues
+  if (window.crypto && window.crypto.getRandomValues) {
+    // Generate UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
+    const randomValues = new Uint8Array(16);
+    window.crypto.getRandomValues(randomValues);
+    
+    // Set version (4) and variant bits according to RFC 4122
+    randomValues[6] = (randomValues[6] & 0x0f) | 0x40;
+    randomValues[8] = (randomValues[8] & 0x3f) | 0x80;
+    
+    const hex = Array.from(randomValues, byte => byte.toString(16).padStart(2, '0')).join('');
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
+  }
+  
+  // Final fallback using Math.random (less secure but functional)
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+    const r = Math.random() * 16 | 0;
+    const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+};
 
 /**
  * @typedef {object} Message
@@ -506,9 +537,9 @@ export default function ChatPage() {
     // Save the message for potential retries
     setLastUserMessage(newMessage);
 
-    // Create a unique ID for this message pair using stable crypto.randomUUID()
-    const messageId = crypto.randomUUID();
-    const assistantMessageId = crypto.randomUUID();
+    // Create a unique ID for this message pair using browser-compatible UUID generation
+    const messageId = generateUUID();
+    const assistantMessageId = generateUUID();
     const sessionId = user?.id ? `user_${user.id}_${messageId}` : `anon_${messageId}`;
 
     // Add user message
