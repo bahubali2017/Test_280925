@@ -86,11 +86,25 @@ export function InstallationNotice() {
    * @returns {Function} Cleanup function for timeout
    */
   useEffect(() => {
-    // Check if user has previously dismissed this notice
-    const dismissed = localStorage.getItem('anamnesis-install-notice-dismissed');
-    if (dismissed === 'true') {
-      setIsDismissed(true);
-      return;
+    // Check if user has previously dismissed this notice (temporary dismissal for 24 hours)
+    const dismissedData = localStorage.getItem('anamnesis-install-notice-dismissed');
+    if (dismissedData) {
+      try {
+        const dismissedTime = parseInt(dismissedData, 10);
+        const now = Date.now();
+        const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
+        
+        if (now - dismissedTime < twentyFourHours) {
+          setIsDismissed(true);
+          return;
+        } else {
+          // Clear expired dismissal
+          localStorage.removeItem('anamnesis-install-notice-dismissed');
+        }
+      } catch (e) {
+        // If invalid data, clear it
+        localStorage.removeItem('anamnesis-install-notice-dismissed');
+      }
     }
 
     /**
@@ -201,7 +215,7 @@ export function InstallationNotice() {
   const handleDismiss = () => {
     setIsVisible(false);
     setIsDismissed(true);
-    localStorage.setItem('anamnesis-install-notice-dismissed', 'true');
+    localStorage.setItem('anamnesis-install-notice-dismissed', Date.now().toString());
   };
 
   /**
