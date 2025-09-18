@@ -54,10 +54,11 @@ class SupabaseWatchdog {
     // Initial check
     this.performHealthCheck();
 
-    // Set up periodic monitoring
+    // Set up periodic monitoring - use longer interval in development
+    const intervalMs = process.env.NODE_ENV === 'production' ? 60000 : 300000; // 5 minutes in dev
     this.monitoringInterval = globalThis.setInterval(() => {
       this.performHealthCheck();
-    }, 60000); // 60 seconds
+    }, intervalMs);
   }
 
   /**

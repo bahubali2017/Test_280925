@@ -87,9 +87,10 @@ export function AuthProvider({ children }) {
       isMounted = false;
       if (authListener?.subscription) {
         authListener.subscription.unsubscribe();
+        setAuthListener(null);
       }
     };
-  }, [authListener]);
+  }, []); // Remove authListener dependency to prevent infinite loops
 
   /**
    * Log in a user with email and password
