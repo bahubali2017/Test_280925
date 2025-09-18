@@ -1,0 +1,102 @@
+> rest-express@1.0.0 start
+> npm run build && NODE_ENV=production node dist/index.js
+
+
+> rest-express@1.0.0 build
+> npm run build:client && npm run build:server
+> rest-express@1.0.0 build:client
+> vite build
+
+vite v5.4.19 building for production...
+✓ 1755 modules transformed.
+../dist/public/index.html                    8.21 kB │ gzip:  2.48 kB
+../dist/public/assets/index-CE9jFBdN.css   110.24 kB │ gzip: 17.61 kB
+../dist/public/assets/browser-CslcrdUx.js    0.29 kB │ gzip:  0.24 kB
+../dist/public/assets/ui-UOgoIWfx.js         2.36 kB │ gzip:  1.12 kB
+../dist/public/assets/utils-BpqZfnrR.js     20.75 kB │ gzip:  6.68 kB
+../dist/public/assets/llm-api-DhAzxQmF.js   39.46 kB │ gzip: 12.36 kB
+../dist/public/assets/vendor-7vskT6N6.js   140.47 kB │ gzip: 45.04 kB
+../dist/public/assets/index-D23_g1KJ.js    255.58 kB │ gzip: 70.64 kB
+✓ built in 17.84s
+
+> rest-express@1.0.0 build:server
+> esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --minify
+
+
+  dist/index.js  91.4kb
+
+⚡ Done in 22ms
+✅ Chat routes prepared for mounting
+[UPTIME-TRACKER] Server uptime tracking initialized
+[ADMIN-WS] Admin WebSocket server initialized
+[BUILD-CACHE] Cache is valid, skipping rebuild
+[BUILD] Using cached build - assets are current
+[ENV-OVERRIDE] NODE_ENV set to: production
+[BUILD] Build timestamp: 1758198854663
+Configuration loaded successfully {
+  url: 'https://ppwaeyekzpyqqlddfmeb.supabase.co',
+  hasAnonKey: true,
+  hasServiceKey: true,
+  environment: 'production'
+}
+Testing Supabase connection...
+✅ Routes mounted: /api/chat, /api/feedback, /api/system, /api/admin, /api/ai
+[ADMIN-WS] WebSocket server attached to HTTP server at /ws/admin
+[BOOT] Server running in production mode on port 5000
+[PRODUCTION] Serving static files from: /home/runner/workspace/dist/public
+[PROCESS-MGMT] Checking for existing processes on port 5000
+[PROCESS-MGMT] netstat unavailable, proceeding with startup
+[PROCESS-MGMT] Cleanup completed for port 5000
+[PROCESS-MGMT] Initializing process management for PID: 981
+[PROCESS-MGMT] Process lock acquired for PID: 981
+[PROCESS-MGMT] Process management initialized successfully
+[PROCESS-MGMT] PID file created: /tmp/anamnesis-server.pid (981)
+🚀 Production server started on port 5000
+📁 Static files served from: /home/runner/workspace/dist/public
+[BUILD-CACHE] Cache updated successfully
+⚠️ Supabase not accessible - authentication will be limited
+✅ Supabase connection OK (via auth-health)
+🩺 Starting Supabase health monitoring (60s intervals)
+🩺 Watchdog started (60s)
+🔄 Supabase connection state changed: UP via auth-health
+✅ Supabase connection restored (via auth-health)
+Fetching messages for user test-user-id with limit 50
+Retrieved 0 messages for user test-user-id
+[RATE-LIMIT] Bypassing rate limit for critical endpoint: /api/chat/stream
+[RATE-LIMIT] Allowing unlimited access to chat endpoint: /chat/stream
+[session_1758198876819_bhlph4ha] Sanitized conversation history: 0 valid entries
+[session_1758198876819_bhlph4ha] Processing streaming chat request [GENERAL_PUBLIC]: How can I tell if I have strep throat?
+[SESSION-TRACKER] Started session session_1758198876819_bhlph4ha for general_public
+[session_1758198876819_bhlph4ha] [ABORT-DEBUG] AbortController created: true
+[session_1758198876819_bhlph4ha] [ABORT-DEBUG] Signal attached to fetch: true
+[session_1758198876819_bhlph4ha] [SSE] STREAM_STARTED - 2025-09-18T12:34:36.826Z
+[WATERMARK] Applied to session session_1758198876819_bhlph4ha, token: eyJzZXNz...
+[AI-AUDIT] {"timestamp":"2025-09-18T12:34:59.705Z","sessionId":"session_1758198876819_bhlph4ha","responseHash":"7fb4b5c62edcbb29bde45b4a2bb892248d2c9b4ff75fa013d29056c48417532a","responseLength":1933,"watermarked":true,"model":"deepseek","originalLength":1933,"processedLength":1933}
+[session_1758198876819_bhlph4ha] [SSE] STREAM_ENDED - completed in 22886ms - 2025-09-18T12:34:59.705Z
+[SESSION-TRACKER] Updated session session_1758198876819_bhlph4ha: 1 messages, avg latency 22886ms
+[session_1758198876819_bhlph4ha] Streaming error: TypeError: Cannot read properties of undefined (reading 'length')
+    at pe.endSession (file:///home/runner/workspace/dist/index.js:36:3039)
+    at file:///home/runner/workspace/dist/index.js:76:54
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+Fetching messages for user test-user-id with limit 50
+Retrieved 0 messages for user test-user-id
+[RATE-LIMIT] Bypassing rate limit for critical endpoint: /api/chat/stream
+[RATE-LIMIT] Allowing unlimited access to chat endpoint: /chat/stream
+[session_1758198908645_srceumrs] Sanitized conversation history: 0 valid entries
+[session_1758198908645_srceumrs] Processing streaming chat request (HIGH RISK) [GENERAL_PUBLIC]: How do I know if I have food poisoning?
+[SESSION-TRACKER] Started session session_1758198908645_srceumrs for general_public
+[SESSION-TRACKER] Flagged session session_1758198908645_srceumrs: high_risk_query (high)
+[session_1758198908645_srceumrs] [ABORT-DEBUG] AbortController created: true
+[session_1758198908645_srceumrs] [ABORT-DEBUG] Signal attached to fetch: true
+[session_1758198908645_srceumrs] [SSE] STREAM_STARTED - 2025-09-18T12:35:08.646Z
+🔄 Supabase state: DOWN→UP (health-api)
+[ADMIN-REMOTE-ACCESS] Supabase state change: DOWN→UP at 2025-09-18T12:35:15.284Z
+[WATERMARK] Applied to session session_1758198908645_srceumrs, token: eyJzZXNz...
+[AI-AUDIT] {"timestamp":"2025-09-18T12:35:40.000Z","sessionId":"session_1758198908645_srceumrs","responseHash":"ae88ccf170153524ae52a5efee9c0bf911ddc62bc52ad8889d17ece1fcd9dec2","responseLength":2648,"watermarked":true,"model":"deepseek","originalLength":2648,"processedLength":2648}
+[session_1758198908645_srceumrs] [SSE] STREAM_ENDED - completed in 31355ms - 2025-09-18T12:35:40.000Z
+[SESSION-TRACKER] Updated session session_1758198908645_srceumrs: 1 messages, avg latency 31355ms
+[session_1758198908645_srceumrs] Streaming error: TypeError: Cannot read properties of undefined (reading 'length')
+    at pe.endSession (file:///home/runner/workspace/dist/index.js:36:3039)
+    at file:///home/runner/workspace/dist/index.js:76:54
+    at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+[session_1758198908645_srceumrs] [SSE] Response finished normally
