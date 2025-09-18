@@ -1,0 +1,62 @@
+> rest-express@1.0.0 start
+> npm run build && NODE_ENV=production node dist/index.js
+> rest-express@1.0.0 build
+> npm run build:client && npm run build:server
+
+
+> rest-express@1.0.0 build:client
+> vite build
+
+vite v5.4.19 building for production...
+✓ 1755 modules transformed.
+../dist/public/index.html                    8.21 kB │ gzip:  2.48 kB
+../dist/public/assets/index-6MvYKxL_.css   109.98 kB │ gzip: 17.54 kB
+../dist/public/assets/browser-CslcrdUx.js    0.29 kB │ gzip:  0.24 kB
+../dist/public/assets/ui-UOgoIWfx.js         2.36 kB │ gzip:  1.12 kB
+../dist/public/assets/utils-BpqZfnrR.js     20.75 kB │ gzip:  6.68 kB
+../dist/public/assets/llm-api-ClyJ8gb4.js   39.04 kB │ gzip: 12.28 kB
+../dist/public/assets/vendor-7vskT6N6.js   140.47 kB │ gzip: 45.04 kB
+../dist/public/assets/index-CZInJhe-.js    254.75 kB │ gzip: 70.42 kB
+✓ built in 7.25s
+
+> rest-express@1.0.0 build:server
+> esbuild server/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist --minify
+
+▲ [WARNING] The CommonJS "module" variable is treated as a global variable in an ECMAScript module and may not work as expected [commonjs-variable-in-esm]
+
+    server/utils/buildCache.js:121:0:
+      121 │ module.exports = { BuildCache };
+          ╵ ~~~~~~
+
+  This file is considered to be an ECMAScript module because the enclosing "package.json" file sets
+  the type of this file to "module":
+
+    package.json:4:10:
+      4 │   "type": "module",
+        ╵           ~~~~~~~~
+
+  Node's package format requires that CommonJS files in a "type": "module" package use the ".cjs"
+  file extension.
+
+1 warning
+
+  dist/index.js  91.6kb
+
+⚡ Done in 18ms
+✅ Chat routes prepared for mounting
+[UPTIME-TRACKER] Server uptime tracking initialized
+[ADMIN-WS] Admin WebSocket server initialized
+file:///home/runner/workspace/dist/index.js:1
+var ue=Object.defineProperty;var _t=Object.getOwnPropertyDescriptor;var Rt=Object.getOwnPropertyNames;var At=Object.prototype.hasOwnProperty;var H=(n=>typeof require<"u"?require:typeof Proxy<"u"?new Proxy(n,{get:(e,t)=>(typeof require<"u"?require:e)[t]}):n)(function(n){if(typeof require<"u")return require.apply(this,arguments);throw Error('Dynamic require of "'+n+'" is not supported')});var de=(n,e)=>()=>(n&&(e=n(n=0)),e);var Ne=(n,e)=>{for(var t in e)ue(n,t,{get:e[t],enumerable:!0})},$t=(n,e,t,s)=>{if(e&&typeof e=="object"||typeof e=="function")for(let o of Rt(e))!At.call(n,o)&&o!==t&&ue(n,o,{get:()=>e[o],enumerable:!(s=_t(e,o))||s.enumerable});return n};var Ct=n=>$t(ue({},"__esModule",{value:!0}),n);var et={};Ne(et,{getSupabaseHealthStatus:()=>we,startHealthMonitoring:()=>ve,testSupabaseConnection:()=>J});import{createClient as Wt}from"@supabase/supabase-js";function ye(n,e=2500){return Promise.race([n,new Promise((t,s)=>globalThis.setTimeout(()=>s(new Error("timeout")),e))])}async function J(){try{let n=process.env.SUPABASE_URL,e=process.env.SUPABASE_SERVICE_KEY||process.env.SUPABASE_ANON_KEY;if(!n||!e)return{ok:!1,reason:"missing-config"};try{if((await ye(fetch(`${n}/auth/v1/health`,{method:"GET",headers:{apikey:e,"Content-Type":"application/json"}}),2500)).ok)return{ok:!0,method:"auth-health"}}catch{}let t=Wt(n,e,{auth:{autoRefreshToken:!1,persistSession:!1}});if(process.env.SUPABASE_SERVICE_KEY)try{let o=t.auth.admin;return await ye(o.listUsers({page:1,perPage:1}),2500),{ok:!0,method:"admin-api"}}catch(o){console.log("Admin API test failed, falling back to REST API test:",o.message)}let s=await ye(fetch(`${n}/rest/v1/`,{method:"GET",headers:{apikey:e,"Content-Type":"application/json"}}),2500);return s.ok?{ok:!0,method:"rest-api"}:{ok:!1,reason:`REST API failed with status ${s.status}`}}catch(n){return{ok:!1,reason:String(n?.message||n)}}}function ve(n){console.log("\u{1FA7A} Starting Supabase health monitoring (60s intervals)");let e=async()=>{let t=await J(),s=t.ok;if(s!==Qe){let o=s?"UP":"DOWN",r=t.reason?` (${t.reason})`:"",a=t.method?` via ${t.method}`:"";console.log(`\u{1F504} Supabase connection state changed: ${o}${a}${r}`),Qe=s,Ze=s,n&&n(s,t)}return t};e(),globalThis.setInterval(e,6e4)}function we(){return Ze}var Qe,Ze,ce=de(()=>{"use strict";Qe=!1,Ze=!1});var Ie={};Ne(Ie,{detectUserRole:()=>zt,enhanceQueryContext:()=>Kt,getResponseInstructions:()=>tt});function zt(n){let e=n.toLowerCase(),t=0,s=0;Object.values(Gt).forEach(a=>{a.forEach(i=>{e.includes(i.toLowerCase())&&(t+=2)})}),Object.values(qt).forEach(a=>{a.forEach(i=>{e.includes(i.toLowerCase())&&(s+=1)})}),(e.includes("treatment protocol")||e.includes("clinical protocol"))&&(t+=5),(e.includes("evidence-based")||e.includes("guideline"))&&(t+=3),e.match(/\d+\s*(mg|mcg|ml|units)/)&&(t+=2),e.match(/\b(i|my|me)\b/g)&&(s+=1);let o=t>=3&&t>s,r=Math.min(100,Math.max(t,s)*10);return{role:o?"healthcare_professional":"general_public",confidence:r,professionalScore:t,generalScore:s,indicators:{professional:t>0,general:s>0}}}function tt(n){return n==="healthcare_professional"?`
+                                                                                                                                                                                                                                                                                                                                               ^
+
+Error: Dynamic require of "fs" is not supported
+    at file:///home/runner/workspace/dist/index.js:1:336
+    at file:///home/runner/workspace/dist/index.js:33:1863
+    at file:///home/runner/workspace/dist/index.js:1:416
+    at file:///home/runner/workspace/dist/index.js:218:1612
+    at ModuleJob.run (node:internal/modules/esm/module_job:263:25)
+    at async ModuleLoader.import (node:internal/modules/esm/loader:540:24)
+    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:117:5)
+
+Node.js v20.19.3
