@@ -821,92 +821,6 @@ router.get("/app-config.json", async (req, res) => {
    * Streaming chat endpoint for real-time message processing
    * Implements Server-Sent Events (SSE) for streaming responses
    */
-  /**
-   * GET /api/messages/:userId - Direct API endpoint to get messages for a user
-   * Added directly in routes.js to ensure availability
-   */
-  router.get("/messages/:userId", circuitBreakerMiddleware, async (req, res) => {
-    try {
-      const { userId } = req.params;
-      const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
-
-      if (!userId) {
-        return res.status(400).json({ 
-          success: false, 
-          message: 'User ID is required' 
-        });
-      }
-
-      console.log(`Direct route: Fetching messages for user ${userId} with limit ${limit}`);
-
-      // Fetch messages from database
-      const messages = await storage.getMessages(userId, limit);
-
-      console.log(`Direct route: Retrieved ${messages.length} messages for user ${userId}`);
-
-      return res.json({
-        success: true,
-        data: messages
-      });
-    } catch (err) {
-      console.error('Failed to fetch messages:', err);
-      return res.status(500).json({ 
-        success: false, 
-        message: 'Failed to fetch messages' 
-      });
-    }
-  });
-
-  /**
-   * Cancel active AI streaming session
-   */
-  router.post('/chat/cancel/:sessionId', async (req, res) => {
-    const { sessionId } = req.params;
-    
-    try {
-      console.log(`[CANCEL] Received cancellation request for session: ${sessionId}`);
-
-      // Set headers to prevent caching
-      res.setHeader('Content-Type', 'application/json');
-      res.setHeader('Cache-Control', 'no-cache');
-
-      // Find the active session controller and abort it
-      const controller = activeSessions.get(sessionId);
-      if (controller) {
-        console.log(`[CANCEL] Aborting active session controller for: ${sessionId}`);
-        controller.abort();
-        activeSessions.delete(sessionId);
-      } else {
-        console.warn(`[CANCEL] No active session controller found for: ${sessionId}`);
-      }
-
-      // Track the cancellation in session tracker (optional, but good for analytics)
-      sessionTracker.cancelSession(sessionId, 'user_cancelled');
-
-      // Send confirmation response immediately
-      res.status(200).json({
-        success: true,
-        sessionId: sessionId,
-        message: 'Stream cancellation processed',
-        timestamp: new Date().toISOString()
-      });
-
-      console.log(`[CANCEL] Successfully processed cancellation for session: ${sessionId}`);
-
-    } catch (error) {
-      console.error(`[CANCEL] Error processing cancellation for session ${sessionId}:`, error);
-      res.status(500).json({
-        success: false,
-        error: 'Failed to process cancellation',
-        sessionId: sessionId
-      });
-    }
-  });
-
-  /**
-   * Streaming chat endpoint for real-time message processing
-   * Implements Server-Sent Events (SSE) for streaming responses
-   */
   router.post("/chat/stream", chatEndpointRateLimit, async (req, res) => {
     try {
       // Start timing the request for analytics
@@ -1348,6 +1262,54 @@ router.get("/app-config.json", async (req, res) => {
       }
     }
   });
+
+  /**
+   * Chat cancellation endpoint
+   */
+  router.post('/chat/cancel/:sessionId', async (req, res) => {
+    const { sessionId } = req.params;
+    console.log(`[${sessionId}] Cancellation requested`);
+
+    try {
+      // Find and abort the active session controller
+      const controller = activeSessions.get(sessionId);
+      if (controller) {
+        console.log(`[${sessionId}] Aborting active session controller.`);
+        controller.abort(); // This signals the fetch request to stop
+        activeSessions.delete(sessionId); // Remove from active sessions
+      } else {
+        console.warn(`[${sessionId}] No active session controller found for cancellation.`);
+      }
+
+      // End the session in the tracker
+      sessionTracker.cancelSession(sessionId, 'user_cancelled');
+
+      res.json({ success: true, sessionId: sessionId, message: 'Stream cancellation processed' });
+    } catch (error) {
+      console.error(`[${sessionId}] Cancellation error:`, error);
+      res.status(500).json({ success: false, message: 'Cancellation failed', sessionId: sessionId });
+    }
+  });
+
+  /**
+   * Stream termination endpoint (used internally or for specific client-side actions)
+   */
+  router.post("/chat/stream/terminate", async (req, res) => {
+    const { sessionId } = req.body;
+    console.log(`[${sessionId || 'unknown'}] Stream termination requested`);
+
+    try {
+      if (sessionId) {
+        // End the session in the tracker
+        sessionTracker.cancelSession(sessionId, 'stream_terminated');
+      }
+      res.json({ success: true, message: 'Stream terminated' });
+    } catch (error) {
+      console.error(`Stream termination error:`, error);
+      res.status(500).json({ success: false, message: 'Termination failed' });
+    }
+  });
+
 
   // Register message API routes with circuit breaker protection
   router.use("/messages", circuitBreakerMiddleware, messageApiRouter);

@@ -774,7 +774,7 @@ export default function ChatPage() {
    */
   const handleStopAI = useCallback(async () => {
     console.debug('[Chat] handleStopAI invoked');
-    if (streamingMessageId) {
+    if (streamingMessageId && !isStoppingAI) {
       setIsStoppingAI(true);
       console.debug(`[Chat] Stopping AI response for message: ${streamingMessageId}`);
 
@@ -789,56 +789,64 @@ export default function ChatPage() {
         const wasAborted = stopStreaming(isDelivered);
         console.debug('[Chat] stopStreaming completed:', { wasAborted });
 
-        if (wasAborted) {
-          // Update UI immediately to show stopped state
-          setMessages(prev => {
-            const currentMessage = prev.find(msg => msg.id === streamingMessageId);
+        // Update UI immediately regardless of abort result
+        setMessages(prev => {
+          const currentMessage = prev.find(msg => msg.id === streamingMessageId);
+          
+          if (!currentMessage) {
+            console.debug(`[Stop AI] Message ${streamingMessageId} not found in state`);
+            return prev;
+          }
 
-            // Get the latest partial content from either the message or the ref
-            const latestContent = currentMessage?.content || partialContentRef.current || '';
+          // Get the latest partial content from either the message or the ref
+          const latestContent = currentMessage.content || partialContentRef.current || '';
 
-            // If there's no content at all (stream just started), remove the message
-            if (!latestContent || latestContent.trim().length === 0) {
-              console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} - no content generated yet`);
-              return prev.filter(msg => msg.id !== streamingMessageId);
-            }
+          // If there's no content at all (stream just started), remove the message
+          if (!latestContent || latestContent.trim().length === 0) {
+            console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} - no content generated yet`);
+            return prev.filter(msg => msg.id !== streamingMessageId);
+          }
 
-            // Preserve the partial content and mark as stopped
-            console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${streamingMessageId}`);
-            return prev.map(msg => 
-              msg.id === streamingMessageId 
-                ? {
-                    ...msg,
+          // Preserve the partial content and mark as stopped
+          console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${streamingMessageId}`);
+          return prev.map(msg => 
+            msg.id === streamingMessageId 
+              ? {
+                  ...msg,
+                  isStreaming: false,
+                  content: latestContent + "\n\n*AI response stopped by user.*",
+                  status: 'stopped',
+                  isCancelled: true,
+                  isError: false,
+                  metadata: {
+                    ...msg.metadata,
                     isStreaming: false,
-                    content: latestContent + "\n\n*AI response stopped by user.*",
-                    status: 'stopped',
                     isCancelled: true,
-                    isError: false,
-                    metadata: {
-                      ...msg.metadata,
-                      isStreaming: false,
-                      isCancelled: true,
-                      status: 'stopped',
-                      cancelledByUser: true,
-                      partialContentLength: latestContent.length,
-                      stoppedAt: new Date().toISOString()
-                    }
+                    status: 'stopped',
+                    cancelledByUser: true,
+                    partialContentLength: latestContent.length,
+                    stoppedAt: new Date().toISOString()
                   }
-                : msg
-            );
-          });
-        }
+                }
+              : msg
+          );
+        });
+
       } catch (error) {
         console.error('[Chat] Error in stopStreaming:', error);
+      } finally {
+        // Always clear streaming state, even if there was an error
+        setStreamingMessageId(null);
+        setPartialContent('');
+        setIsStoppingAI(false);
+        setIsLoading(false);
       }
-
-      // Clear streaming state immediately
-      setStreamingMessageId(null);
-      setPartialContent('');
-      setIsStoppingAI(false);
-      setIsLoading(false);
+    } else if (!streamingMessageId) {
+      console.warn('[Chat] handleStopAI called but no streaming message ID found');
+    } else {
+      console.debug('[Chat] handleStopAI called but already stopping');
     }
-  }, [streamingMessageId, messages]);
+  }, [streamingMessageId, isStoppingAI, messages]);
 
   /**
    * Handles user logout

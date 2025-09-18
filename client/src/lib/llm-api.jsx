@@ -992,7 +992,7 @@ function stopStreaming(isDelivered = false) {
     }
   }
 
-  // Abort the client-side streaming request
+  // Abort the client-side streaming request FIRST
   try {
     controllerToAbort.abort(isDelivered ? 'message_complete' : 'user_cancelled');
     console.debug("STOP_AI: Streaming request aborted successfully");
@@ -1000,12 +1000,16 @@ function stopStreaming(isDelivered = false) {
     console.warn("STOP_AI: Error aborting controller:", error);
   }
 
-  // Send server-side cancellation request
+  // Send server-side cancellation request IMMEDIATELY (don't wait for promises)
   if (sessionToCancel) {
+    console.debug(`[LLM] Sending immediate server-side cancellation for session: ${sessionToCancel}`);
+    
+    // Fire and forget - don't wait for the response
     fetch(`/api/chat/cancel/${sessionToCancel}`, { 
       method: "POST",
       headers: { 'Content-Type': 'application/json' },
-      signal: AbortSignal.timeout(3000)
+      body: JSON.stringify({ reason: 'user_cancelled' }),
+      signal: AbortSignal.timeout(2000) // Shorter timeout
     }).then(response => {
       if (response.ok) {
         console.debug(`[LLM] Server-side cancellation successful for session: ${sessionToCancel}`);
@@ -1015,6 +1019,14 @@ function stopStreaming(isDelivered = false) {
     }).catch(error => {
       console.warn("[LLM] Server-side cancellation request failed:", error.message);
     });
+
+    // Also try direct termination via additional endpoint
+    fetch(`/api/chat/stream/terminate`, {
+      method: "POST", 
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ sessionId: sessionToCancel }),
+      signal: AbortSignal.timeout(1000)
+    }).catch(() => {}); // Silent fallback
   }
 
   // Clear the stream state
