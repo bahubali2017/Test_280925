@@ -608,7 +608,10 @@ export default function ChatPage() {
           // Check if this was a deliberate abort/stop action
           const isManualAbort = error && typeof error === 'object' && 
             (('name' in error && error.name === 'AbortError') || 
-             ('message' in error && typeof error.message === 'string' && error.message.includes('Request aborted')));
+             ('message' in error && typeof error.message === 'string' && 
+              (error.message.includes('Request aborted') || 
+               error.message.includes('Stream stopped by user') ||
+               error.message.includes('cancelled'))));
           if (isManualAbort) {
             console.debug(`Message ${currentStreamingId} was manually aborted, adding cancellation message`);
 
@@ -691,19 +694,15 @@ export default function ChatPage() {
    * Handles stopping an in-progress AI response - Enhanced with proper state management
    */
   const handleStopAI = useCallback(async () => {
-    console.log('[STOP-DEBUG] handleStopAI invoked!');
-    console.log('[STOP-DEBUG] currentStreamingId:', currentStreamingId);
-    console.log('[STOP-DEBUG] isStoppingAI:', isStoppingAI);
-
     // CRITICAL FIX: Check if we have an active streaming message
     if (!currentStreamingId) {
-      console.warn('[STOP-DEBUG] handleStopAI called but no streaming message ID found');
+      console.warn('[Chat] handleStopAI called but no streaming message ID found');
       return;
     }
 
     // CRITICAL FIX: Prevent multiple simultaneous stop operations
     if (isStoppingAI) {
-      console.log('[STOP-DEBUG] handleStopAI called but already stopping');
+      console.debug('[Chat] handleStopAI called but already stopping');
       return;
     }
 
@@ -735,10 +734,10 @@ export default function ChatPage() {
       );
 
       // Get stopStreaming from cached module and call it immediately
-      console.log('[STOP-DEBUG] About to call stopStreaming...');
+      console.debug('[Chat] About to call stopStreaming...');
       const { stopStreaming } = await getLLMApi();
       const wasAborted = stopStreaming();
-      console.log('[STOP-DEBUG] stopStreaming completed:', { wasAborted });
+      console.debug('[Chat] stopStreaming completed:', { wasAborted });
 
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
