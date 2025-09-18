@@ -1,0 +1,157 @@
+🔧 STRICT AGENT PROMPT — STOP AI BUTTON (FINAL VIDEO-VALIDATED FIX)
+Objective
+
+Fix the Stop AI button so it always renders and actually cancels the current AI stream.
+Evidence from video:
+
+Streaming continues server-side (STREAM_ENDED - completed normally)
+
+Stop AI button never appears in UI → root cause is streamingMessageId mismatch.
+
+Guardrails
+
+❌ Do not modify triage, ATD, admin metrics, medical safety layers.
+
+❌ Do not introduce new state variables beyond streamingMessageId.
+
+❌ Do not add debugging spam (only minimal lifecycle logs allowed).
+
+Phase 1 — Correct streaming state
+
+File: client/src/pages/ChatPage.jsx
+
+Ensure a single state for active stream:
+
+const [streamingMessageId, setStreamingMessageId] = useState(null);
+
+
+When starting a new AI message:
+
+Generate a stable assistantMessageId = crypto.randomUUID().
+
+Push new assistant placeholder { id: assistantMessageId, isUser: false, status: 'streaming', content: '' }.
+
+Set setStreamingMessageId(assistantMessageId).
+
+Pass this assistantMessageId into sendMessage() (so both frontend & backend know it).
+
+On stream completion (normal or error):
+
+Call setStreamingMessageId(null).
+
+On Stop AI:
+
+Call setStreamingMessageId(null) immediately, before aborting.
+
+Update that message’s status to "stopped" and preserve partial content.
+
+Phase 2 — Render Stop AI button unconditionally during stream
+
+File: client/src/components/MessageBubble.jsx
+
+Replace button rendering logic with:
+
+{!isUser && isStreaming && typeof onStopAI === 'function' && (
+  <button
+    className="stop-ai"
+    onClick={(e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      onStopAI();
+    }}
+  >
+    Stop AI
+  </button>
+)}
+
+
+Remove conditions like status !== 'failed'.
+
+Do not wrap in arrow IIFEs.
+
+Add one debug log only: console.debug('[StopAI] Button rendered for message', id);
+
+Phase 3 — Pass props correctly
+
+File: client/src/pages/ChatPage.jsx
+
+When mapping messages:
+
+<MessageBubble
+  key={msg.id}
+  {...msg}
+  isStreaming={msg.id === streamingMessageId}
+  onStopAI={msg.id === streamingMessageId ? handleStopAI : undefined}
+/>
+
+
+This ensures the button always appears for the currently streaming assistant message.
+
+Phase 4 — Client-side stop (clean)
+
+File: client/src/lib/llm-api.jsx
+
+In streaming handler catch:
+
+if (err.name === 'AbortError') {
+  console.debug('[StopAI] Stream aborted cleanly');
+  return; // do NOT mark as failed
+}
+
+
+In stopStreaming():
+
+Abort controller.
+
+Do not override message status (ChatPage does that).
+
+Phase 5 — Server-side stop
+
+File: server/routes.js
+
+Maintain activeSessions = new Map().
+
+When client sends X-Session-Id, reuse it for session tracking.
+
+On cancel:
+
+app.post('/api/chat/cancel/:sessionId', (req, res) => {
+  const ctrl = activeSessions.get(req.params.sessionId);
+  if (ctrl) {
+    ctrl.abort();
+    activeSessions.delete(req.params.sessionId);
+    return res.json({ cancelled: true });
+  }
+  res.json({ cancelled: false });
+});
+
+
+Ensure signal: ctrl.signal is passed into the provider’s API request.
+
+Phase 6 — Tests (must pass)
+
+Start AI stream → button visible within 1s.
+
+Click Stop AI →
+
+Button disappears, message shows partial content with "stopped".
+
+Server log shows [STREAM] aborted not completed normally.
+
+Ask new question → works immediately, no validation errors.
+
+Never see "failed" status after a manual stop.
+
+Acceptance Criteria
+
+Button always visible when AI is streaming.
+
+Immediate termination on click (both frontend + backend).
+
+Partial response preserved with "stopped" status.
+
+No wasted credits (backend abort confirmed).
+
+No duplicate state variables.
+
+Minimal logs only.

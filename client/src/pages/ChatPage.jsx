@@ -498,8 +498,9 @@ export default function ChatPage() {
     // Save the message for potential retries
     setLastUserMessage(newMessage);
 
-    // Create a unique ID for this message pair
-    const messageId = Date.now().toString();
+    // Create a unique ID for this message pair using stable crypto.randomUUID()
+    const messageId = crypto.randomUUID();
+    const assistantMessageId = crypto.randomUUID();
     const sessionId = user?.id ? `user_${user.id}_${messageId}` : `anon_${messageId}`;
 
     // Add user message
@@ -528,11 +529,8 @@ export default function ChatPage() {
       // Get cached llm-api module
       const { sendMessage } = await getLLMApi();
 
-      // Create the response ID but don't add to messages yet
-      const responseId = `${messageId}_response`;
-      
-      // Set as current streaming message for display
-      setStreamingMessageId(responseId);
+      // Set as current streaming message for display using stable assistantMessageId
+      setStreamingMessageId(assistantMessageId);
       setPartialContent('');
       
       // Track if we've added the message to the array yet
@@ -551,7 +549,7 @@ export default function ChatPage() {
           setMessages((prev) => [
             ...prev,
             {
-              id: responseId,
+              id: assistantMessageId,
               content: content, // CRITICAL FIX: Start with actual content, not empty
               isUser: false,
               timestamp: new Date(),
@@ -568,7 +566,7 @@ export default function ChatPage() {
           // CRITICAL FIX: Update message content incrementally on every streaming update
           setMessages((prev) => 
             prev.map(msg => 
-              msg.id === responseId 
+              msg.id === assistantMessageId 
                 ? {
                     ...msg,
                     content: content, // Update with latest content
@@ -586,7 +584,7 @@ export default function ChatPage() {
           // Update message with layer processing status
           setMessages((prev) => 
             prev.map(msg => 
-              msg.id === responseId 
+              msg.id === assistantMessageId 
                 ? {
                     ...msg,
                     metadata: {
@@ -606,7 +604,7 @@ export default function ChatPage() {
         if (messageAdded && metadata.dynamicDisclaimers) {
           setMessages((prev) => 
             prev.map(msg => 
-              msg.id === responseId 
+              msg.id === assistantMessageId 
                 ? {
                     ...msg,
                     metadata: {
@@ -624,14 +622,14 @@ export default function ChatPage() {
 
         // If this is the final update (streaming complete)
         if (metadata.isComplete) {
-          console.debug(`[Chat] Stream complete for message ${responseId}, updating status to delivered`);
+          console.debug(`[Chat] Stream complete for message ${assistantMessageId}, updating status to delivered`);
           
           // Only finalize if we have actual content and the message was added
           if (messageAdded && content && content.trim().length > 0) {
             // Update the message with final content and metadata
             setMessages((prev) => 
               prev.map(msg => 
-                msg.id === responseId 
+                msg.id === assistantMessageId 
                   ? {
                       ...msg,
                       content: content,
@@ -651,7 +649,7 @@ export default function ChatPage() {
             );
           } else {
             // No content received - don't add empty message to history
-            console.debug(`[Chat] Stream completed but no content for ${responseId}, not adding to message history`);
+            console.debug(`[Chat] Stream completed but no content for ${assistantMessageId}, not adding to message history`);
           }
 
           // Clear streaming state immediately to prevent any lingering animations
@@ -664,7 +662,7 @@ export default function ChatPage() {
       const result = await sendMessage(
         newMessage, 
         conversationHistory,
-        { sessionId }, // Pass sessionId in options
+        { sessionId, assistantMessageId }, // Pass sessionId and assistantMessageId in options
         handleStreamingUpdate // Streaming callback
       );
 

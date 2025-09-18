@@ -1338,7 +1338,9 @@ deliveredError.deliveredContent = accumulatedText;
 throw deliveredError;
 }
 // Check if this was a cancellation by the user or if the message was already delivered
-const isCancelled = signal && signal.aborted;
+// Improved AbortError detection - check both signal state and error type
+const isAbortError = error.name === 'AbortError' || error.message?.includes('aborted');
+const isCancelled = (signal && signal.aborted) || isAbortError;
 const wasDelivered = messageDeliveryState.messageDelivered === true;
 // If the message was already delivered, we should preserve that state
 // and not show any error or cancellation UI
