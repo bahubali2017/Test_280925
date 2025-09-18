@@ -25,9 +25,24 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Never cache index.html (prevents reload loops)
+  // Network-first strategy for index.html (prevents stale bundles)
   if (url.pathname === "/" || url.pathname.endsWith("index.html")) {
-    return event.respondWith(fetch(request));
+    return event.respondWith(
+      fetch(request)
+        .then(response => {
+          // Always serve fresh network response for HTML
+          if (response.ok) {
+            // Clone and cache the fresh response for offline fallback
+            const copy = response.clone();
+            caches.open(CACHE_NAME).then(cache => cache.put(request, copy));
+          }
+          return response;
+        })
+        .catch(() => {
+          // Fallback to cache only if network fails (offline scenario)
+          return caches.match(request);
+        })
+    );
   }
 
   // Skip navigation requests (SPA routes)

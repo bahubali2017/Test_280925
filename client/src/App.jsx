@@ -56,18 +56,40 @@ function Router() {
 export default function App() {
   const { supabaseUp } = useAuthAvailability();
 
-  // DISABLED: Version checking system causing infinite reload loops
-  // Service worker controllerchange listener for automatic reload after deploy
+  // Service worker registration with update forcing (prevents stale bundles)
   useEffect(() => {
-    // DISABLED: This was causing infinite reload loops
-    // if ("serviceWorker" in navigator) {
-    //   navigator.serviceWorker.addEventListener("controllerchange", () => {
-    //     window.location.reload();
-    //   });
-    // }
-    
-    // DISABLED: Version checking initialization
-    // initializeVersionChecking();
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/sw.js")
+        .then(registration => {
+          console.log("[SW] Service worker registered:", registration);
+          
+          // Force update check on app load to prevent stale bundles
+          registration.update();
+          
+          // Listen for new service worker installations
+          registration.addEventListener("updatefound", () => {
+            const newWorker = registration.installing;
+            if (newWorker) {
+              newWorker.addEventListener("statechange", () => {
+                if (newWorker.state === "installed" && navigator.serviceWorker.controller) {
+                  // New service worker is available, reload to activate it
+                  console.log("[SW] New service worker available, reloading...");
+                  window.location.reload();
+                }
+              });
+            }
+          });
+          
+          // Handle controller changes (when new SW becomes active)
+          navigator.serviceWorker.addEventListener("controllerchange", () => {
+            console.log("[SW] Service worker controller changed, reloading...");
+            window.location.reload();
+          });
+        })
+        .catch(error => {
+          console.error("[SW] Service worker registration failed:", error);
+        });
+    }
   }, []);
 
   return (

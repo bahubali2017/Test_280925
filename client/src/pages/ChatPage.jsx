@@ -264,15 +264,34 @@ export default function ChatPage() {
       // Get cached llm-api module
       const { sendMessage } = await getLLMApi();
 
-      // Create the response ID but don't add to messages yet
+      // Create the response ID and immediately add placeholder message
       const responseId = `${retryId}_response`;
+      
+      // CRITICAL FIX: Immediately push placeholder assistant message
+      // This ensures MessageBubble exists instantly so Stop AI button can render
+      setMessages(prev => [
+        ...prev,
+        {
+          id: responseId,
+          content: '',
+          isUser: false,
+          timestamp: new Date(),
+          sessionId: retryId,
+          isStreaming: true,
+          status: 'pending',
+          metadata: {
+            isStreaming: true,
+            isRetry: true
+          }
+        }
+      ]);
       
       // Set as current streaming message for display
       setStreamingMessageId(responseId);
       setPartialContent('');
       
       // Track if we've added the message to the array yet
-      let messageAdded = false;
+      let messageAdded = true; // Already added above
 
       // Streaming update handler
       const handleStreamingUpdate = (content, metadata = {}) => {
@@ -280,26 +299,8 @@ export default function ChatPage() {
         setPartialContent(content);
         partialContentRef.current = content;
         
-        // Add the assistant message only when first token arrives (not empty content)
-        if (!messageAdded && content && content.trim().length > 0) {
-          messageAdded = true;
-          setMessages(prev => [
-            ...prev,
-            {
-              id: responseId,
-              content: content, // CRITICAL FIX: Start with actual content, not empty
-              isUser: false,
-              timestamp: new Date(),
-              sessionId: retryId,
-              isStreaming: true,
-              status: 'pending',
-              metadata: {
-                isStreaming: true,
-                isRetry: true
-              }
-            }
-          ]);
-        } else if (messageAdded && content && content.trim().length > 0) {
+        // Update the existing placeholder message with streaming content
+        if (content && content.trim().length > 0) {
           // CRITICAL FIX: Update message content incrementally on every streaming update
           setMessages(prev => 
             prev.map(msg => 
@@ -529,12 +530,30 @@ export default function ChatPage() {
       // Get cached llm-api module
       const { sendMessage } = await getLLMApi();
 
+      // CRITICAL FIX: Immediately push placeholder assistant message
+      // This ensures MessageBubble exists instantly so Stop AI button can render
+      setMessages(prev => [
+        ...prev,
+        {
+          id: assistantMessageId,
+          content: '',
+          isUser: false,
+          timestamp: new Date(),
+          sessionId: sessionId,
+          isStreaming: true,
+          status: 'pending',
+          metadata: {
+            isStreaming: true
+          }
+        }
+      ]);
+      
       // Set as current streaming message for display using stable assistantMessageId
       setStreamingMessageId(assistantMessageId);
       setPartialContent('');
       
       // Track if we've added the message to the array yet
-      let messageAdded = false;
+      let messageAdded = true; // Already added above
 
       // Phase 7: Enhanced streaming update handler with real-time medical layer feedback
       const handleStreamingUpdate = (content, metadata = {}) => {
@@ -543,26 +562,8 @@ export default function ChatPage() {
         setPartialContent(content);
         partialContentRef.current = content;
         
-        // Add the assistant message only when first token arrives (not empty content)
-        if (!messageAdded && content && content.trim().length > 0) {
-          messageAdded = true;
-          setMessages((prev) => [
-            ...prev,
-            {
-              id: assistantMessageId,
-              content: content, // CRITICAL FIX: Start with actual content, not empty
-              isUser: false,
-              timestamp: new Date(),
-              sessionId: metadata.sessionId || sessionId, // Use backend sessionId if available
-              isStreaming: true,
-              status: 'pending',
-              metadata: {
-                isStreaming: true,
-                layerStatus: 'parsing' // Phase 7: Initial medical layer processing status
-              }
-            }
-          ]);
-        } else if (messageAdded && content && content.trim().length > 0) {
+        // Update the existing placeholder message with streaming content
+        if (content && content.trim().length > 0) {
           // CRITICAL FIX: Update message content incrementally on every streaming update
           setMessages((prev) => 
             prev.map(msg => 
@@ -1034,6 +1035,33 @@ export default function ChatPage() {
             <div ref={messagesEndRef} />
           </div>
         </div>
+
+        {/* GLOBAL STOP AI BUTTON (Backup) - Appears when streaming */}
+        {streamingMessageId && (
+          <div className="flex justify-center mb-4">
+            <Button
+              onClick={handleStopAI}
+              disabled={isStoppingAI}
+              variant="outline"
+              data-testid="global-stop-ai-button"
+              className="px-6 py-2 bg-red-50 hover:bg-red-100 border-red-200 hover:border-red-300 text-red-700 hover:text-red-800 dark:bg-red-950/50 dark:hover:bg-red-950/70 dark:border-red-800 dark:hover:border-red-700 dark:text-red-300 dark:hover:text-red-200 font-medium rounded-full shadow-sm hover:shadow-md transition-all duration-200"
+            >
+              {isStoppingAI ? (
+                <>
+                  <div className="inline-block w-4 h-4 mr-2 border-2 border-red-400 border-t-transparent rounded-full animate-spin"></div>
+                  Stopping AI...
+                </>
+              ) : (
+                <>
+                  <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <rect x="6" y="6" width="12" height="12" rx="2" ry="2"></rect>
+                  </svg>
+                  Stop AI Response
+                </>
+              )}
+            </Button>
+          </div>
+        )}
 
         {/* Message Input */}
         <form onSubmit={handleSendMessage} className="flex space-x-2 relative">
