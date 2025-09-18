@@ -249,14 +249,16 @@ retryDelay: 1000
 * @returns {object} Standardized metadata object
 */
 function createResponseMetadata(requestTime, data, queryIntent, options = {}) {
+const safeData = data && typeof data === 'object' ? data : {};
+const safeOptions = options && typeof options === 'object' ? options : {};
 return {
 requestTime,
-promptTokens: data?.usage?.prompt_tokens || 0,
-completionTokens: data?.usage?.completion_tokens || 0,
-totalTokens: data?.usage?.total_tokens || 0,
-modelName: data?.model || options.modelName || "deepseek-chat",
+promptTokens: (safeData.usage && typeof safeData.usage === 'object' ? safeData.usage.prompt_tokens : 0) || 0,
+completionTokens: (safeData.usage && typeof safeData.usage === 'object' ? safeData.usage.completion_tokens : 0) || 0,
+totalTokens: (safeData.usage && typeof safeData.usage === 'object' ? safeData.usage.total_tokens : 0) || 0,
+modelName: safeData.model || safeOptions.modelName || "deepseek-chat",
 ...(queryIntent ? { queryIntent: extractQueryIntentMetadata(queryIntent) } : {}),
-...options
+...safeOptions
 };
 }
 /**
@@ -366,7 +368,7 @@ return defaultSuggestions;
 * @returns {Promise<any>} Result of the successful API call
 * @throws {Error} If all retries fail
 */
-async function withExponentialBackoff(apiCall, maxRetries = 3, initialDelay = 1000, onRetry = null) {
+async function withExponentialBackoff(apiCall, maxRetries = 3, initialDelay = 1000, onRetry) {
 let lastError = null;
 let delay = initialDelay;
 for (let attempt = 0; attempt <= maxRetries; attempt++) {
@@ -379,7 +381,7 @@ lastError = error;
 // On the last attempt, don't retry
 if (attempt === maxRetries) break;
 // Execute optional retry callback
-if (onRetry) onRetry(error, attempt, delay);
+if (onRetry && typeof onRetry === 'function') onRetry(error, attempt, delay);
 // Wait for the calculated delay
 await new Promise(resolve => window.setTimeout(resolve, delay));
 // Exponential backoff: double the delay for next attempt
@@ -628,8 +630,7 @@ return promptParts.join("\n\n");
 * Sends a message to the Medical AI Assistant with optional streaming support
 * @param {string} message - The message to send
 * @param {Array<{role: string, content: string}>} [history=[]] - Previous conversation history
-* @param {object} [_options={}] - Additional options for the request (unused, kept for API compatibility)
-* @param options
+* @param {object} [options={}] - Additional options for the request
 * @param {Function} [onStreamingUpdate=null] - Callback for streaming updates
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
@@ -638,6 +639,8 @@ async function sendMessage(message, history = [], options = {}, onStreamingUpdat
 if (!message || typeof message !== "string" || message.trim() === "") {
 throw createAPIError("validation", "Message cannot be empty");
 }
+
+const { abortSignal = null, ...otherOptions } = options || {};
 
 console.debug('[AI] Sending message directly to backend API:', message.substring(0, 100) + '...');
 
@@ -679,7 +682,7 @@ console.debug('[AI] Using standard endpoint');
       },
       body: JSON.stringify(requestBody),
       credentials: "include",
-      signal: options.abortSignal // Use the provided abortSignal
+      signal: abortSignal // Use the provided abortSignal
     });
 // Original non-streaming handling code:
     // const response = await apiRequest('POST', endpoint, requestBody);
@@ -724,6 +727,11 @@ console.debug('[AI] Using standard endpoint');
 console.error('[AI] Error in sendMessage:', error);
 throw error;
 }
+  // Always return a response to satisfy function signature
+  return {
+    content: "Error: Unable to process request",
+    metadata: { error: true, requestTime: Date.now() - startTime }
+  };
 } // Close sendMessage function
 
 /**
@@ -887,21 +895,25 @@ let buffer = '';
 return {
 content: accumulatedText,
 metadata: {
-requestTime: metadata.requestTime || 0,
-sessionId: metadata.sessionId,
-isHighRisk: requestBody.isHighRisk,
+requestTime: (typeof metadata === 'object' && metadata !== null && 'requestTime' in metadata ? metadata.requestTime : 0),
+sessionId: (typeof metadata === 'object' && metadata !== null && 'sessionId' in metadata ? metadata.sessionId : undefined),
+isHighRisk: (typeof requestBody === 'object' && requestBody !== null && 'isHighRisk' in requestBody ? requestBody.isHighRisk : false),
 attemptsMade: 1,
-modelName: metadata.model || 'deepseek-chat',
-usage: metadata.tokensEstimate ? { total_tokens: metadata.tokensEstimate } : undefined,
+modelName: (typeof metadata === 'object' && metadata !== null && 'model' in metadata ? metadata.model : 'deepseek-chat'),
+usage: (typeof metadata === 'object' && metadata !== null && 'tokensEstimate' in metadata && metadata.tokensEstimate ? { total_tokens: metadata.tokensEstimate } : undefined),
 ...metadata
 }
 };
 } catch (error) {
 // Handle AbortError (user cancellation) differently from other errors
-if (error.name === 'AbortError' || abortSignal?.aborted) {
+const typedError = error;
+if ((typedError && typeof typedError === 'object' && 'name' in typedError && typedError.name === 'AbortError') || abortSignal?.aborted) {
   console.debug("Stream aborted, breaking read loop");
-  // Don't throw - let the calling function handle this as a cancellation
-  return;
+  // Return cancelled response instead of undefined
+  return {
+    content: "Request was cancelled",
+    metadata: { cancelled: true, requestTime: 0 }
+  };
 }
 console.error('[AI] Streaming error:', error);
 throw error;
@@ -934,7 +946,9 @@ function resetStreamState() {
     controller: null,
     sessionId: null,
     messageId: null,
-    isActive: false
+    isActive: false,
+    startTime: null,
+    lastActivity: null
   };
 }
 
@@ -984,20 +998,32 @@ function stopStreaming(isDelivered = false) {
   console.debug(`[LLM] Stopping stream for session: ${sessionToCancel}, message: ${messageIdToStop}`);
 
   // Clear any pending timeouts immediately
-  if (typeof window !== 'undefined' && window.globalErrorTimeout) {
-    console.debug("Clearing global error timeout on stop");
-    clearTimeout(window.globalErrorTimeout);
-    window.globalErrorTimeout = null;
+  if (typeof window !== 'undefined') {
+    const globalWindow = window;
+    // @ts-ignore - globalErrorTimeout is a custom property
+    if (globalWindow.globalErrorTimeout) {
+      console.debug("Clearing global error timeout on stop");
+      // @ts-ignore - globalErrorTimeout is a custom property
+      clearTimeout(globalWindow.globalErrorTimeout);
+      // @ts-ignore - globalErrorTimeout is a custom property
+      globalWindow.globalErrorTimeout = null;
+    }
   }
 
   // Cancel the reader if it exists
-  if (typeof window !== 'undefined' && window.globalStreamReader) {
-    try {
-      console.debug("STOP_AI: Cancelling active reader immediately");
-      window.globalStreamReader.cancel("User cancelled");
-      window.globalStreamReader = null;
-    } catch (e) {
-      console.debug("Reader already cancelled or unavailable:", e?.message || e);
+  if (typeof window !== 'undefined') {
+    const globalWindow = window;
+    // @ts-ignore - globalStreamReader is a custom property
+    if (globalWindow.globalStreamReader) {
+      try {
+        console.debug("STOP_AI: Cancelling active reader immediately");
+        // @ts-ignore - globalStreamReader is a custom property
+        globalWindow.globalStreamReader.cancel("User cancelled");
+        // @ts-ignore - globalStreamReader is a custom property
+        globalWindow.globalStreamReader = null;
+      } catch (e) {
+        console.debug("Reader already cancelled or unavailable:", typeof e === 'object' && e !== null && 'message' in e ? e.message : String(e));
+      }
     }
   }
 
@@ -1057,7 +1083,7 @@ function stopStreaming(isDelivered = false) {
 /**
  * Enhanced sendMessage with integrated medical safety processing
  * @param {string} message - User message
- * @param {Array} history - Conversation history
+ * @param {Array<object>} history - Conversation history
  * @param {object} options - Additional options
  * @param {string} [options.region='US'] - User's region
  * @param {object} [options.demographics] - User demographics
@@ -1070,7 +1096,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
   const {
     region = 'US',
     demographics = {},
-    sessionId = null,
+    sessionId,
     onStreamingUpdate = null,
     abortSignal = null,
     ...otherOptions
@@ -1099,7 +1125,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
     });
 
     // Enhanced streaming callback that includes safety information
-    const enhancedStreamingCallback = onStreamingUpdate ? (content, metadata = {}) => {
+    const enhancedStreamingCallback = (onStreamingUpdate && typeof onStreamingUpdate === 'function') ? (/** @type {any} */ content, metadata = {}) => {
       onStreamingUpdate(content, {
         ...metadata,
         medicalSafety: {
@@ -1108,7 +1134,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
           hasWarnings: safetyResult.triageWarning !== null
         }
       });
-    } : null;
+    } : undefined;
 
     let aiResponse;
 
@@ -1151,7 +1177,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
         aiResponse = await sendMessage(message, history, {
           ...otherOptions,
           abortSignal
-        }, onStreamingUpdate);
+        }, (onStreamingUpdate && typeof onStreamingUpdate === 'function') ? onStreamingUpdate : undefined);
       }
     }
 
@@ -1242,7 +1268,7 @@ function extractMedicalSafetyInfo(response) {
  * @param {QueryIntent} [queryIntent=null] - Query intent analysis results
  * @returns {Promise<APIResponse>} The AI response with metadata
  */
-async function sendMessageClientSide(message, history = [], queryIntent = null) {
+async function sendMessageClientSide(message, history = [], queryIntent) {
 const config = getDeepSeekConfig();
 // Default isHighRisk if no query intent
 const isHighRisk = queryIntent ? (queryIntent.isHighRisk || queryIntent.isMentalHealthCrisis) : false;
@@ -1258,7 +1284,7 @@ const customPrompt = queryIntent ? createCustomPrompt(queryIntent) : '';
 const messages = prepareMessages(message, history, true, customPrompt);
 // Use withExponentialBackoff helper for client-side retries
 return await withExponentialBackoff(
-async (attempt) => {
+async (/** @type {number} */ attempt) => {
 // Start timing the request
 const startTime = Date.now();
 const response = await fetch(config.endpoint, {
@@ -1288,7 +1314,7 @@ const rawContent = data.choices[0]?.message?.content ||
 // Calculate request time
 const requestTime = Date.now() - startTime;
 // Add appropriate disclaimers using helper function
-const finalContent = addDisclaimers(rawContent, queryIntent, isHighRisk);
+const finalContent = addDisclaimers(rawContent, queryIntent || null, isHighRisk);
 // Create standardized response metadata using helper function
 const metadata = createResponseMetadata(
 requestTime, 
@@ -1307,7 +1333,7 @@ return { content: finalContent, metadata };
 Math.min(config.maxRetries, 2), // Limit client-side retries
 config.retryDelay,
 // Log retry attempts
-(error, attempt, delay) => {
+(/** @type {any} */ error, /** @type {number} */ attempt, /** @type {number} */ delay) => {
 console.error(`Client-side API retry attempt ${attempt + 1}/2 failed:`, error);
 console.info(`Retrying direct API call in ${Math.round(delay/100)/10}s...`);
 }
