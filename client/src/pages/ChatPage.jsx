@@ -65,7 +65,7 @@ export default function ChatPage() {
   console.log('[ChatPage] Component rendering');
   
   /** @type {[Array<Message>, React.Dispatch<React.SetStateAction<Array<Message>>>]} */
-  const [messages, setMessages] = useState([]);
+  const [messages, setMessages] = useState(/** @type {Array<Message>} */([]));
   /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [newMessage, setNewMessage] = useState('');
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
@@ -76,14 +76,14 @@ export default function ChatPage() {
   const [retryCount, setRetryCount] = useState(0);
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
-  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
+  /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
   const [streamingMessageId, setStreamingMessageId] = useState(null);
   /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [partialContent, setPartialContent] = useState('');
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isStoppingAI, setIsStoppingAI] = useState(false);
   /** @type {[Array<string>, React.Dispatch<React.SetStateAction<Array<string>>>]} */
-  const [starterQuestions, setStarterQuestions] = useState([]);
+  const [starterQuestions, setStarterQuestions] = useState(/** @type {Array<string>} */([]));
 
   const { user, logout, isLoading: authLoading } = useAuth();
   const [, setLocation] = useLocation();
@@ -786,16 +786,6 @@ export default function ChatPage() {
   };
 
   /**
-   * Create stable reference for onStopAI prop to prevent race conditions
-   */
-  const getStopHandler = useCallback((messageId) => {
-    if (streamingMessageId && messageId === streamingMessageId) {
-      return handleStopAI;
-    }
-    return undefined; // Use undefined instead of null to prevent conditional rendering issues
-  }, [streamingMessageId, handleStopAI]);
-
-  /**
    * Handles stopping an in-progress AI response - Enhanced with proper state management
    */
   const handleStopAI = useCallback(async () => {
@@ -924,6 +914,16 @@ export default function ChatPage() {
       setIsLoading(false);
     }
   }, [streamingMessageId, isStoppingAI, messages]);
+
+  /**
+   * Create stable reference for onStopAI prop to prevent race conditions
+   */
+  const getStopHandler = useCallback((messageId) => {
+    if (streamingMessageId && messageId === streamingMessageId) {
+      return handleStopAI;
+    }
+    return undefined; // Use undefined instead of null to prevent conditional rendering issues
+  }, [streamingMessageId, handleStopAI]);
 
   /**
    * Handles user logout
