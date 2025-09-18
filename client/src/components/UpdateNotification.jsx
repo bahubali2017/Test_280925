@@ -1,3 +1,4 @@
+/* global navigator, setTimeout, sessionStorage */
 import { useState, useEffect } from 'react';
 
 /**
