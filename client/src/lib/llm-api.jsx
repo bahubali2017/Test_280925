@@ -662,11 +662,13 @@ const endpoint = shouldStream ? '/api/chat/stream' : '/api/chat';
 if (shouldStream) {
 // Handle streaming response
 console.debug('[AI] Using streaming endpoint');
-// Clear any existing stream state before starting new stream
-currentStream.controller = null;
-currentStream.sessionId = null;
-currentStream.messageId = null;
-currentStream.isActive = false;
+// CRITICAL FIX: Reset stream state completely before starting new stream
+      currentStream.controller = null;
+      currentStream.sessionId = null;
+      currentStream.messageId = null;
+      currentStream.isActive = false;
+      currentStream.startTime = null;
+      currentStream.lastActivity = null;
 return await handleStreamingResponse(endpoint, requestBody, onStreamingUpdate, options);
 } else {
 // Handle regular response  
@@ -710,6 +712,13 @@ console.debug('[AI] Starting streaming request to', endpoint);
 
 let accumulatedText = '';
 let metadata = {};
+// CRITICAL FIX: Reset stream state completely before starting new stream
+      currentStream.controller = null;
+      currentStream.sessionId = null;
+      currentStream.messageId = null;
+      currentStream.isActive = false;
+      currentStream.startTime = null;
+      currentStream.lastActivity = null;
 const abortSignal = options.abortSignal || new GlobalAbortController().signal;
 
 try {
@@ -863,7 +872,7 @@ usage: metadata.tokensEstimate ? { total_tokens: metadata.tokensEstimate } : und
 } catch (error) {
 // Handle AbortError (user cancellation) differently from other errors
 if (error.name === 'AbortError' || abortSignal?.aborted) {
-  console.debug('[AI] Stream aborted by user - not treating as error');
+  console.debug("Stream aborted, breaking read loop");
   // Don't throw - let the calling function handle this as a cancellation
   return;
 }
@@ -874,13 +883,15 @@ throw error;
 
 /**
 * Global stream management object - single source of truth
-* @type {{controller: AbortController|null, sessionId: string|null, messageId: string|null, isActive: boolean}}
+* @type {{controller: AbortController|null, sessionId: string|null, messageId: string|null, isActive: boolean, startTime: number|null, lastActivity: number|null}}
 */
 let currentStream = {
   controller: null,
   sessionId: null,
   messageId: null,
-  isActive: false
+  isActive: false,
+  startTime: null,
+  lastActivity: null
 };
 
 /**
@@ -1067,6 +1078,8 @@ try {
 const newController = new GlobalAbortController();
 currentStream.controller = newController;
 currentStream.isActive = true;
+currentStream.startTime = Date.now();
+currentStream.lastActivity = Date.now();
 // Use the provided signal or the one from our controller
 const abortSignal = signal || newController.signal;
 // Set an error timeout to handle real connection issues

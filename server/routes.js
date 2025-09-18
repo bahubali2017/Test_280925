@@ -1264,30 +1264,55 @@ router.get("/app-config.json", async (req, res) => {
   });
 
   /**
-   * Chat cancellation endpoint
+   * Chat cancellation endpoint - Enhanced with immediate termination
    */
   router.post('/chat/cancel/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
-    console.log(`[${sessionId}] Cancellation requested`);
+    console.log(`[${sessionId}] IMMEDIATE CANCELLATION requested`);
 
     try {
-      // Find and abort the active session controller
-      const controller = activeSessions.get(sessionId);
-      if (controller) {
-        console.log(`[${sessionId}] Aborting active session controller.`);
-        controller.abort(); // This signals the fetch request to stop
-        activeSessions.delete(sessionId); // Remove from active sessions
-      } else {
-        console.warn(`[${sessionId}] No active session controller found for cancellation.`);
-      }
+      // IMMEDIATE RESPONSE: Send success immediately to prevent client timeout
+      res.json({ 
+        success: true, 
+        sessionId: sessionId, 
+        message: 'Stream cancellation initiated',
+        timestamp: new Date().toISOString()
+      });
 
-      // End the session in the tracker
-      sessionTracker.cancelSession(sessionId, 'user_cancelled');
+      // BACKGROUND CLEANUP: Process actual cancellation asynchronously
+      process.nextTick(() => {
+        try {
+          // Find and abort the active session controller
+          const controller = activeSessions.get(sessionId);
+          if (controller) {
+            console.log(`[${sessionId}] Aborting active session controller immediately`);
+            controller.abort('user_cancelled_immediate'); // This signals the fetch request to stop
+            activeSessions.delete(sessionId); // Remove from active sessions
+            console.log(`[${sessionId}] Session controller aborted and removed from active sessions`);
+          } else {
+            console.warn(`[${sessionId}] No active session controller found for cancellation`);
+          }
 
-      res.json({ success: true, sessionId: sessionId, message: 'Stream cancellation processed' });
+          // End the session in the tracker
+          sessionTracker.cancelSession(sessionId, 'user_cancelled');
+          
+          console.log(`[${sessionId}] Cancellation cleanup completed`);
+        } catch (cleanupError) {
+          console.error(`[${sessionId}] Background cancellation cleanup error:`, cleanupError);
+        }
+      });
+
     } catch (error) {
       console.error(`[${sessionId}] Cancellation error:`, error);
-      res.status(500).json({ success: false, message: 'Cancellation failed', sessionId: sessionId });
+      // Still try to send a response if headers haven't been sent
+      if (!res.headersSent) {
+        res.status(500).json({ 
+          success: false, 
+          message: 'Cancellation failed', 
+          sessionId: sessionId,
+          error: error.message 
+        });
+      }
     }
   });
 

@@ -774,81 +774,130 @@ export default function ChatPage() {
   };
 
   /**
-   * Handles stopping an in-progress AI response
+   * Handles stopping an in-progress AI response - Enhanced with proper state management
    */
   const handleStopAI = useCallback(async () => {
     console.debug('[Chat] handleStopAI invoked');
-    if (streamingMessageId && !isStoppingAI) {
-      setIsStoppingAI(true);
-      console.debug(`[Chat] Stopping AI response for message: ${streamingMessageId}`);
-
-      try {
-        // Get the current message status before stopping
-        const currentMessage = messages.find(msg => msg.id === streamingMessageId);
-        const isDelivered = currentMessage?.status === 'delivered';
-
-        // Get stopStreaming from cached module and call it immediately
-        console.debug('[Chat] About to call stopStreaming...');
-        const { stopStreaming } = await getLLMApi();
-        const wasAborted = stopStreaming(isDelivered);
-        console.debug('[Chat] stopStreaming completed:', { wasAborted });
-
-        // Update UI immediately regardless of abort result
-        setMessages(prev => {
-          const currentMessage = prev.find(msg => msg.id === streamingMessageId);
-          
-          if (!currentMessage) {
-            console.debug(`[Stop AI] Message ${streamingMessageId} not found in state`);
-            return prev;
-          }
-
-          // Get the latest partial content from either the message or the ref
-          const latestContent = currentMessage.content || partialContentRef.current || '';
-
-          // If there's no content at all (stream just started), remove the message
-          if (!latestContent || latestContent.trim().length === 0) {
-            console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} - no content generated yet`);
-            return prev.filter(msg => msg.id !== streamingMessageId);
-          }
-
-          // Preserve the partial content and mark as stopped
-          console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${streamingMessageId}`);
-          return prev.map(msg => 
-            msg.id === streamingMessageId 
-              ? {
-                  ...msg,
-                  isStreaming: false,
-                  content: latestContent + "\n\n*AI response stopped by user.*",
-                  status: 'stopped',
-                  isCancelled: true,
-                  isError: false,
-                  metadata: {
-                    ...msg.metadata,
-                    isStreaming: false,
-                    isCancelled: true,
-                    status: 'stopped',
-                    cancelledByUser: true,
-                    partialContentLength: latestContent.length,
-                    stoppedAt: new Date().toISOString()
-                  }
-                }
-              : msg
-          );
-        });
-
-      } catch (error) {
-        console.error('[Chat] Error in stopStreaming:', error);
-      } finally {
-        // Always clear streaming state, even if there was an error
-        setStreamingMessageId(null);
-        setPartialContent('');
-        setIsStoppingAI(false);
-        setIsLoading(false);
-      }
-    } else if (!streamingMessageId) {
+    
+    // CRITICAL FIX: Check if we have an active streaming message
+    if (!streamingMessageId) {
       console.warn('[Chat] handleStopAI called but no streaming message ID found');
-    } else {
+      return;
+    }
+
+    // CRITICAL FIX: Prevent multiple simultaneous stop operations
+    if (isStoppingAI) {
       console.debug('[Chat] handleStopAI called but already stopping');
+      return;
+    }
+
+    setIsStoppingAI(true);
+    console.debug(`[Chat] Stopping AI response for message: ${streamingMessageId}`);
+
+    try {
+      // Store the current streaming message ID to prevent race conditions
+      const currentStreamingId = streamingMessageId;
+      
+      // Get the current message status before stopping
+      const currentMessage = messages.find(msg => msg.id === currentStreamingId);
+      const isDelivered = currentMessage?.status === 'delivered';
+
+      // IMMEDIATE UI UPDATE: Mark message as stopping
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === currentStreamingId 
+            ? {
+                ...msg,
+                isStreaming: false,
+                status: 'stopping',
+                metadata: {
+                  ...msg.metadata,
+                  isStreaming: false,
+                  status: 'stopping'
+                }
+              }
+            : msg
+        )
+      );
+
+      // Get stopStreaming from cached module and call it immediately
+      console.debug('[Chat] About to call stopStreaming...');
+      const { stopStreaming } = await getLLMApi();
+      const wasAborted = stopStreaming(isDelivered);
+      console.debug('[Chat] stopStreaming completed:', { wasAborted });
+
+      // FINAL UI UPDATE: Update message with final stopped state
+      setMessages(prev => {
+        const targetMessage = prev.find(msg => msg.id === currentStreamingId);
+        
+        if (!targetMessage) {
+          console.debug(`[Stop AI] Message ${currentStreamingId} not found in state`);
+          return prev;
+        }
+
+        // Get the latest partial content from either the message or the ref
+        const latestContent = targetMessage.content || partialContentRef.current || '';
+
+        // If there's no content at all (stream just started), remove the message
+        if (!latestContent || latestContent.trim().length === 0) {
+          console.debug(`[Stop AI] Removing empty assistant message ${currentStreamingId} - no content generated yet`);
+          return prev.filter(msg => msg.id !== currentStreamingId);
+        }
+
+        // Preserve the partial content and mark as stopped
+        console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${currentStreamingId}`);
+        return prev.map(msg => 
+          msg.id === currentStreamingId 
+            ? {
+                ...msg,
+                isStreaming: false,
+                content: latestContent + "\n\n*AI response stopped by user.*",
+                status: 'stopped',
+                isCancelled: true,
+                isError: false,
+                metadata: {
+                  ...msg.metadata,
+                  isStreaming: false,
+                  isCancelled: true,
+                  status: 'stopped',
+                  cancelledByUser: true,
+                  partialContentLength: latestContent.length,
+                  stoppedAt: new Date().toISOString()
+                }
+              }
+            : msg
+        );
+      });
+
+    } catch (error) {
+      console.error('[Chat] Error in stopStreaming:', error);
+      
+      // Error handling: Mark message as failed to stop
+      setMessages(prev => 
+        prev.map(msg => 
+          msg.id === streamingMessageId 
+            ? {
+                ...msg,
+                isStreaming: false,
+                status: 'failed',
+                isError: true,
+                content: (msg.content || '') + "\n\n*Failed to stop AI response.*",
+                metadata: {
+                  ...msg.metadata,
+                  isStreaming: false,
+                  status: 'failed',
+                  stopError: error.message
+                }
+              }
+            : msg
+        )
+      );
+    } finally {
+      // CRITICAL FIX: Always clear streaming state, even if there was an error
+      setStreamingMessageId(null);
+      setPartialContent('');
+      setIsStoppingAI(false);
+      setIsLoading(false);
     }
   }, [streamingMessageId, isStoppingAI, messages]);
 
@@ -1023,9 +1072,9 @@ export default function ChatPage() {
                     showFollowUps={isLastAiMessage}
                     isFirst={isFirst}
                     isLast={isLast}
-                    onStopAI={!msg.isUser && msg.id === streamingMessageId ? handleStopAI : undefined}
+                    onStopAI={!msg.isUser && (msg.id === streamingMessageId || msg.status === 'pending' || msg.isStreaming) ? handleStopAI : undefined}
                     isStoppingAI={isStoppingAI}
-                    isStreaming={msg.id === streamingMessageId}
+                    isStreaming={msg.id === streamingMessageId || msg.isStreaming}
                     partialContent={msg.id === streamingMessageId ? partialContent : ''}
                     status={msg.status || 'sent'}
                   />
