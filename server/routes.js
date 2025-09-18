@@ -966,6 +966,7 @@ router.get("/app-config.json", async (req, res) => {
       // 1) Create per-session abort bundle with combined signal
       const clientAbort = new AbortController();      // fired by client socket close
       const adminAbort = new AbortController();       // fired by /api/chat/cancel/:sessionId
+      // eslint-disable-next-line no-undef
       const combinedSignal = AbortSignal.any([clientAbort.signal, adminAbort.signal]);
       
       let closed = false;
@@ -984,7 +985,9 @@ router.get("/app-config.json", async (req, res) => {
         if (!clientAbort.signal.aborted) {
           clientAbort.abort();              // stop upstream
         }
-        try { res.end(); } catch {}
+        try { res.end(); } catch {
+          // Ignore errors when ending response - connection might already be closed
+        }
       }
 
       // Add both listeners before starting upstream fetch
@@ -1098,7 +1101,9 @@ router.get("/app-config.json", async (req, res) => {
           }
         } finally {
           // ensure stream is canceled if we broke early
-          try { await reader.cancel(); } catch {}
+          try { await reader.cancel(); } catch {
+            // Ignore errors when canceling reader - stream might already be closed
+          }
         }
 
         // Early exit check - don't process anything if connection was aborted
@@ -1159,7 +1164,9 @@ router.get("/app-config.json", async (req, res) => {
         } catch (err) {
           if (err?.name === 'AbortError' || combinedSignal.aborted) {
             console.log(`[${sessionId}] [SSE] ${sessionId} aborted by client/cancel`);
-            try { res.end(); } catch {}
+            try { res.end(); } catch {
+              // Ignore errors when ending response - connection might already be closed
+            }
             return; // no error message, no "completed"
           }
           // ... real error handling/logging ...
