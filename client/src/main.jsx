@@ -1,8 +1,6 @@
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import './index.css';
-import { AuthAvailabilityProvider } from './contexts/AuthAvailabilityContext.jsx';
-import { GlobalErrorBoundary } from './components/GlobalErrorBoundary.jsx';
 // DISABLED: Version checking system causing infinite reload loops
 // import { initializeVersionChecking } from './lib/versionChecker.js';
 
@@ -23,9 +21,5 @@ if (!rootElement) {
 // initializeVersionChecking();
 
 ReactDOM.createRoot(rootElement).render(
-  <AuthAvailabilityProvider>
-    <GlobalErrorBoundary>
-      <App />
-    </GlobalErrorBoundary>
-  </AuthAvailabilityProvider>
+  <App />
 );
