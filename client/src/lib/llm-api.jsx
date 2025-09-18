@@ -263,7 +263,8 @@ export async function sendMessage(message, history = [], options = {}) {
   // Create and store AbortController for stopping functionality
   if (isStreaming) {
     activeAbortController = createAbortController();
-    console.debug('[API] Created AbortController for streaming request');
+    console.log('[API] Created AbortController for streaming request');
+    console.log('[API] AbortController signal:', activeAbortController.signal);
   }
 
   try {
@@ -424,16 +425,17 @@ let activeAbortController = null;
  * @returns {boolean} Whether a stream was stopped
  */
 export function stopStreaming() {
-  console.debug('[API] stopStreaming called');
+  console.log('[API] stopStreaming called');
+  console.log('[API] activeAbortController exists:', !!activeAbortController);
   
   if (activeAbortController) {
-    console.debug('[API] Aborting active streaming request');
+    console.log('[API] Aborting active streaming request');
     activeAbortController.abort(new Error('Stream stopped by user'));
     activeAbortController = null;
     return true;
   }
   
-  console.debug('[API] No active streaming request to stop');
+  console.log('[API] No active streaming request to stop');
   return false;
 }
 
