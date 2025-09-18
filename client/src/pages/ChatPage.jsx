@@ -605,6 +605,17 @@ export default function ChatPage() {
           // const isDelivered = prev.find(msg => msg.id === currentStreamingId)?.status === 'delivered';
           // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
 
+          // Check if this message was already manually stopped by user  
+          const originalMessage = prev.find(msg => msg.id === currentStreamingId);
+          const wasManuallyAborted = originalMessage?.metadata?.manuallyAborted || 
+                                   originalMessage?.isCancelled || 
+                                   originalMessage?.status === 'stopped';
+          
+          if (wasManuallyAborted) {
+            console.debug(`Message ${currentStreamingId} was already manually stopped, ignoring error`);
+            return prev; // Don't add error message, user already stopped it
+          }
+
           // Check if this was a deliberate abort/stop action
           const isManualAbort = error && typeof error === 'object' && 
             (('name' in error && error.name === 'AbortError') || 
@@ -616,7 +627,6 @@ export default function ChatPage() {
             console.debug(`Message ${currentStreamingId} was manually aborted, adding cancellation message`);
 
             // Get the original message so we can extract any partial content already delivered
-            const originalMessage = prev.find(msg => msg.id === currentStreamingId);
             const currentPartialContent = originalMessage?.content || '';
 
             // Add a cancellation notice to the content
@@ -774,6 +784,7 @@ export default function ChatPage() {
                   isCancelled: true,
                   status: 'stopped',
                   cancelledByUser: true,
+                  manuallyAborted: true,
                   partialContentLength: latestContent.length,
                   stoppedAt: new Date().toISOString()
                 }
