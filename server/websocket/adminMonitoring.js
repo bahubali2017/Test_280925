@@ -1,8 +1,10 @@
+/* global setInterval, clearInterval */
 /**
  * @file Admin WebSocket server for real-time monitoring
  * Provides live updates to admin dashboard about system events
  */
 
+const { URL } = require("url");
 import { WebSocket, WebSocketServer } from 'ws';
 import { validateAdminWebSocketToken } from '../middleware/adminAuthMiddleware.js';
 import { checkWebSocketRateLimit, incrementWebSocketConnections, decrementWebSocketConnections } from '../middleware/rateLimiter.js';
@@ -166,7 +168,7 @@ class AdminWebSocketServer {
    * @param {number} code - Close code
    * @param {string} reason - Close reason
    */
-  handleDisconnection(ws, code, reason) {
+  handleDisconnection(ws, code, _reason) {
     const clientInfo = this.clientInfo.get(ws);
     
     if (clientInfo) {
@@ -241,7 +243,7 @@ class AdminWebSocketServer {
           });
           break;
           
-        case 'subscribe':
+        case 'subscribe': {
           // Subscribe to specific event types
           const events = message.events || ['ai_session_update', 'ai_session_flagged', 'ai_metrics_update'];
           this.clientInfo.get(ws).subscribedEvents = events;
@@ -253,6 +255,7 @@ class AdminWebSocketServer {
             }
           });
           break;
+        }
           
         case 'ping':
           this.sendToClient(ws, {
