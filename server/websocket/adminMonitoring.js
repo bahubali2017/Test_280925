@@ -167,6 +167,7 @@ class AdminWebSocketServer {
    * @param {WebSocket} ws - WebSocket connection
    * @param {number} code - Close code
    * @param {string} reason - Close reason
+   * @param _reason
    */
   handleDisconnection(ws, code, _reason) {
     const clientInfo = this.clientInfo.get(ws);
