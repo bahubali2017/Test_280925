@@ -4,7 +4,7 @@
  * Provides live updates to admin dashboard about system events
  */
 
-const { URL } = require("url");
+import { URL } from "url";
 import { WebSocket, WebSocketServer } from 'ws';
 import { validateAdminWebSocketToken } from '../middleware/adminAuthMiddleware.js';
 import { checkWebSocketRateLimit, incrementWebSocketConnections, decrementWebSocketConnections } from '../middleware/rateLimiter.js';

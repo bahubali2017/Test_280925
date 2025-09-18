@@ -1,3 +1,4 @@
+/* global setInterval */
 /**
  * @file Session state tracking for admin monitoring
  * Manages AI session lifecycle and metrics collection

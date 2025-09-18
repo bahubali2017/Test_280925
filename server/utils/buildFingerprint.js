@@ -1,3 +1,4 @@
+/* global Buffer */
 /**
  * @file Build Fingerprinting Utility
  * Generates unique deployment identifiers for copy tracing
