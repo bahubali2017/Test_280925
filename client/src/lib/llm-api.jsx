@@ -665,6 +665,11 @@ const endpoint = shouldStream ? '/api/chat/stream' : '/api/chat';
 if (shouldStream) {
 // Handle streaming response
 console.debug('[AI] Using streaming endpoint');
+// Clear any existing stream state before starting new stream
+currentStream.controller = null;
+currentStream.sessionId = null;
+currentStream.messageId = null;
+currentStream.isActive = false;
 return await handleStreamingResponse(endpoint, requestBody, onStreamingUpdate, options);
 } else {
 // Handle regular response  
@@ -866,18 +871,14 @@ throw error;
 }
 
 /**
-* Global AbortController instance for the current streaming request
-* This allows other components to cancel the stream
-* @type {AbortController|null}
+* Global stream management object - single source of truth
+* @type {{controller: AbortController|null, sessionId: string|null, messageId: string|null, isActive: boolean}}
 */
-/**
- * Global stream management object - single source of truth
- * @type {{controller: AbortController|null, sessionId: string|null, messageId: string|null}}
- */
 let currentStream = {
   controller: null,
   sessionId: null,
-  messageId: null
+  messageId: null,
+  isActive: false
 };
 
 /**
@@ -886,9 +887,9 @@ let currentStream = {
 let globalStreamReader = null;
 /**
 * Object to track message delivery state
-* @type {{messageDelivered: boolean}}
+* @type {{messageDelivered: boolean, isStopped: boolean, isError: boolean}}
 */
-let messageDeliveryState = { messageDelivered: false };
+let messageDeliveryState = { messageDelivered: false, isStopped: false, isError: false };
 // Phase 7: Client-side caching for layer results
 const layerResultCache = new Map();
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache TTL
@@ -947,69 +948,76 @@ console.debug('[Cache] Stored layer result for:', message.substring(0, 50) + '..
 */
 function stopStreaming(isDelivered = false) {
   console.debug('[LLM] stopStreaming called', { 
-    hasController: !!currentStream.controller, 
+    hasController: !!currentStream.controller,
+    isActive: currentStream.isActive,
     sessionId: currentStream.sessionId 
   });
   
   // Check if we have an active stream
-  if (!currentStream.controller) {
+  if (!currentStream.controller || !currentStream.isActive) {
     console.warn('[LLM] No active stream controller to stop');
     return false;
   }
 
-  // Store controller reference before clearing (CRITICAL FIX)
+  // Store references before clearing to prevent race conditions
   const controllerToAbort = currentStream.controller;
   const sessionToCancel = currentStream.sessionId;
+  const messageIdToStop = currentStream.messageId;
 
-  // Update our message delivery state - CRITICAL: Mark as clean stop, not error  
+  // Mark stream as inactive IMMEDIATELY to prevent race conditions
+  currentStream.isActive = false;
+
+  // Update message delivery state
   messageDeliveryState.messageDelivered = isDelivered;
   messageDeliveryState.isStopped = true;
   messageDeliveryState.isError = false;
 
-  // Clear the global error timeout immediately to prevent delays
+  console.debug(`[LLM] Stopping stream for session: ${sessionToCancel}, message: ${messageIdToStop}`);
+
+  // Clear any pending timeouts immediately
   if (globalErrorTimeout) {
     console.debug("Clearing global error timeout on stop");
-    window.clearTimeout(globalErrorTimeout);
+    clearTimeout(globalErrorTimeout);
     globalErrorTimeout = null;
   }
 
-  // IMMEDIATE READER CLEANUP: Cancel active reader if it exists
+  // Cancel the reader if it exists
   if (globalStreamReader) {
     try {
       console.debug("STOP_AI: Cancelling active reader immediately");
-      globalStreamReader.cancel();
+      globalStreamReader.cancel("User cancelled");
       globalStreamReader = null;
     } catch (e) {
-      console.debug("Reader already cancelled or unavailable");
+      console.debug("Reader already cancelled or unavailable:", e.message);
     }
   }
 
-  // Abort the client-side streaming request using stored reference (CRITICAL FIX)
+  // Abort the client-side streaming request
   try {
     controllerToAbort.abort(isDelivered ? 'message_complete' : 'user_cancelled');
-    console.debug("STOP_AI: Streaming request manually aborted", isDelivered ? "(message already delivered)" : "");
+    console.debug("STOP_AI: Streaming request aborted successfully");
   } catch (error) {
     console.warn("STOP_AI: Error aborting controller:", error);
   }
 
-  // Cancel server-side generation if we have the sessionId
+  // Send server-side cancellation request
   if (sessionToCancel) {
-    // Fire-and-forget server cancellation with timeout
     fetch(`/api/chat/cancel/${sessionToCancel}`, { 
       method: "POST",
-      signal: AbortSignal.timeout(2000) // 2 second timeout
-    }).then(() => {
-      console.debug(`[LLM] Server-side AI generation cancel successful for session: ${sessionToCancel}`);
+      headers: { 'Content-Type': 'application/json' },
+      signal: AbortSignal.timeout(3000)
+    }).then(response => {
+      if (response.ok) {
+        console.debug(`[LLM] Server-side cancellation successful for session: ${sessionToCancel}`);
+      } else {
+        console.warn(`[LLM] Server-side cancellation failed with status: ${response.status}`);
+      }
     }).catch(error => {
-      console.warn("[LLM] Failed to cancel server-side generation:", error);
-      // This is non-critical since client abort triggers req.on('close')
+      console.warn("[LLM] Server-side cancellation request failed:", error.message);
     });
-    console.debug(`[LLM] Server-side AI generation cancel requested for session: ${sessionToCancel}`);
-  } else {
-    console.warn("[LLM] No server sessionId available, relying on client abort to trigger req.on('close')");
   }
 
-  // Clear the stream state AFTER using the references (CRITICAL FIX)
+  // Clear the stream state
   currentStream.controller = null;
   currentStream.sessionId = null;
   currentStream.messageId = null;
@@ -1042,10 +1050,11 @@ onStreamingUpdate(accumulatedText, { isStreaming: true, isComplete: false });
 }
 try {
 // Create a new AbortController for this request
-// This makes the controller globally available for stopStreaming()
-currentStream.controller = new GlobalAbortController();
+const newController = new GlobalAbortController();
+currentStream.controller = newController;
+currentStream.isActive = true;
 // Use the provided signal or the one from our controller
-const abortSignal = signal || currentStream.controller.signal;
+const abortSignal = signal || newController.signal;
 // Set an error timeout to handle real connection issues
 // This will be cleared if 'done' event is received
 errorTimeout = window.setTimeout(() => {
@@ -1157,6 +1166,11 @@ try {
 const data = JSON.parse(jsonData);
 // Process based on current event type
 if (currentEvent === 'chunk' && data.text) {
+// Check if stream is still active before processing
+if (!currentStream.isActive) {
+console.debug("Stream marked as inactive, stopping chunk processing");
+break;
+}
 // Accumulate text chunks
 accumulatedText += data.text;
 // Update UI with current accumulated text
@@ -1269,12 +1283,19 @@ console.error("Error parsing SSE data:", e, "raw data:", jsonData);
 }
 // Clear the global abort controller and reader since we're done with the fetch
 if (globalStreamReader) {
-try { globalStreamReader.cancel(); } catch {}
+try { 
+globalStreamReader.cancel(); 
+console.debug("Stream reader cancelled on completion");
+} catch (e) {
+console.debug("Reader was already cancelled:", e.message);
+}
 globalStreamReader = null;
 }
-if (currentStream.controller) {
+// Reset stream state
 currentStream.controller = null;
-}
+currentStream.sessionId = null;
+currentStream.messageId = null;
+currentStream.isActive = false;
 // Final update with complete flag
 const requestTime = Date.now() - startTime;
 // Check if the request was cancelled

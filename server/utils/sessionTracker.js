@@ -12,8 +12,9 @@
  * @property {boolean} flagged - Whether session has been flagged
  * @property {string[]} flagReasons - Reasons for flagging
  * @property {string} userRole - Role of the user (general_public, medical_professional, etc.)
- * @property {string} status - Session status (active, completed, terminated)
+ * @property {string} status - Session status (active, completed, terminated, cancelled)
  * @property {Object} metrics - Performance metrics
+ * @property {string} [cancellationReason] - Reason for cancellation if applicable
  */
 
 class SessionTracker {
@@ -22,21 +23,21 @@ class SessionTracker {
      * @type {Map<string, Session>}
      */
     this.activeSessions = new Map();
-    
+
     /**
      * @type {Session[]}
      */
     this.completedSessions = [];
-    
+
     /**
      * @type {Function[]}
      */
     this.eventListeners = [];
-    
+
     // Clean up old completed sessions every hour
     setInterval(() => this.cleanupOldSessions(), 3600000);
   }
-  
+
   /**
    * Start tracking a new session
    * @param {string} sessionId - Unique session identifier
@@ -60,21 +61,21 @@ class SessionTracker {
         errors: 0
       }
     };
-    
+
     this.activeSessions.set(sessionId, session);
-    
+
     console.info(`[SESSION-TRACKER] Started session ${sessionId} for ${userRole}`);
-    
+
     // Emit session started event
     this.emitEvent('session_started', {
       sessionId,
       userRole,
       timestamp: new Date().toISOString()
     });
-    
+
     return session;
   }
-  
+
   /**
    * Update session with message activity
    * @param {string} sessionId - Session identifier
@@ -84,19 +85,19 @@ class SessionTracker {
   updateSession(sessionId, latency = 0, isError = false) {
     const session = this.activeSessions.get(sessionId);
     if (!session) return;
-    
+
     session.messageCount++;
     session.metrics.totalLatency += latency;
     session.metrics.avgLatency = session.metrics.totalLatency / session.messageCount;
     session.metrics.maxLatency = Math.max(session.metrics.maxLatency, latency);
-    
+
     if (isError) {
       session.metrics.errors++;
     }
-    
+
     console.debug(`[SESSION-TRACKER] Updated session ${sessionId}: ${session.messageCount} messages, avg latency ${Math.round(session.metrics.avgLatency)}ms`);
   }
-  
+
   /**
    * Flag a session for admin attention
    * @param {string} sessionId - Session identifier
@@ -106,12 +107,12 @@ class SessionTracker {
   flagSession(sessionId, reason, severity = 'medium') {
     const session = this.activeSessions.get(sessionId);
     if (!session) return;
-    
+
     session.flagged = true;
     session.flagReasons.push(reason);
-    
+
     console.warn(`[SESSION-TRACKER] Flagged session ${sessionId}: ${reason} (${severity})`);
-    
+
     // Emit session flagged event
     this.emitEvent('session_flagged', {
       sessionId,
@@ -120,37 +121,61 @@ class SessionTracker {
       timestamp: new Date().toISOString()
     });
   }
-  
+
   /**
-   * End a session and move to completed
-   * @param {string} sessionId - Session identifier
-   * @param {string} outcome - Session outcome (completed, terminated, error)
+   * Cancel a session (user initiated)
+   * @param {string} sessionId - Session ID
+   * @param {string} reason - Cancellation reason
    */
-  endSession(sessionId, outcome = 'completed') {
+  cancelSession(sessionId, reason = 'user_cancelled') {
     const session = this.activeSessions.get(sessionId);
-    if (!session) return;
-    
-    session.endTime = Date.now();
-    session.status = outcome;
-    
-    const duration = session.endTime - session.startTime;
-    
-    console.info(`[SESSION-TRACKER] Ended session ${sessionId}: ${outcome}, duration ${duration}ms, ${session.messageCount} messages`);
-    
-    // Move to completed sessions
-    this.completedSessions.push({ ...session });
-    this.activeSessions.delete(sessionId);
-    
-    // Emit session ended event
-    this.emitEvent('session_ended', {
-      sessionId,
-      duration,
-      messageCount: session.messageCount,
-      outcome,
-      timestamp: new Date().toISOString()
-    });
+    if (session) {
+      session.endTime = Date.now();
+      session.status = 'cancelled';
+      session.cancellationReason = reason;
+      session.duration = session.endTime - session.startTime;
+
+      // Move to completed sessions
+      this.completedSessions.push(session);
+      this.activeSessions.delete(sessionId);
+
+      console.debug(`[SESSION-TRACKER] Cancelled session ${sessionId}: ${reason}, duration ${session.duration}ms`);
+
+      // Emit session ended event
+      this.emitEvent('session_cancelled', {
+        sessionId,
+        reason,
+        duration: session.duration,
+        timestamp: new Date().toISOString()
+      });
+    }
   }
-  
+
+  /**
+   * End a session
+   * @param {string} sessionId - Session ID
+   * @param {'completed'|'timeout'|'error'} status - Final status
+   */
+  endSession(sessionId, status = 'completed') {
+    const session = this.activeSessions.get(sessionId);
+    if (session) {
+      session.endTime = Date.now();
+      session.status = status;
+      session.duration = session.endTime - session.startTime;
+
+      // Move to completed sessions
+      this.completedSessions.push(session);
+      this.activeSessions.delete(sessionId);
+
+      // Keep only last 1000 completed sessions
+      if (this.completedSessions.length > 1000) {
+        this.completedSessions = this.completedSessions.slice(-1000);
+      }
+
+      console.debug(`[SESSION-TRACKER] Ended session ${sessionId}: ${status}, duration ${session.duration}ms, ${session.messages.length} messages`);
+    }
+  }
+
   /**
    * Get current system metrics
    * @returns {Object} System metrics object
@@ -159,26 +184,26 @@ class SessionTracker {
     const activeSessionCount = this.activeSessions.size;
     const flaggedSessionCount = Array.from(this.activeSessions.values())
       .filter(session => session.flagged).length;
-    
+
     // Calculate aggregate metrics from recent completed sessions (last 1000)
     const recentSessions = this.completedSessions.slice(-1000);
     const totalSessions = this.completedSessions.length;
-    
+
     let avgDuration = 0;
     let successRate = 100;
     let avgLatency = 0;
-    
+
     if (recentSessions.length > 0) {
       const totalDuration = recentSessions.reduce((sum, s) => sum + (s.endTime - s.startTime), 0);
       avgDuration = totalDuration / recentSessions.length;
-      
+
       const successfulSessions = recentSessions.filter(s => s.status === 'completed').length;
       successRate = (successfulSessions / recentSessions.length) * 100;
-      
+
       const totalAvgLatency = recentSessions.reduce((sum, s) => sum + s.metrics.avgLatency, 0);
       avgLatency = totalAvgLatency / recentSessions.length;
     }
-    
+
     return {
       total_sessions: totalSessions,
       active_sessions: activeSessionCount,
@@ -189,7 +214,7 @@ class SessionTracker {
       avg_latency: Math.round(avgLatency)
     };
   }
-  
+
   /**
    * Get detailed AI metrics for admin dashboard
    * @returns {Object} Detailed metrics object
@@ -197,28 +222,28 @@ class SessionTracker {
   getDetailedMetrics() {
     const baseMetrics = this.getSystemMetrics();
     const recentSessions = this.completedSessions.slice(-1000);
-    
+
     // Calculate response time percentiles
     const latencies = recentSessions
       .map(s => s.metrics.avgLatency)
       .filter(l => l > 0)
       .sort((a, b) => a - b);
-    
+
     const responseTimePercentiles = {
       p50: latencies[Math.floor(latencies.length * 0.5)] || 0,
       p95: latencies[Math.floor(latencies.length * 0.95)] || 0,
       p99: latencies[Math.floor(latencies.length * 0.99)] || 0
     };
-    
+
     // Count high-risk queries and ATD escalations
     const highRiskQueries = recentSessions.filter(s => 
       s.flagReasons.some(reason => reason.includes('high_risk'))
     ).length;
-    
+
     const atdEscalations = recentSessions.filter(s => 
       s.flagReasons.some(reason => reason.includes('atd') || reason.includes('escalation'))
     ).length;
-    
+
     return {
       ...baseMetrics,
       high_risk_queries: highRiskQueries,
@@ -226,7 +251,7 @@ class SessionTracker {
       response_times: responseTimePercentiles
     };
   }
-  
+
   /**
    * Add event listener for session events
    * @param {Function} listener - Event listener function
@@ -234,7 +259,7 @@ class SessionTracker {
   addEventListener(listener) {
     this.eventListeners.push(listener);
   }
-  
+
   /**
    * Remove event listener
    * @param {Function} listener - Event listener function to remove
@@ -245,7 +270,7 @@ class SessionTracker {
       this.eventListeners.splice(index, 1);
     }
   }
-  
+
   /**
    * Emit event to all listeners
    * @param {string} eventType - Type of event
@@ -260,24 +285,24 @@ class SessionTracker {
       }
     });
   }
-  
+
   /**
    * Clean up old completed sessions to prevent memory leaks
    */
   cleanupOldSessions() {
     const cutoffTime = Date.now() - (24 * 60 * 60 * 1000); // 24 hours ago
     const originalLength = this.completedSessions.length;
-    
+
     this.completedSessions = this.completedSessions.filter(session => 
       session.endTime > cutoffTime
     );
-    
+
     const cleaned = originalLength - this.completedSessions.length;
     if (cleaned > 0) {
       console.info(`[SESSION-TRACKER] Cleaned up ${cleaned} old sessions`);
     }
   }
-  
+
   /**
    * Report system error for admin monitoring
    * @param {string} component - Component where error occurred
@@ -286,7 +311,7 @@ class SessionTracker {
    */
   reportError(component, error, severity = 'medium') {
     console.error(`[SESSION-TRACKER] System error in ${component}: ${error}`);
-    
+
     this.emitEvent('error_occurred', {
       component,
       error,

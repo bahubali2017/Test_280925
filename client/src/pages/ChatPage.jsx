@@ -74,7 +74,7 @@ export default function ChatPage() {
   const [retryCount, setRetryCount] = useState(0);
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
-  /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
+  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [streamingMessageId, setStreamingMessageId] = useState(null);
   /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [partialContent, setPartialContent] = useState('');
@@ -82,10 +82,10 @@ export default function ChatPage() {
   const [isStoppingAI, setIsStoppingAI] = useState(false);
   /** @type {[Array<string>, React.Dispatch<React.SetStateAction<Array<string>>>]} */
   const [starterQuestions, setStarterQuestions] = useState([]);
-  
+
   const { user, logout } = useAuth();
   const [, setLocation] = useLocation();
-  
+
   /** @type {React.RefObject<HTMLDivElement>} */
   const messagesEndRef = useRef(null);
   /** @type {React.RefObject<HTMLInputElement>} */
@@ -168,10 +168,10 @@ export default function ChatPage() {
       .filter(msg => {
         // Skip error messages in conversation history
         if (msg.isError) return false;
-        
+
         // Include all user messages
         if (msg.isUser) return true;
-        
+
         // For assistant messages, only include if:
         // - Status is 'delivered' (not pending/streaming)
         // - Not cancelled and not streaming
@@ -229,15 +229,15 @@ export default function ChatPage() {
       // Keep only non-error messages or those older than 30 seconds
       const filteredMessages = prev.filter(msg => {
         if (!msg.isError) return true;
-        
+
         // Safely handle timestamp comparison
         const msgTime = msg.timestamp instanceof Date ? 
           msg.timestamp.getTime() : 
           new Date(msg.timestamp).getTime();
-          
+
         return msgTime < (currentTime - 30000);
       });
-      
+
       return filteredMessages;
     });
 
@@ -264,15 +264,12 @@ export default function ChatPage() {
       // Get cached llm-api module
       const { sendMessage } = await getLLMApi();
 
-      // Create the response ID and immediately add placeholder message
-      const responseId = `${retryId}_response`;
-      
       // CRITICAL FIX: Immediately push placeholder assistant message
       // This ensures MessageBubble exists instantly so Stop AI button can render
       setMessages(prev => [
         ...prev,
         {
-          id: responseId,
+          id: `${retryId}_response`,
           content: '',
           isUser: false,
           timestamp: new Date(),
@@ -281,30 +278,33 @@ export default function ChatPage() {
           status: 'pending',
           metadata: {
             isStreaming: true,
-            isRetry: true
+            isRetry: true,
+            messageId: `${retryId}_response`
           }
         }
       ]);
-      
+
       // Set as current streaming message for display
-      setStreamingMessageId(responseId);
+      setStreamingMessageId(`${retryId}_response`);
       setPartialContent('');
-      
+
       // Track if we've added the message to the array yet
       let messageAdded = true; // Already added above
 
       // Streaming update handler
       const handleStreamingUpdate = (content, metadata = {}) => {
+        handleStreamingUpdate.messageId = `${retryId}_response`; // Store for reference
+        handleStreamingUpdate.sessionId = retryId; // Attach sessionId for cancellation
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
         partialContentRef.current = content;
-        
+
         // Update the existing placeholder message with streaming content
         if (content && content.trim().length > 0) {
           // CRITICAL FIX: Update message content incrementally on every streaming update
           setMessages(prev => 
             prev.map(msg => 
-              msg.id === responseId 
+              msg.id === `${retryId}_response` 
                 ? {
                     ...msg,
                     content: content // Update with latest content
@@ -316,14 +316,14 @@ export default function ChatPage() {
 
         // If this is the final update (streaming complete)
         if (metadata.isComplete) {
-          console.debug(`[Chat] Stream complete for retry message ${responseId}, updating status to delivered`);
-          
+          console.debug(`[Chat] Stream complete for retry message ${`${retryId}_response`}, updating status to delivered`);
+
           // Only finalize if we have actual content and the message was added
           if (messageAdded && content && content.trim().length > 0) {
             // Update the message with final content and metadata
             setMessages(prev => 
               prev.map(msg => 
-                msg.id === responseId 
+                msg.id === `${retryId}_response` 
                   ? {
                       ...msg,
                       content: content,
@@ -342,7 +342,7 @@ export default function ChatPage() {
             );
           } else {
             // No content received - don't add empty message to history
-            console.debug(`[Chat] Stream completed but no content for retry ${responseId}, not adding to message history`);
+            console.debug(`[Chat] Stream completed but no content for retry ${`${retryId}_response`}, not adding to message history`);
           }
 
           // Clear streaming state immediately to prevent any lingering animations
@@ -376,7 +376,7 @@ export default function ChatPage() {
           // Check delivery status for debugging purposes
           // const isDelivered = prev.find(msg => msg.id === streamingMessageId)?.status === 'delivered';
           // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
-          
+
           // Check if this was a deliberate abort/stop action
           /** @type {boolean} */
           const isManualAbort = Boolean(
@@ -452,7 +452,7 @@ export default function ChatPage() {
     const defaultMessage = "I'm sorry, I encountered an error processing your request. Please try again later.";
 
     if (!error) return defaultMessage;
-    
+
     /**
      * Type guard to check if it's our standardized API error format
      * @param {unknown} err - The error to check
@@ -543,25 +543,27 @@ export default function ChatPage() {
           isStreaming: true,
           status: 'pending',
           metadata: {
-            isStreaming: true
+            isStreaming: true,
+            messageId: assistantMessageId
           }
         }
       ]);
-      
+
       // Set as current streaming message for display using stable assistantMessageId
       setStreamingMessageId(assistantMessageId);
       setPartialContent('');
-      
+
       // Track if we've added the message to the array yet
       let messageAdded = true; // Already added above
 
-      // Phase 7: Enhanced streaming update handler with real-time medical layer feedback
+      // Continue with streaming update handler logic
       const handleStreamingUpdate = (content, metadata = {}) => {
+        handleStreamingUpdate.messageId = assistantMessageId; // Store for reference
         handleStreamingUpdate.sessionId = sessionId; // Attach sessionId for cancellation
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
         partialContentRef.current = content;
-        
+
         // Update the existing placeholder message with streaming content
         if (content && content.trim().length > 0) {
           // CRITICAL FIX: Update message content incrementally on every streaming update
@@ -581,7 +583,7 @@ export default function ChatPage() {
         // Phase 7: Handle real-time medical layer status updates (only if message has been added)
         if (messageAdded && metadata.layerStatus) {
           console.debug(`[Medical Layer] Status update: ${metadata.layerStatus}`);
-          
+
           // Update message with layer processing status
           setMessages((prev) => 
             prev.map(msg => 
@@ -624,7 +626,7 @@ export default function ChatPage() {
         // If this is the final update (streaming complete)
         if (metadata.isComplete) {
           console.debug(`[Chat] Stream complete for message ${assistantMessageId}, updating status to delivered`);
-          
+
           // Only finalize if we have actual content and the message was added
           if (messageAdded && content && content.trim().length > 0) {
             // Update the message with final content and metadata
@@ -781,63 +783,62 @@ export default function ChatPage() {
         const currentMessage = messages.find(msg => msg.id === streamingMessageId);
         const isDelivered = currentMessage?.status === 'delivered';
 
-        // Get stopStreaming from cached module
+        // Get stopStreaming from cached module and call it immediately
         console.debug('[Chat] About to call stopStreaming...');
         const { stopStreaming } = await getLLMApi();
-        await stopStreaming(isDelivered);
-        console.debug('[Chat] stopStreaming completed');
+        const wasAborted = stopStreaming(isDelivered);
+        console.debug('[Chat] stopStreaming completed:', { wasAborted });
+
+        if (wasAborted) {
+          // Update UI immediately to show stopped state
+          setMessages(prev => {
+            const currentMessage = prev.find(msg => msg.id === streamingMessageId);
+
+            // Get the latest partial content from either the message or the ref
+            const latestContent = currentMessage?.content || partialContentRef.current || '';
+
+            // If there's no content at all (stream just started), remove the message
+            if (!latestContent || latestContent.trim().length === 0) {
+              console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} - no content generated yet`);
+              return prev.filter(msg => msg.id !== streamingMessageId);
+            }
+
+            // Preserve the partial content and mark as stopped
+            console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${streamingMessageId}`);
+            return prev.map(msg => 
+              msg.id === streamingMessageId 
+                ? {
+                    ...msg,
+                    isStreaming: false,
+                    content: latestContent + "\n\n*AI response stopped by user.*",
+                    status: 'stopped',
+                    isCancelled: true,
+                    isError: false,
+                    metadata: {
+                      ...msg.metadata,
+                      isStreaming: false,
+                      isCancelled: true,
+                      status: 'stopped',
+                      cancelledByUser: true,
+                      partialContentLength: latestContent.length,
+                      stoppedAt: new Date().toISOString()
+                    }
+                  }
+                : msg
+            );
+          });
+        }
       } catch (error) {
         console.error('[Chat] Error in stopStreaming:', error);
       }
 
-      // CRITICAL FIX: Preserve partial content when stopping AI instead of removing it
-      setMessages(prev => {
-        const currentMessage = prev.find(msg => msg.id === streamingMessageId);
-        
-        // Get the latest partial content from either the message or the ref
-        const latestContent = currentMessage?.content || partialContentRef.current || '';
-        
-        // If there's no content at all (stream just started), remove the message to prevent empty responses
-        if (!latestContent || latestContent.trim().length === 0) {
-          console.debug(`[Stop AI] Removing empty assistant message ${streamingMessageId} - no content generated yet`);
-          return prev.filter(msg => msg.id !== streamingMessageId);
-        }
-        
-        // CRITICAL FIX: Preserve the partial content and mark as stopped
-        console.debug(`[Stop AI] Preserving partial content (${latestContent.length} chars) for message ${streamingMessageId}`);
-        return prev.map(msg => 
-          msg.id === streamingMessageId 
-            ? {
-                ...msg,
-                isStreaming: false,
-                content: latestContent + "\n\n*AI response stopped by user.*", // Show content + stop indicator
-                status: 'stopped',
-                isCancelled: true,
-                isError: false, // Explicitly prevent error state
-                metadata: {
-                  ...msg.metadata,
-                  isStreaming: false,
-                  isCancelled: true,
-                  status: 'stopped',
-                  cancelledByUser: true,
-                  partialContentLength: latestContent.length // Track how much content was preserved
-                }
-              }
-            : msg
-        );
-      });
-
       // Clear streaming state immediately
       setStreamingMessageId(null);
       setPartialContent('');
-      
-      // Reset the stopping state immediately for faster UI response
       setIsStoppingAI(false);
-      
-      // CRITICAL FIX: Reset loading state to immediately re-enable input
       setIsLoading(false);
     }
-  }, [streamingMessageId, messages, setIsStoppingAI, setStreamingMessageId, setPartialContent, setIsLoading]);
+  }, [streamingMessageId, messages]);
 
   /**
    * Handles user logout
@@ -851,10 +852,10 @@ export default function ChatPage() {
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">
       {/* PWA Update Notification */}
       <UpdateNotification />
-      
+
       {/* PWA Installation Notice Popup */}
       <InstallationNotice />
-      
+
       {/* Header */}
       <header className="bg-card dark:bg-sidebar-background py-3 px-4 md:px-6 shadow-md border-b border-border transition-colors duration-300">
         <div className="container-xl">
@@ -873,12 +874,12 @@ export default function ChatPage() {
                   <p className="text-muted-foreground text-sm dark:text-gray-300">Medical AI Assistant</p>
                 </div>
               </div>
-              
+
               {/* Right side controls - horizontal layout */}
               <div className="flex items-center gap-2">
                 {/* Theme Toggle */}
                 <ThemeToggle />
-                
+
                 {/* Logout Button */}
                 <button
                   type="button"
@@ -891,7 +892,7 @@ export default function ChatPage() {
               </div>
             </div>
           </div>
-          
+
           {/* Desktop Layout */}
           <div className="hidden sm:flex justify-between items-center">
             {/* Logo and Brand */}

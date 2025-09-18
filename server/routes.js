@@ -47,15 +47,15 @@ const circuitBreakerMiddleware = (req, res, next) => {
  */
 async function processAIResponse(response, sessionId) {
   if (!response) return response;
-  
+
   // Remove all # symbols and markdown formatting
   let cleaned = response.replace(/#/g, '').replace(/\*\*/g, '');
-  
+
   // Check if response seems incomplete (ends abruptly in middle of sentence/list)
   const trimmed = cleaned.trim();
   const lastChar = trimmed.slice(-1);
   const lastWords = trimmed.split(' ').slice(-5).join(' ').toLowerCase();
-  
+
   // Signs of incomplete response
   const endsAbruptly = (
     lastChar === ':' || // Ends with colon (incomplete section)
@@ -64,12 +64,12 @@ async function processAIResponse(response, sessionId) {
     trimmed.endsWith('1.') || trimmed.endsWith('2.') || trimmed.endsWith('3.') || // Incomplete numbered list
     trimmed.endsWith('-') // Incomplete bullet point
   );
-  
+
   if (endsAbruptly) {
     console.warn(`[${sessionId}] Detected incomplete response, adding completion note`);
     cleaned += '\n\nNote: This information provides key medical guidance. For complete protocols and specific dosing, please consult current medical guidelines and healthcare professionals.';
   }
-  
+
   // Apply watermarking and logging
   const watermarkedResponse = injectWatermark(cleaned, sessionId, { enabled: true });
   await logAIResponse(watermarkedResponse, sessionId, { 
@@ -78,7 +78,7 @@ async function processAIResponse(response, sessionId) {
     originalLength: response.length,
     processedLength: watermarkedResponse.length 
   });
-  
+
   return watermarkedResponse;
 }
 
@@ -184,7 +184,7 @@ router.get("/health", (req, res) => {
       }
     });
   });
-  
+
   /**
    * Chat API test endpoint to check if the API routes are correctly mounted
    */
@@ -212,28 +212,28 @@ async function generateAppVersionHash() {
   if (cachedVersionHash) {
     return cachedVersionHash;
   }
-  
+
   const crypto = await import('crypto');
   const fs = await import('fs');
   const path = await import('path');
-  
+
   try {
     // Read package.json for version info
     const packagePath = path.resolve(process.cwd(), 'package.json');
     const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
-    
+
     // Use fixed server start time as build identifier
     const buildTimestamp = process.env.BUILD_TIMESTAMP || serverStartTime;
     const version = packageJson.version || '1.0.0';
     const replId = process.env.REPL_ID || 'local-dev';
-    
+
     // Create consistent hash using server start time, not current time
     cachedVersionHash = crypto.default
       .createHash('sha256')
       .update(`${version}-${buildTimestamp}-${replId}`)
       .digest('hex')
       .substring(0, 8);
-      
+
     console.log(`[Version] Generated consistent version hash: ${cachedVersionHash}`);
     return cachedVersionHash;
   } catch (error) {
@@ -254,10 +254,10 @@ router.get("/app-config.json", async (req, res) => {
     res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
     res.setHeader('Pragma', 'no-cache');
     res.setHeader('Expires', '0');
-    
+
     const versionHash = await generateAppVersionHash();
     const timestamp = new Date().toISOString();
-    
+
     // Basic app configuration with version info
     const config = {
       version: versionHash,
@@ -269,10 +269,10 @@ router.get("/app-config.json", async (req, res) => {
         buildTime: timestamp
       }
     };
-    
+
     // Log version requests for debugging
     console.log(`[Version Check] Client requested app-config.json, serving version: ${versionHash}`);
-    
+
     res.json(config);
   } catch (error) {
     console.error('Error serving app-config.json:', error);
@@ -418,7 +418,7 @@ router.get("/app-config.json", async (req, res) => {
     try {
       const timestamp = new Date().toISOString();
       const authHeader = req.headers.authorization;
-      
+
       // Initialize response object
       const debugInfo = {
         timestamp,
@@ -451,7 +451,7 @@ router.get("/app-config.json", async (req, res) => {
 
       // Extract token from Bearer header
       const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-      
+
       if (!token) {
         debugInfo.message = "No token found in authorization header";
         return res.json(debugInfo);
@@ -466,7 +466,7 @@ router.get("/app-config.json", async (req, res) => {
       if (!watchdog.isCircuitBreakerOpen()) {
         try {
           const result = await verifyToken(token);
-          
+
           if (result.success) {
             debugInfo.authenticated = true;
             debugInfo.user = {
@@ -508,7 +508,7 @@ router.get("/app-config.json", async (req, res) => {
   router.get("/auth/session", async (req, res) => {
     try {
       const authHeader = req.headers.authorization;
-      
+
       // Initialize response
       const sessionInfo = {
         authenticated: false,
@@ -523,7 +523,7 @@ router.get("/app-config.json", async (req, res) => {
 
       // Extract token
       const token = authHeader.startsWith("Bearer ") ? authHeader.substring(7) : authHeader;
-      
+
       if (!token) {
         return res.json(sessionInfo);
       }
@@ -539,7 +539,7 @@ router.get("/app-config.json", async (req, res) => {
       // Verify token
       try {
         const result = await verifyToken(token);
-        
+
         if (result.success) {
           sessionInfo.authenticated = true;
           sessionInfo.user = {
@@ -573,10 +573,10 @@ router.get("/app-config.json", async (req, res) => {
     try {
       // Start timing the request for analytics
       const startTime = Date.now();
-      
+
       // Generate a unique session ID if not provided
       const sessionId = req.headers['x-session-id'] || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      
+
       // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors
       if (req.body && Array.isArray(req.body.conversationHistory)) {
         req.body.conversationHistory = req.body.conversationHistory.filter(entry => {
@@ -592,7 +592,7 @@ router.get("/app-config.json", async (req, res) => {
         });
         console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
       }
-      
+
       // Validate request
       const validation = chatRequestSchema.safeParse(req.body);
       if (!validation.success) {
@@ -614,23 +614,23 @@ router.get("/app-config.json", async (req, res) => {
           message: "DeepSeek API key is missing. Please set the DEEPSEEK_API_KEY environment variable.",
         });
       }
-      
+
       // Log the incoming request for analytics
       // Detect user role for appropriate response level
       const { detectUserRole, getResponseInstructions } = await import('../client/src/lib/user-role-detector.js');
       const roleAnalysis = detectUserRole(message);
       const responseInstructions = getResponseInstructions(roleAnalysis.role);
-      
+
       console.info(`[${sessionId}] Processing chat request${isHighRisk ? ' (HIGH RISK)' : ''} [${roleAnalysis.role.toUpperCase()}]: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`);
-      
+
       // Start session tracking for admin monitoring
       sessionTracker.startSession(sessionId, roleAnalysis.role);
-      
+
       // Flag high-risk sessions immediately
       if (isHighRisk) {
         sessionTracker.flagSession(sessionId, 'high_risk_query', 'high');
       }
-      
+
       // Prepare messages array with enhanced system context and conversation history
       const medicalContext = `You are MAIA, a medical AI assistant. Provide complete, concise medical information in plain text format.
         ${isHighRisk ? 'IMPORTANT: The user may describe an urgent medical situation. Emphasize the importance of seeking immediate professional medical attention for emergencies.' : ''}
@@ -643,38 +643,38 @@ router.get("/app-config.json", async (req, res) => {
         2. Complete ALL responses 
         3. Use simple headers with colons
         4. Educational information only
-        
+
         Format: Brief answer, key points, recommendations.`;
-      
+
       const messages = [
         { role: "system", content: medicalContext }
       ];
-      
+
       // Add conversation history if available
       if (conversationHistory && conversationHistory.length > 0) {
         // Add only the last 10 messages to avoid token limits
         messages.push(...conversationHistory.slice(-10));
       }
-      
+
       // Add the current message
       messages.push({ role: "user", content: message });
-      
+
       // Make API request with timeout and retry logic - optimized for comprehensive responses
       const maxRetries = 1; // Single retry for faster failure handling
       const timeoutMs = 90000; // 90 seconds timeout for comprehensive medical responses
-      
+
       let lastError = null;
       let attemptsMade = 0;
-      
+
       for (let attempt = 0; attempt <= maxRetries; attempt++) {
         attemptsMade++;
-        
+
         try {
           // Create timeout promise
           const timeoutPromise = new Promise((_, reject) => {
             setTimeout(() => reject(new Error('Request timed out')), timeoutMs);
           });
-          
+
           // Create fetch promise with all messages
           const fetchPromise = fetch(config.endpoint, {
             method: "POST",
@@ -689,14 +689,14 @@ router.get("/app-config.json", async (req, res) => {
               max_tokens: 4096, // Maximum tokens for complete medical explanations
             }),
           });
-          
+
           // Race the promises
           const deepSeekResponse = await Promise.race([fetchPromise, timeoutPromise]);
-          
+
           if (!deepSeekResponse.ok) {
             const errorData = await deepSeekResponse.text();
             console.error(`[${sessionId}] DeepSeek API error (attempt ${attempt + 1}/${maxRetries + 1}):`, errorData);
-            
+
             // For certain status codes, we don't retry
             if (deepSeekResponse.status === 401 || deepSeekResponse.status === 403) {
               return res.status(deepSeekResponse.status).json({
@@ -705,14 +705,14 @@ router.get("/app-config.json", async (req, res) => {
                 error_type: "authentication",
               });
             }
-            
+
             lastError = new Error(`DeepSeek API error: ${deepSeekResponse.statusText}`);
             // Continue to retry for other error types
           } else {
             // Success - process the response
             const data = await deepSeekResponse.json();
             let aiResponse = data.choices[0]?.message?.content;
-            
+
             if (!aiResponse) {
               console.error(`[${sessionId}] Empty response from DeepSeek API`);
               return res.status(500).json({
@@ -724,18 +724,18 @@ router.get("/app-config.json", async (req, res) => {
 
             // Clean and ensure complete response
             aiResponse = await processAIResponse(aiResponse, sessionId);
-            
+
             // Log the response time
             const requestDuration = Date.now() - startTime;
             console.info(`[${sessionId}] DeepSeek API request completed in ${requestDuration}ms (attempt ${attempt + 1})`);
-            
+
             // Update session with completion metrics
             sessionTracker.updateSession(sessionId, requestDuration, false);
             sessionTracker.endSession(sessionId, 'completed');
-            
+
             // Use authenticated user ID if available, otherwise default to anonymous
             const userId = req.user?.id || "anonymous";
-            
+
             // Create metadata for messages
             const messageMetadata = { 
               timestamp: new Date(),
@@ -743,13 +743,13 @@ router.get("/app-config.json", async (req, res) => {
               isHighRisk,
               requestTime: requestDuration,
             };
-            
+
             // Save user message with metadata
             await storage.saveMessage(userId, message, true, {
               ...messageMetadata,
               type: 'user_message'
             });
-            
+
             // Save AI response with metadata including tokens
             await storage.saveMessage(userId, aiResponse, false, {
               ...messageMetadata,
@@ -758,7 +758,7 @@ router.get("/app-config.json", async (req, res) => {
               completionTokens: data.usage?.completion_tokens,
               totalTokens: data.usage?.total_tokens
             });
-            
+
             // Return success response with full metadata
             return res.json({
               success: true,
@@ -780,7 +780,7 @@ router.get("/app-config.json", async (req, res) => {
         } catch (error) {
           console.error(`[${sessionId}] Error during attempt ${attempt + 1}/${maxRetries + 1}:`, error);
           lastError = error;
-          
+
           // If this isn't the last attempt, wait before retrying
           if (attempt < maxRetries) {
             const retryDelay = 1000 * Math.pow(2, attempt); // Exponential backoff
@@ -789,10 +789,10 @@ router.get("/app-config.json", async (req, res) => {
           }
         }
       }
-      
+
       // If we got here, all attempts failed
       console.error(`[${sessionId}] All ${maxRetries + 1} attempts failed.`);
-      
+
       // Return a friendly error message
       return res.status(500).json({
         success: false,
@@ -829,21 +829,21 @@ router.get("/app-config.json", async (req, res) => {
     try {
       const { userId } = req.params;
       const limit = req.query.limit ? parseInt(req.query.limit, 10) : 50;
-      
+
       if (!userId) {
         return res.status(400).json({ 
           success: false, 
           message: 'User ID is required' 
         });
       }
-      
+
       console.log(`Direct route: Fetching messages for user ${userId} with limit ${limit}`);
-      
+
       // Fetch messages from database
       const messages = await storage.getMessages(userId, limit);
-      
+
       console.log(`Direct route: Retrieved ${messages.length} messages for user ${userId}`);
-      
+
       return res.json({
         success: true,
         data: messages
@@ -856,22 +856,53 @@ router.get("/app-config.json", async (req, res) => {
       });
     }
   });
-  
+
   /**
    * Cancel active AI streaming session
    */
-  router.post("/chat/cancel/:sessionId", (req, res) => {
+  router.post('/chat/cancel/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
-    const controller = activeSessions.get(sessionId);
-    if (controller) {
-      controller.abort();
-      activeSessions.delete(sessionId);
-      console.log(`[${sessionId}] AI session cancelled by user`);
-      return res.json({ success: true, cancelled: true });
+    
+    try {
+      console.log(`[CANCEL] Received cancellation request for session: ${sessionId}`);
+
+      // Set headers to prevent caching
+      res.setHeader('Content-Type', 'application/json');
+      res.setHeader('Cache-Control', 'no-cache');
+
+      // Find the active session controller and abort it
+      const controller = activeSessions.get(sessionId);
+      if (controller) {
+        console.log(`[CANCEL] Aborting active session controller for: ${sessionId}`);
+        controller.abort();
+        activeSessions.delete(sessionId);
+      } else {
+        console.warn(`[CANCEL] No active session controller found for: ${sessionId}`);
+      }
+
+      // Track the cancellation in session tracker (optional, but good for analytics)
+      sessionTracker.cancelSession(sessionId, 'user_cancelled');
+
+      // Send confirmation response immediately
+      res.status(200).json({
+        success: true,
+        sessionId: sessionId,
+        message: 'Stream cancellation processed',
+        timestamp: new Date().toISOString()
+      });
+
+      console.log(`[CANCEL] Successfully processed cancellation for session: ${sessionId}`);
+
+    } catch (error) {
+      console.error(`[CANCEL] Error processing cancellation for session ${sessionId}:`, error);
+      res.status(500).json({
+        success: false,
+        error: 'Failed to process cancellation',
+        sessionId: sessionId
+      });
     }
-    res.json({ success: false, cancelled: false });
   });
-  
+
   /**
    * Streaming chat endpoint for real-time message processing
    * Implements Server-Sent Events (SSE) for streaming responses
@@ -880,10 +911,10 @@ router.get("/app-config.json", async (req, res) => {
     try {
       // Start timing the request for analytics
       const startTime = Date.now();
-      
+
       // Generate a unique session ID if not provided
       const sessionId = req.headers['x-session-id'] || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      
+
       // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors  
       if (req.body && Array.isArray(req.body.conversationHistory)) {
         req.body.conversationHistory = req.body.conversationHistory.filter(entry => {
@@ -899,10 +930,10 @@ router.get("/app-config.json", async (req, res) => {
         });
         console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
       }
-      
+
       // Validate request body against schema
       const validation = chatRequestSchema.safeParse(req.body);
-      
+
       if (!validation.success) {
         console.error(`[${sessionId}] Validation failed:`, validation.error);
         return res.status(400).json({
@@ -911,10 +942,10 @@ router.get("/app-config.json", async (req, res) => {
           errors: validation.error.errors,
         });
       }
-      
+
       const { message, conversationHistory, isHighRisk } = validation.data;
       const config = getDeepSeekConfig();
-      
+
       if (!config.apiKey) {
         console.error("Missing DeepSeek API key");
         return res.status(500).json({
@@ -928,7 +959,7 @@ router.get("/app-config.json", async (req, res) => {
       res.setHeader('Cache-Control', 'no-cache, no-transform');
       res.setHeader('Connection', 'keep-alive');
       res.flushHeaders(); // Flush the headers to establish SSE connection
-      
+
       // Set reasonable timeout for SSE connection (removed aggressive 1s timeout)
       res.setTimeout(120000); // 2 minutes for complete medical responses
 
@@ -937,12 +968,12 @@ router.get("/app-config.json", async (req, res) => {
   const { detectUserRole, getResponseInstructions } = await import('../client/src/lib/user-role-detector.js');
   const roleAnalysis = detectUserRole(message);
   const responseInstructions = getResponseInstructions(roleAnalysis.role);
-  
+
   console.info(`[${sessionId}] Processing streaming chat request${isHighRisk ? ' (HIGH RISK)' : ''} [${roleAnalysis.role.toUpperCase()}]: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`);
 
       // Start session tracking for admin monitoring
       sessionTracker.startSession(sessionId, roleAnalysis.role);
-      
+
       // Flag high-risk sessions immediately
       if (isHighRisk) {
         sessionTracker.flagSession(sessionId, 'high_risk_query', 'high');
@@ -950,7 +981,7 @@ router.get("/app-config.json", async (req, res) => {
 
       // Prepare messages for the LLM
       let promptMessages = [];
-      
+
       // Add system message with safety instructions and role information
       promptMessages.push({
         role: "system",
@@ -966,43 +997,43 @@ router.get("/app-config.json", async (req, res) => {
         3. Use simple headers with colons  
         4. Educational information only
         5. If response is getting long, prioritize the most important information first
-        
+
         CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`
       });
-      
+
       // Add conversation history for context
       if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
         // Limit history to last 10 messages to avoid token limits
         const recentHistory = conversationHistory.slice(-10);
         promptMessages = [...promptMessages, ...recentHistory];
       }
-      
+
       // Add the current user message
       promptMessages.push({
         role: "user",
         content: message
       });
-      
+
       // Send the request to DeepSeek API with streaming enabled
       const deepSeekUrl = "https://api.deepseek.com/v1/chat/completions";
-      
+
       // Create AbortController for immediate cancellation
       const ac = new AbortController();
       let closed = false;
-      
+
       // Track active session for cancellation support
       activeSessions.set(sessionId, ac);
-      
+
       // Unified abort handler - triggers on user Stop AI or connection close
       const handleAbort = (reason) => {
         if (closed) return; // Guard against multiple calls
         closed = true;
-        
+
         // IMMEDIATE upstream abort - highest priority to stop AI generation
         ac.abort();
-        
+
         console.log(`[${sessionId}] [SSE] STOPPED_BY_USER - upstream aborted immediately - ${new Date().toISOString()}`);
-        
+
         // Immediate socket destruction for instant Network tab cancellation
         try {
           if (res.socket && !res.socket.destroyed) {
@@ -1011,16 +1042,16 @@ router.get("/app-config.json", async (req, res) => {
         } catch (socketError) {
           console.debug(`[${sessionId}] Socket destroy error:`, socketError.message);
         }
-        
+
         // Quick client notification (non-blocking)
         try {
           if (!res.destroyed && !res.closed && !res.writableEnded) {
             res.write(`event: STOPPED_BY_USER\ndata: ${JSON.stringify({
               stopped: true,
               reason: reason,
-              timestamp: Date.now()
+              timestamp: new Date().toISOString()
             })}\n\n`);
-            
+
             // Immediate flush and end
             if (res.flush) res.flush();
             res.end();
@@ -1028,10 +1059,10 @@ router.get("/app-config.json", async (req, res) => {
         } catch (writeError) {
           // Silent fail - connection might already be closed
         }
-        
+
         // Remove from active sessions map
         activeSessions.delete(sessionId);
-        
+
         // Background session cleanup (non-blocking)
         process.nextTick(() => {
           try {
@@ -1042,31 +1073,31 @@ router.get("/app-config.json", async (req, res) => {
           }
         });
       };
-      
+
       // IMMEDIATE client abort handlers - triggers on user Stop AI
       req.on("close", () => {
         console.log(`[${sessionId}] [SSE] Client closed – triggering immediate abort`);
         handleAbort('connection_close');
       });
-      
+
       req.on("aborted", () => {
         console.log(`[${sessionId}] [SSE] Request aborted – triggering immediate abort`);
         handleAbort('connection_aborted');
       });
-      
+
       // Additional handler for connection errors that might not trigger close/aborted
       res.on("error", () => {
         console.log(`[${sessionId}] [SSE] Response error – triggering immediate abort`);
         handleAbort('response_error');
       });
-      
+
       res.on("finish", () => {
         // Response finished normally or was ended
         if (!closed) {
           console.log(`[${sessionId}] [SSE] Response finished normally`);
         }
       });
-      
+
       // Create fire-and-forget upstream fetch (detached from SSE lifecycle)
       const upstreamFetch = () => fetch(deepSeekUrl, {
         method: "POST",
@@ -1086,81 +1117,79 @@ router.get("/app-config.json", async (req, res) => {
         }),
         signal: ac.signal // MUST pass the AbortSignal
       });
-      
-      // Normal upstream fetch without artificial timeouts
-      
+
       // Execute upstream fetch with normal streaming
       (async () => {
         try {
           console.log(`[${sessionId}] [SSE] STREAM_STARTED - ${new Date().toISOString()}`);
           const deepSeekResponse = await upstreamFetch();
           if (closed || !deepSeekResponse) return; // Don't process if already closed
-          
+
           try {
-        
+
         if (!deepSeekResponse.ok) {
           throw new Error(`API error: ${deepSeekResponse.status} ${deepSeekResponse.statusText}`);
         }
-        
+
         const reader = deepSeekResponse.body.getReader();
         const decoder = new TextDecoder("utf-8");
-        
+
         let buffer = '';
         let responseText = '';
-        
+
         // Save user and AI message to database
         const userId = req.user?.id || "anonymous";
-        
+
         // Read the stream chunk by chunk with abort signal checking
         try {
           while (true) {
             // Check abort signal before each read
             if (ac.signal.aborted || closed) throw new Error('aborted');
             const { done, value } = await reader.read();
-            
+
             if (done) {
               break;
             }
-            
+
             // Decode the chunk
             buffer += decoder.decode(value, { stream: true });
-            
+
             // Process complete lines in the buffer
             let lines = buffer.split('\n');
             buffer = lines.pop() || ''; // Keep the last partial line in the buffer
-            
+
             for (const line of lines) {
               // Check abort signal during line processing for immediate termination
               if (ac.signal.aborted || closed) {
                 console.log(`[${sessionId}] [SSE] Abort detected during token processing - stopping immediately`);
                 throw new Error('aborted');
               }
-              
+
               // Skip empty lines and :keep-alive comments
               if (!line || line.trim() === '' || line.startsWith(':')) {
                 continue;
               }
-              
+
               // Lines starting with "data:" contain the streamed content
               if (line.startsWith('data:')) {
                 const jsonPart = line.slice(5).trim();
-                
+
                 // Check for the "[DONE]" marker
                 if (jsonPart === '[DONE]') {
                   continue;
                 }
-                
+
                 try {
                   const data = JSON.parse(jsonPart);
                   const content = data.choices?.[0]?.delta?.content || '';
-                  
+
                   if (content) {
                     // Clean content before sending and accumulating
                     const cleanedContent = content.replace(/#/g, '');
-                    
+
                     // Accumulate response text
                     responseText += cleanedContent;
-                    
+
                     // Send the cleaned chunk to the client using event-based format for SSE
                     if (!closed && !res.writableEnded && !ac.signal.aborted) {
                       res.write(`event: chunk\ndata: ${JSON.stringify({ text: cleanedContent })}\n\n`);
@@ -1182,7 +1211,7 @@ router.get("/app-config.json", async (req, res) => {
           try { reader.cancel(); } catch {}
           try { response.body?.cancel(); } catch {}
         }
-        
+
         // Early exit check - don't process anything if connection was aborted
         if (!closed && !ac.signal.aborted) {
           // Finalize the streaming response and apply final processing
@@ -1192,7 +1221,7 @@ router.get("/app-config.json", async (req, res) => {
           if (!closed && !ac.signal.aborted) {
             console.log(`[${sessionId}] [SSE] STREAM_ENDED - completed in ${requestDuration}ms - ${new Date().toISOString()}`);
           }
-          
+
           // Save the messages to the database only if not aborted
           try {
             if (userId !== "anonymous" && responseText && !closed && !ac.signal.aborted) {
@@ -1201,9 +1230,9 @@ router.get("/app-config.json", async (req, res) => {
           } catch (dbError) {
             console.error(`[${sessionId}] Error saving messages:`, dbError);
           }
-          
+
           // Send configuration data for the client only if not aborted
-          if (!closed && !res.writableEnded && !ac.signal.aborted) {
+          if (!closed && !ac.signal.aborted) {
             res.write(`event: config\ndata: ${JSON.stringify({
               model: config.model || "deepseek-chat",
               sessionId: sessionId,
@@ -1211,24 +1240,24 @@ router.get("/app-config.json", async (req, res) => {
               tokensEstimate: Math.round(responseText.split(' ').length * 1.3)
             })}\n\n`);
           }
-          
+
           // Send completion event only if not aborted
-          if (!closed && !res.writableEnded && !ac.signal.aborted) {
+          if (!closed && !ac.signal.aborted) {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: true,
               requestTime: requestDuration
             })}\n\n`);
           }
-          
+
           // Update session with completion metrics only if not aborted
           if (!closed && !ac.signal.aborted) {
             sessionTracker.updateSession(sessionId, requestDuration, false);
             sessionTracker.endSession(sessionId, 'completed');
           }
-          
+
           // Always clean up from active sessions on completion
           activeSessions.delete(sessionId);
-          
+
           // End the response safely only if not aborted
           if (!res.writableEnded && !closed && !ac.signal.aborted) {
             res.end();
@@ -1247,18 +1276,18 @@ router.get("/app-config.json", async (req, res) => {
                 error: apiError.message,
                 code: 'streaming_error' 
               })}\n\n`);
-              
+
               // Send done event to complete the stream
               res.write(`event: done\ndata: ${JSON.stringify({
                 completed: false,
                 error: true,
                 requestTime: Date.now() - startTime
               })}\n\n`);
-              
+
               // Update session with error metrics
               sessionTracker.updateSession(sessionId, Date.now() - startTime, true);
               sessionTracker.endSession(sessionId, 'error');
-              
+
               res.end();
             } catch (writeError) {
               console.debug(`[${sessionId}] Could not send error event:`, writeError.message);
@@ -1285,7 +1314,7 @@ router.get("/app-config.json", async (req, res) => {
         });
     } catch (error) {
       console.error("Streaming endpoint error:", error);
-      
+
       // Check if headers have already been sent (we might have started streaming)
       if (!res.headersSent) {
         res.status(500).json({
@@ -1302,9 +1331,8 @@ router.get("/app-config.json", async (req, res) => {
               code: 'request_error' 
             })}\n\n`);
           }
-          
-          // Handle error completion event - Create timestamp directly since we may not have access
-          // to the original startTime variable in this context
+
+          // Send completion event to complete the stream
           if (!res.destroyed && !res.closed) {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: false,
@@ -1315,7 +1343,7 @@ router.get("/app-config.json", async (req, res) => {
         } catch (writeError) {
           console.error("Error sending error message via SSE:", writeError);
         }
-        
+
         res.end();
       }
     }
@@ -1323,7 +1351,7 @@ router.get("/app-config.json", async (req, res) => {
 
   // Register message API routes with circuit breaker protection
   router.use("/messages", circuitBreakerMiddleware, messageApiRouter);
-  
+
   // Register direct endpoints with circuit breaker protection for Supabase-dependent routes
   router.use("/direct/messages", circuitBreakerMiddleware);
   router.use("/direct", directEndpoints);
@@ -1333,10 +1361,10 @@ router.get("/app-config.json", async (req, res) => {
 
   // Phase 7: Visual Trace Debugging System
   const debugRouter = express.Router();
-  
+
   debugRouter.get('/debug/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
-    
+
     try {
       // Create demo debug data for visualization
       const debugData = {
@@ -1388,7 +1416,7 @@ router.get("/app-config.json", async (req, res) => {
         enhancePrompt: '#8b5cf6',
         llmResponse: '#10b981'
       };
-      
+
       const htmlResponse = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -1425,13 +1453,13 @@ router.get("/app-config.json", async (req, res) => {
             <h1>🧠 Medical Query Debug Trace</h1>
             <p>Session: ${debugData.sessionId} | ${new Date(debugData.timestamp).toLocaleString()}</p>
         </div>
-        
+
         <div class="content">
             <div class="input-display">
                 <h3>User Input</h3>
                 <p><strong>"${debugData.userInput}"</strong></p>
             </div>
-            
+
             <div class="timeline">
                 ${Object.keys(debugData.processingStages).map(stage => 
                   `<div class="timeline-item">
@@ -1442,7 +1470,7 @@ router.get("/app-config.json", async (req, res) => {
                   </div>`
                 ).join('')}
             </div>
-            
+
             <div class="metrics">
                 <div class="metric">
                     <div class="metric-value">${debugData.totalProcessingTime}ms</div>
@@ -1461,7 +1489,7 @@ router.get("/app-config.json", async (req, res) => {
                     <div class="metric-label">Triage Level</div>
                 </div>
             </div>
-            
+
             ${Object.entries(debugData.processingStages).map(([stageName, stageData]) => 
               `<div class="stage">
                 <div class="stage-header" style="background-color: ${stageColors[stageName]};">
@@ -1473,7 +1501,7 @@ router.get("/app-config.json", async (req, res) => {
                 </div>
               </div>`
             ).join('')}
-            
+
             <div class="stage">
                 <div class="stage-header" style="background-color: ${stageColors.llmResponse};">
                     <span>LLM Response</span>
@@ -1492,10 +1520,10 @@ router.get("/app-config.json", async (req, res) => {
     </div>
 </body>
 </html>`;
-      
+
       res.setHeader('Content-Type', 'text/html');
       res.send(htmlResponse);
-      
+
     } catch (error) {
       console.error('Debug endpoint error:', error);
       res.status(500).json({ 
@@ -1505,7 +1533,7 @@ router.get("/app-config.json", async (req, res) => {
       });
     }
   });
-  
+
 // Debug and feedback routes are mounted in server/index.js
 console.log("✅ Chat routes prepared for mounting");
 
@@ -1516,7 +1544,7 @@ router.get('/api/legal/terms', (req, res) => {
     const fs = require('fs');
     const path = require('path');
     const termsPath = path.join(process.cwd(), 'public', 'TERMS.md');
-    
+
     if (fs.existsSync(termsPath)) {
       const content = fs.readFileSync(termsPath, 'utf8');
       res.set('Content-Type', 'text/plain');
@@ -1535,7 +1563,7 @@ router.get('/api/legal/license', (req, res) => {
     const fs = require('fs');
     const path = require('path');
     const licensePath = path.join(process.cwd(), 'public', 'LICENSE.txt');
-    
+
     if (fs.existsSync(licensePath)) {
       const content = fs.readFileSync(licensePath, 'utf8');
       res.set('Content-Type', 'text/plain');
