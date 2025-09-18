@@ -1241,11 +1241,6 @@ router.get("/app-config.json", async (req, res) => {
 
         res.end();
       }
-    } finally {
-      // 6) Cleanup in finally
-      activeSessions.delete(sessionId);
-      req.off('aborted', onClientGone);
-      req.off('close', onClientGone);
     }
   });
 
