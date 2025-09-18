@@ -136,4 +136,7 @@
  */
 
 // Export types for ES6 imports (these are just comments for JSDoc, actual exports don't exist in pure JS)
+/**
+ *
+ */
 export {};

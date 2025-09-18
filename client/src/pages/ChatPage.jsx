@@ -760,8 +760,10 @@ export default function ChatPage() {
 
   /**
    * Create stable reference for onStopAI prop to prevent race conditions
+   * @param {string} messageId - The message ID to check for stop handler
+   * @returns {function|undefined} Stop handler function or undefined
    */
-  const getStopHandler = useCallback(/** @param {string} messageId */ (messageId) => {
+  const getStopHandler = useCallback((messageId) => {
     if (streamingMessageId && messageId === streamingMessageId) {
       return handleStopAI;
     }
