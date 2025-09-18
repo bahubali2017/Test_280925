@@ -47,7 +47,7 @@ return isError(obj) && obj.name === 'AbortError';
 /**
 * Type guard to check if an object has our API error shape
 * @param {unknown} obj - The object to check
-* @returns {obj is APIErrorDetails} Whether the object is an API error
+* @returns {boolean} Whether the object is an API error
 */
 function isAPIError(obj) {
 return Boolean(
@@ -303,9 +303,6 @@ return `${EMERGENCY_DISCLAIMER}\n\n${content}`;
 // Return original content if no disclaimers needed
 return content;
 }
-// Using the createResponseMetadata function defined earlier
-// The withExponentialBackoff function is defined later in the file (line ~478)
-// This duplicate declaration has been removed for code stability
 /**
 * Gets follow-up suggestions based on query intent
 * @param {QueryIntent} queryIntent - Query intent analysis results
@@ -753,98 +750,103 @@ let currentEvent = null;
 let buffer = '';
 
 // Process SSE chunks correctly
-while (true) {
-// Check for abort signal before each read
-if (abortSignal.aborted) {
-console.debug("Stream aborted, breaking read loop");
-break;
-}
+        while (true) {
+          // Check for abort signal before each read
+          if (abortSignal.aborted) {
+            console.debug("Stream aborted, breaking read loop");
+            break;
+          }
 
-const { done, value } = await reader.read();
-if (done) {
-console.log("Stream reading complete");
-break;
-}
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log("Stream reading complete");
+            break;
+          }
 
-// Decode chunk
-const chunk = decoder.decode(value, { stream: true });
-buffer += chunk;
+          // Decode chunk and add to buffer
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
 
-// Process complete lines in the buffer
-const lines = buffer.split('\n');
-buffer = lines.pop() || ''; // Keep the last possibly incomplete line
+          // Process complete lines in the buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep the last possibly incomplete line
 
-for (const line of lines) {
-const trimmedLine = line.trim();
-// Skip empty lines and comments
-if (!trimmedLine || trimmedLine.startsWith(':')) continue;
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            // Skip empty lines and comments
+            if (!trimmedLine || trimmedLine.startsWith(':')) continue;
 
-// Event line
-if (trimmedLine.startsWith('event:')) {
-currentEvent = trimmedLine.substring(6).trim();
-continue;
-}
+            // Event line
+            if (trimmedLine.startsWith('event:')) {
+              currentEvent = trimmedLine.substring(6).trim();
+              continue;
+            }
 
-// Data line
-if (trimmedLine.startsWith('data:')) {
-const jsonData = trimmedLine.substring(5).trim();
-try {
-const data = JSON.parse(jsonData);
+            // Data line
+            if (trimmedLine.startsWith('data:')) {
+              const jsonData = trimmedLine.substring(5).trim();
 
-// Process based on current event type
-if (currentEvent === 'chunk' && data.text) {
-// Accumulate text chunks
-accumulatedText += data.text;
-// Update UI with current accumulated text
-onStreamingUpdate(accumulatedText, { 
-isStreaming: true, 
-isComplete: false,
-chunkReceived: true
-});
-} else if (currentEvent === 'done') {
-// Capture metadata from the done event
-metadata = { 
-...metadata, 
-...data,
-isComplete: true,
-completed: true,
-status: 'delivered',
-error: false
-};
-console.log("Stream completed with metadata:", data);
+              // Handle [DONE] sentinel first
+              if (jsonData === '[DONE]') {
+                console.log("Received [DONE] sentinel, ending stream");
+                break;
+              }
 
-// Final update with complete text
-onStreamingUpdate(accumulatedText, { 
-isStreaming: false, 
-isComplete: true,
-status: 'delivered',
-error: false,
-...metadata
-});
-} else if (currentEvent === 'config') {
-// Store session info from config
-metadata = { ...metadata, ...data };
-// CRITICAL: Capture server sessionId for cancellation
-if (data.sessionId) {
-  currentStream.sessionId = data.sessionId;
-  console.debug("[LLM] Captured server sessionId for cancellation:", data.sessionId);
-}
-console.log("Received config:", data);
-} else if (currentEvent === 'error') {
-console.error("Stream error:", data.error);
-throw createAPIError('streaming', data.error || "Unknown streaming error");
-}
-} catch (parseError) {
-// Handle [DONE] sentinel
-if (jsonData === '[DONE]') {
-console.log("Received [DONE] sentinel, ending stream");
-break;
-}
-console.error("Failed to parse SSE JSON:", jsonData, parseError);
-}
-}
-}
-}
+              try {
+                const data = JSON.parse(jsonData);
+
+                // Process based on current event type
+                if (currentEvent === 'chunk' && data.text) {
+                  // Accumulate text chunks
+                  accumulatedText += data.text;
+                  console.debug(`[SSE] Received chunk: "${data.text.substring(0, 50)}..." (${data.text.length} chars)`);
+
+                  // CRITICAL FIX: Immediately update UI with current accumulated text
+                  onStreamingUpdate(accumulatedText, { 
+                    isStreaming: true, 
+                    isComplete: false,
+                    chunkReceived: true,
+                    totalLength: accumulatedText.length
+                  });
+                } else if (currentEvent === 'done') {
+                  // Capture metadata from the done event
+                  metadata = { 
+                    ...metadata, 
+                    ...data,
+                    isComplete: true,
+                    completed: true,
+                    status: 'delivered',
+                    error: false
+                  };
+                  console.log("Stream completed with metadata:", data);
+
+                  // Final update with complete text
+                  onStreamingUpdate(accumulatedText, { 
+                    isStreaming: false, 
+                    isComplete: true,
+                    status: 'delivered',
+                    error: false,
+                    ...metadata
+                  });
+                } else if (currentEvent === 'config') {
+                  // Store session info from config
+                  metadata = { ...metadata, ...data };
+                  // CRITICAL: Capture server sessionId for cancellation
+                  if (data.sessionId) {
+                    currentStream.sessionId = data.sessionId;
+                    console.debug("[LLM] Captured server sessionId for cancellation:", data.sessionId);
+                  }
+                  console.log("Received config:", data);
+                } else if (currentEvent === 'error') {
+                  console.error("Stream error:", data.error);
+                  throw createAPIError('streaming', data.error || "Unknown streaming error");
+                }
+              } catch (parseError) {
+                console.error("Failed to parse SSE JSON:", jsonData, parseError);
+              }
+            }
+          }
+        }
 
 return {
 content: accumulatedText,
@@ -952,7 +954,7 @@ function stopStreaming(isDelivered = false) {
     isActive: currentStream.isActive,
     sessionId: currentStream.sessionId 
   });
-  
+
   // Check if we have an active stream
   if (!currentStream.controller || !currentStream.isActive) {
     console.warn('[LLM] No active stream controller to stop');
@@ -1003,7 +1005,7 @@ function stopStreaming(isDelivered = false) {
   // Send server-side cancellation request IMMEDIATELY (don't wait for promises)
   if (sessionToCancel) {
     console.debug(`[LLM] Sending immediate server-side cancellation for session: ${sessionToCancel}`);
-    
+
     // Fire and forget - don't wait for the response
     fetch(`/api/chat/cancel/${sessionToCancel}`, { 
       method: "POST",
@@ -1145,154 +1147,103 @@ const decoder = new window.TextDecoder();
 let currentEvent = null;
 let buffer = '';
 // Process SSE chunks correctly
-while (true) {
-// Check for abort signal before each read
-if (abortSignal.aborted) {
-console.debug("STOP_AI: Stream aborted, breaking read loop immediately");
-break;
-}
-const { done, value } = await reader.read();
-if (done) {
-console.log("Stream reading complete");
-break;
-}
-// Decode chunk
-const chunk = decoder.decode(value, { stream: true });
-buffer += chunk;
-// Process complete lines in the buffer
-const lines = buffer.split('\n');
-buffer = lines.pop() || ''; // Keep the last possibly incomplete line
-for (const line of lines) {
-const trimmedLine = line.trim();
-// Skip empty lines and comments
-if (!trimmedLine || trimmedLine.startsWith(':')) continue;
-// Event line
-if (trimmedLine.startsWith('event:')) {
-currentEvent = trimmedLine.substring(6).trim();
-continue;
-}
-// Data line
-if (trimmedLine.startsWith('data:')) {
-const jsonData = trimmedLine.substring(5).trim();
-try {
-const data = JSON.parse(jsonData);
-// Process based on current event type
-if (currentEvent === 'chunk' && data.text) {
-// Check if stream is still active before processing
-if (!currentStream.isActive) {
-console.debug("Stream marked as inactive, stopping chunk processing");
-break;
-}
-// Accumulate text chunks
-accumulatedText += data.text;
-// Update UI with current accumulated text
-onStreamingUpdate(accumulatedText, { 
-isStreaming: true, 
-isComplete: false,
-queryIntent: extractQueryIntentMetadata(queryIntent),
-chunkReceived: true // Track that we're receiving data
-});
-} else if (currentEvent === 'done') {
-// Mark as delivered to prevent any error messages from showing up later
-messageDelivered = true;
-// CRITICAL FIX: Check if message was manually stopped before setting status
-const wasStopped = messageDeliveryState.isStopped === true;
-const finalStatus = wasStopped ? 'stopped' : 'delivered';
-// Capture metadata from the done event with explicit completion flag
-metadata = { 
-...metadata, 
-...data,
-isComplete: true, // Explicitly mark as complete to ensure proper status update
-completed: true,
-status: finalStatus, // Respect stopped status if message was manually cancelled
-error: false // Explicitly mark no error to prevent fallback error display
-};
-console.log("Stream completed with metadata:", data);
-console.debug("STREAM_END: Message streaming has ended, setting status to delivered");
-// CRITICAL FIX: Prevent any pending error handlers from executing
-if (errorTimeout) {
-console.debug("STREAM_END: Clearing error timeout handler");
-window.clearTimeout(errorTimeout);
-errorTimeout = null;
-}
-// Also clear the global timeout reference
-if (globalErrorTimeout) {
-console.debug("STREAM_END: Clearing global error timeout handler");
-window.clearTimeout(globalErrorTimeout);
-globalErrorTimeout = null;
-}
-// Immediately trigger a final update with the accumulated text
-// This ensures the message is properly marked as complete
-onStreamingUpdate(accumulatedText, { 
-isStreaming: false, 
-isComplete: true,
-status: finalStatus, // Use the final status (respects stopped state)
-error: false, // Explicitly mark as no error to prevent error display
-queryIntent: extractQueryIntentMetadata(queryIntent),
-...metadata
-});
-// Double check to make sure the timeout is cleared
-window.setTimeout(() => {
-console.debug("Doing final check to ensure error timeouts are cleared");
-if (errorTimeout) {
-safeClearTimeout(errorTimeout);
-errorTimeout = null;
-}
-}, 0);
-} else if (currentEvent === 'STOPPED_BY_USER') {
-// Immediate client-side abort handling
-console.log("[SSE] Received STOPPED_BY_USER event - UI updating instantly");
-messageDelivered = true; // Prevent error timeouts
-// Clear any pending timeouts immediately
-if (errorTimeout) {
-window.clearTimeout(errorTimeout);
-errorTimeout = null;
-}
-if (globalErrorTimeout) {
-window.clearTimeout(globalErrorTimeout);
-globalErrorTimeout = null;
-}
-// Update UI instantly with stopped status
-onStreamingUpdate(accumulatedText || "AI response stopped by user.", { 
-isStreaming: false, 
-isComplete: true,
-isCancelled: true,
-status: 'cancelled',
-cancelledByUser: true,
-stoppedByUser: true,
-error: false,
-reason: 'user_cancelled'
-});
-// Exit the stream processing immediately
-return {
-content: accumulatedText || "AI response stopped by user.",
-metadata: { 
-status: 'cancelled',
-cancelledByUser: true,
-stoppedByUser: true,
-reason: 'user_cancelled',
-...metadata
-}
-};
-} else if (currentEvent === 'config') {
-// Store session info from config
-metadata = { ...metadata, ...data };
-// CRITICAL: Capture server sessionId for cancellation
-if (data.sessionId) {
-  currentStream.sessionId = data.sessionId;
-  console.debug("[LLM] Captured server sessionId for cancellation:", data.sessionId);
-}
-console.log("Received config:", data);
-} else if (currentEvent === 'error') {
-console.error("Stream error:", data.error);
-throw new Error(data.error || "Unknown streaming error");
-}
-} catch (e) {
-console.error("Error parsing SSE data:", e, "raw data:", jsonData);
-}
-}
-}
-}
+        while (true) {
+          // Check for abort signal before each read
+          if (abortSignal.aborted) {
+            console.debug("Stream aborted, breaking read loop");
+            break;
+          }
+
+          const { done, value } = await reader.read();
+          if (done) {
+            console.log("Stream reading complete");
+            break;
+          }
+
+          // Decode chunk and add to buffer
+          const chunk = decoder.decode(value, { stream: true });
+          buffer += chunk;
+
+          // Process complete lines in the buffer
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep the last possibly incomplete line
+
+          for (const line of lines) {
+            const trimmedLine = line.trim();
+            // Skip empty lines and comments
+            if (!trimmedLine || trimmedLine.startsWith(':')) continue;
+
+            // Event line
+            if (trimmedLine.startsWith('event:')) {
+              currentEvent = trimmedLine.substring(6).trim();
+              continue;
+            }
+
+            // Data line
+            if (trimmedLine.startsWith('data:')) {
+              const jsonData = trimmedLine.substring(5).trim();
+
+              // Handle [DONE] sentinel first
+              if (jsonData === '[DONE]') {
+                console.log("Received [DONE] sentinel, ending stream");
+                break;
+              }
+
+              try {
+                const data = JSON.parse(jsonData);
+
+                // Process based on current event type
+                if (currentEvent === 'chunk' && data.text) {
+                  // Accumulate text chunks
+                  accumulatedText += data.text;
+                  console.debug(`[SSE] Received chunk: "${data.text.substring(0, 50)}..." (${data.text.length} chars)`);
+
+                  // CRITICAL FIX: Immediately update UI with current accumulated text
+                  onStreamingUpdate(accumulatedText, { 
+                    isStreaming: true, 
+                    isComplete: false,
+                    chunkReceived: true,
+                    totalLength: accumulatedText.length
+                  });
+                } else if (currentEvent === 'done') {
+                  // Capture metadata from the done event
+                  metadata = { 
+                    ...metadata, 
+                    ...data,
+                    isComplete: true,
+                    completed: true,
+                    status: 'delivered',
+                    error: false
+                  };
+                  console.log("Stream completed with metadata:", data);
+
+                  // Final update with complete text
+                  onStreamingUpdate(accumulatedText, { 
+                    isStreaming: false, 
+                    isComplete: true,
+                    status: 'delivered',
+                    error: false,
+                    ...metadata
+                  });
+                } else if (currentEvent === 'config') {
+                  // Store session info from config
+                  metadata = { ...metadata, ...data };
+                  // CRITICAL: Capture server sessionId for cancellation
+                  if (data.sessionId) {
+                    currentStream.sessionId = data.sessionId;
+                    console.debug("[LLM] Captured server sessionId for cancellation:", data.sessionId);
+                  }
+                  console.log("Received config:", data);
+                } else if (currentEvent === 'error') {
+                  console.error("Stream error:", data.error);
+                  throw new Error(data.error || "Unknown streaming error");
+                }
+              } catch (parseError) {
+                console.error("Failed to parse SSE JSON:", jsonData, parseError);
+              }
+            }
+          }
+        }
 // Clear the global abort controller and reader since we're done with the fetch
 if (globalStreamReader) {
 try { 
@@ -1583,7 +1534,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
     // Check if AI should be blocked due to safety concerns
     if (safetyResult.shouldBlockAI) {
       console.log('[Medical Safety] AI blocked - using fallback response');
-      
+
       // Use fallback response for safety
       aiResponse = {
         content: safetyResult.fallbackResponse.response,
@@ -1606,7 +1557,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
     } else {
       // Proceed with normal AI call
       console.log('[Medical Safety] AI approved - proceeding with request');
-      
+
       try {
         aiResponse = await sendMessage(message, history, {
           ...otherOptions,
@@ -1614,7 +1565,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
         }, enhancedStreamingCallback);
       } catch (error) {
         console.error('[Medical Safety] AI call failed, attempting fallback:', error);
-        
+
         // Try to fall back to original sendMessage without safety processing
         aiResponse = await sendMessage(message, history, {
           ...otherOptions,
@@ -1633,7 +1584,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
       );
 
       aiResponse.content = postProcessedResponse.processedContent;
-      
+
       // Merge safety metadata
       aiResponse.metadata = {
         ...aiResponse.metadata,
@@ -1659,7 +1610,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
 
   } catch (error) {
     console.error('[Medical Safety] Error in safety processing:', error);
-    
+
     // If safety processing fails, fall back to regular message without safety
     try {
       return await sendMessage(message, history, {
@@ -1680,7 +1631,7 @@ export async function sendMessageWithSafety(message, history = [], options = {})
  */
 function extractMedicalSafetyInfo(response) {
   const safetyInfo = response.metadata?.medicalSafety;
-  
+
   if (!safetyInfo) {
     return {
       hasWarnings: false,

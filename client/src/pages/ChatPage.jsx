@@ -560,6 +560,10 @@ export default function ChatPage() {
       const handleStreamingUpdate = (content, metadata = {}) => {
         handleStreamingUpdate.messageId = assistantMessageId; // Store for reference
         handleStreamingUpdate.sessionId = sessionId; // Attach sessionId for cancellation
+        
+        // CRITICAL DEBUG: Log streaming updates
+        console.debug(`[Chat] Streaming update received: ${content.length} chars, streaming: ${metadata.isStreaming}, complete: ${metadata.isComplete}`);
+        
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
         partialContentRef.current = content;
