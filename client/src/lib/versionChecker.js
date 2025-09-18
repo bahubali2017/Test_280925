@@ -1,3 +1,4 @@
+/* eslint-env browser */
 /**
  * @file Version Checking Utility
  * @description Client-side version checking to detect server updates and force cache refresh
