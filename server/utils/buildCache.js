@@ -14,7 +14,8 @@ const CACHE_FILE = path.join(__dirname, '../../.build-cache.json');
  */
 class BuildCache {
   /**
-   *
+   * Retrieves cached build information from the build cache file.
+   * @returns {object|null} The cached build info object or null if not found
    */
   static getBuildInfo() {
     try {
@@ -46,8 +47,9 @@ class BuildCache {
   }
 
   /**
-   *
-   * @param currentHash
+   * Determines if a rebuild is required based on cache age and hash comparison.
+   * @param {string} currentHash - The current hash to compare against cached version
+   * @returns {boolean} True if rebuild is required, false otherwise
    */
   static shouldRebuild(currentHash) {
     const cached = this.getBuildInfo();
@@ -75,15 +77,17 @@ class BuildCache {
   }
 
   /**
-   *
+   * Generates a unique build identifier.
+   * @returns {string} A random hex string as build ID
    */
   static generateBuildId() {
     return crypto.randomBytes(8).toString('hex');
   }
 
   /**
-   *
-   * @param filePaths
+   * Generates a hash based on the contents of specified files.
+   * @param {string[]} filePaths - Array of file paths to hash
+   * @returns {string} A shortened hash string of the file contents
    */
   static generateFileHash(filePaths) {
     const hash = crypto.createHash('sha256');
@@ -99,7 +103,8 @@ class BuildCache {
   }
 
   /**
-   *
+   * Checks if a build is necessary by comparing current file hashes.
+   * @returns {boolean} True if build is necessary, false otherwise
    */
   static checkBuildNecessity() {
     const importantFiles = [
