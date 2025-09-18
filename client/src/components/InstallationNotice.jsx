@@ -96,6 +96,7 @@ export function InstallationNotice() {
     /**
      * Checks if the PWA is currently installed/running in standalone mode
      * Uses multiple detection methods for cross-platform compatibility
+     * More conservative detection to prevent false positives in development
      * 
      * @function
      * @returns {boolean} True if PWA is installed and running standalone
@@ -107,18 +108,20 @@ export function InstallationNotice() {
      * }
      */
     const checkIfInstalled = () => {
-      // Check for standalone display mode (most browsers)
-      const standaloneMatch = window.matchMedia('(display-mode: standalone)').matches;
+      // Check for iOS Safari standalone mode (most reliable)
+      const iosStandalone = typeof window !== 'undefined' && window.navigator && 'standalone' in window.navigator && window.navigator.standalone === true;
       
-      if (standaloneMatch) {
+      if (iosStandalone) {
         setIsInstalled(true);
         return true;
       }
       
-      // Check for iOS Safari standalone mode
-      const iosStandalone = typeof window !== 'undefined' && window.navigator && 'standalone' in window.navigator && window.navigator.standalone === true;
+      // For non-iOS, be more conservative with standalone detection
+      // Only consider installed if we're in a true standalone window (not iframe)
+      const standaloneMatch = window.matchMedia('(display-mode: standalone)').matches;
+      const isInIframe = window !== window.top;
       
-      if (iosStandalone) {
+      if (standaloneMatch && !isInIframe) {
         setIsInstalled(true);
         return true;
       }
@@ -203,13 +206,10 @@ export function InstallationNotice() {
 
   /**
    * Handles installation button click action
-   * - Searches for existing PWA install button in the DOM
-   * - Programmatically triggers click event for seamless integration
-   * - Uses event dispatching for proper event handling
-   * - Automatically dismisses notice after triggering installation
-   * 
-   * This approach maintains consistency with existing PWA install functionality
-   * and ensures all installation logic remains centralized in PWAInstallButton component.
+   * - Provides device-specific installation instructions
+   * - Shows appropriate guidance based on detected platform
+   * - Triggers native PWA installation prompt when available
+   * - Automatically dismisses notice after showing instructions
    * 
    * @function
    * @returns {void}
@@ -219,32 +219,31 @@ export function InstallationNotice() {
    * <button onClick={handleInstall}>Install Now</button>
    */
   const handleInstall = () => {
-    // Find the existing PWA install button by its aria-label attribute
-    const installButton = document.querySelector('[aria-label*="Install Anamnesis"]');
-    
-    if (installButton) {
-      /**
-       * Create and dispatch a synthetic click event
-       * This ensures proper event bubbling and browser compatibility
-       * @type {MouseEvent}
-       */
-      if (typeof MouseEvent !== 'undefined') {
-        installButton.dispatchEvent(new MouseEvent('click', { // eslint-disable-line no-undef
-          view: window,
-          bubbles: true,
-          cancelable: true
-        }));
+    if (platform === 'ios') {
+      // iOS - Show detailed installation instructions
+      if (typeof alert !== 'undefined') {
+        alert('To install Anamnesis on your iPhone/iPad:\n\n1. Tap the Share button (⬆️) at the bottom of Safari\n2. Scroll down and tap "Add to Home Screen"\n3. Tap "Add" to install the app'); // eslint-disable-line no-undef
+      }
+    } else {
+      // Android/Desktop - Try to trigger native install prompt
+      const beforeInstallPromptHandler = (e) => {
+        e.preventDefault();
+        e.prompt();
+      };
+      
+      // Check if beforeinstallprompt event is available
+      if (typeof window !== 'undefined' && 'BeforeInstallPromptEvent' in window) {
+        window.addEventListener('beforeinstallprompt', beforeInstallPromptHandler, { once: true });
       } else {
-        // Fallback for environments without MouseEvent
-        if (typeof window !== 'undefined'
-          && installButton instanceof window.HTMLElement
-          && typeof installButton.click === 'function') {
-          installButton.click();
+        // Fallback instructions for platforms without native prompt
+        const instructions = getInstallationInstructions();
+        if (typeof alert !== 'undefined') {
+          alert(`${instructions.title}\n\n${instructions.steps.join('\n')}`); // eslint-disable-line no-undef
         }
       }
     }
     
-    // Always dismiss the notice after attempting installation
+    // Always dismiss the notice after showing instructions
     handleDismiss();
   };
 
