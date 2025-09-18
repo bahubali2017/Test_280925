@@ -34,7 +34,7 @@ dotenv.config();
 process.env.NODE_ENV = "production";
 
 // Build cache integration
-const { BuildCache } = require('./utils/buildCache.js');
+import { BuildCache } from './utils/buildCache.js';
 
 // Check if rebuild is necessary
 const needsRebuild = BuildCache.checkBuildNecessity();
@@ -431,6 +431,9 @@ adminWebSocketServer.initialize(httpServer);
         const server = httpServer.listen(port, "0.0.0.0", () => {
           console.log(`🚀 Production server started on port ${port}`);
           console.log(`📁 Static files served from: ${staticPath}`);
+          
+          // Mark build as completed successfully
+          BuildCache.markBuildComplete(true);
           
           // Store server reference for graceful shutdown
           global.httpServer = server;
