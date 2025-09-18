@@ -1,3 +1,34 @@
+
+module.exports = {
+  root: true,
+  env: { browser: true, es2020: true, node: true },
+  extends: [
+    'eslint:recommended',
+    '@eslint/js/recommended',
+  ],
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'node_modules', '**/*.min.js'],
+  parserOptions: { 
+    ecmaVersion: 'latest', 
+    sourceType: 'module',
+    ecmaFeatures: {
+      jsx: true
+    }
+  },
+  settings: {
+    react: { version: '18.3' }
+  },
+  plugins: ['react', 'jsx-a11y'],
+  rules: {
+    'no-unused-vars': 'warn',
+    'no-undef': 'error',
+    'react/prop-types': 'off',
+    'react/react-in-jsx-scope': 'off'
+  },
+  // Performance optimization
+  cache: true,
+  cacheLocation: '.eslintcache'
+}
+
 module.exports = {
   root: true,
   env: {

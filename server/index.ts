@@ -32,7 +32,11 @@ dotenv.config();
 // CRITICAL: Determine NODE_ENV for proper asset serving
 // For Replit compatibility, we run production mode with built assets
 process.env.NODE_ENV = "production";
+
+// Build fingerprinting to track rebuild necessity
+const BUILD_TIMESTAMP = Date.now();
 console.log(`[ENV-OVERRIDE] NODE_ENV set to: ${process.env.NODE_ENV}`);
+console.log(`[BUILD] Build timestamp: ${BUILD_TIMESTAMP}`);
 
 // Create Express app
 const app = express();
