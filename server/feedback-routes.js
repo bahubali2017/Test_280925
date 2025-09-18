@@ -2,6 +2,7 @@ import { Router } from 'express';
 
 /**
  * Creates feedback routes for the API
+ * @returns {Router} Express router with feedback endpoints
  */
 export function createFeedbackRoutes() {
   const feedbackRouter = Router();
@@ -126,12 +127,12 @@ export function createFeedbackRoutes() {
  * @param root0.sessionId
  * @param root0.userId
  * @param root0.feedbackType
- * @param root0.userQuery
- * @param root0.aiResponse
+ * @param root0._userQuery
+ * @param root0._aiResponse
  * @param root0.userRole
- * @param root0.responseMetadata
+ * @param root0._responseMetadata
  */
-async function storeFeedback({ messageId, sessionId, userId, feedbackType, userQuery, aiResponse, userRole, responseMetadata }) {
+async function storeFeedback({ messageId, sessionId, userId, feedbackType, _userQuery, _aiResponse, userRole, _responseMetadata }) {
   try {
     // For now, just log the feedback instead of using database
     console.log(`[Feedback] Storing ${feedbackType} feedback for session ${sessionId}`);
@@ -158,9 +159,9 @@ async function storeFeedback({ messageId, sessionId, userId, feedbackType, userQ
  * @param root0.userQuery
  * @param root0.aiResponse
  * @param root0.userRole
- * @param root0.sessionId
+ * @param root0._sessionId
  */
-async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole, sessionId }) {
+async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole, _sessionId }) {
   try {
     console.log(`[ML-Engine] Processing ${feedbackType} feedback for role: ${userRole}`);
     
@@ -177,6 +178,10 @@ async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole
     
     // For now, simulate ML learning without database
     console.log(`[ML-Engine] Successfully processed ${feedbackType} feedback for ${userRole}`);
+    
+    // Create pool connection for ML operations
+    const { Pool } = await import('@neondatabase/serverless');
+    const pool = new Pool({ connectionString: process.env.DATABASE_URL });
     
     for (const queryPattern of queryPatterns) {
       for (const responsePattern of responsePatterns) {
@@ -224,6 +229,7 @@ async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole
 /**
  * Extract meaningful patterns from user queries for ML learning
  * @param query
+ * @returns {string[]} Array of extracted query patterns
  */
 function extractQueryPatterns(query) {
   const patterns = [];
@@ -259,6 +265,7 @@ function extractQueryPatterns(query) {
 /**
  * Extract meaningful patterns from AI responses for ML learning
  * @param response
+ * @returns {string[]} Array of extracted response patterns
  */
 function extractResponsePatterns(response) {
   const patterns = [];
