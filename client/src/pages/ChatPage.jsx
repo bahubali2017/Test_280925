@@ -278,7 +278,7 @@ export default function ChatPage() {
       const conversationHistory = prepareConversationHistory(recentMessages);
 
       // Get cached llm-api module
-      const { sendMessageClientSide } = await getLLMApi();
+      const { sendMessage } = await getLLMApi();
 
       // CRITICAL FIX: Immediately push placeholder assistant message
       // This ensures MessageBubble exists instantly so Stop AI button can render
@@ -308,7 +308,7 @@ export default function ChatPage() {
       // Note: Streaming handled internally by sendMessageClientSide
 
       // Call the enhanced API with streaming support
-      const result = await sendMessageClientSide(
+      const result = await sendMessage(
         messageContent,
         conversationHistory,
         undefined // queryIntent - let API determine intent
@@ -483,7 +483,7 @@ export default function ChatPage() {
       const conversationHistory = prepareConversationHistory(recentMessages);
 
       // Get cached llm-api module
-      const { sendMessageClientSide } = await getLLMApi();
+      const { sendMessage } = await getLLMApi();
 
       // CRITICAL FIX: Immediately push placeholder assistant message
       // This ensures MessageBubble exists instantly so Stop AI button can render
@@ -512,7 +512,7 @@ export default function ChatPage() {
       // Note: streaming handled internally by sendMessageClientSide
 
       // Call the enhanced API with streaming support
-      const result = await sendMessageClientSide(
+      const result = await sendMessage(
         newMessage,
         conversationHistory,
         undefined // queryIntent - let API determine intent
@@ -653,9 +653,7 @@ export default function ChatPage() {
       // Store the current streaming message ID to prevent race conditions
       const activeStreamingId = currentStreamingId;
 
-      // Get the current message status before stopping
-      const currentMessage = messages.find(msg => msg.id === activeStreamingId);
-      const isDelivered = currentMessage?.status === 'delivered';
+      // Note: Current message status no longer needed for stopping function
 
       // IMMEDIATE UI UPDATE: Mark message as stopping
       setMessages(prev =>
@@ -678,7 +676,7 @@ export default function ChatPage() {
       // Get stopStreaming from cached module and call it immediately
       console.debug('[Chat] About to call stopStreaming...');
       const { stopStreaming } = await getLLMApi();
-      const wasAborted = stopStreaming(isDelivered);
+      const wasAborted = stopStreaming();
       console.debug('[Chat] stopStreaming completed:', { wasAborted });
 
       // FINAL UI UPDATE: Update message with final stopped state
