@@ -50,9 +50,45 @@ export function AuthProvider({ children }) {
       try {
         console.log('[Auth] Initializing authentication...');
         
-        // Auto-authenticate guest user in development mode for immediate chat access
+        // SECURITY-CRITICAL: Development authentication bypass
+        // This MUST NEVER activate in production
         if (config.app.isDevelopment) {
-          console.log('[Auth] Development mode detected - auto-authenticating guest user');
+          // Additional security verification before bypassing authentication
+          const currentHostname = typeof window !== 'undefined' ? window.location.hostname.toLowerCase() : '';
+          
+          // Triple-check: verify we're not on any production domain
+          const productionDomains = ['anamnesis.health', 'anamnesis-health.com', 'mvp-anamnesis.health', 'app.anamnesis.health'];
+          const isProductionDomain = productionDomains.some(domain => 
+            currentHostname === domain || currentHostname.endsWith('.' + domain)
+          );
+          
+          if (isProductionDomain) {
+            console.error('[SECURITY] CRITICAL: Development bypass attempted on production domain:', currentHostname);
+            console.error('[SECURITY] This indicates a serious security misconfiguration.');
+            // Force production mode and continue with normal auth
+            setIsLoading(false);
+            return;
+          }
+          
+          // Verify we're actually in a known development environment
+          const isKnownDevEnv = (
+            currentHostname === 'localhost' ||
+            currentHostname === '127.0.0.1' ||
+            currentHostname.includes('replit.dev') ||
+            currentHostname.includes('.repl.co') ||
+            currentHostname.includes('gitpod.io')
+          );
+          
+          if (!isKnownDevEnv) {
+            console.warn('[SECURITY] Development mode detected but not on known dev environment:', currentHostname);
+            console.warn('[SECURITY] Skipping development bypass for safety.');
+            setIsLoading(false);
+            return;
+          }
+          
+          console.log('[Auth] Development mode verified on safe environment:', currentHostname);
+          console.log('[Auth] Auto-authenticating guest user for development');
+          
           /** @type {User} */
           const guestUser = {
             id: 'dev-guest-user',
