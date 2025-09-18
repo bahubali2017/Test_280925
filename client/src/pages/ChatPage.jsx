@@ -62,6 +62,8 @@ const getLLMApi = async () => {
  * @returns {JSX.Element} The ChatPage component
  */
 export default function ChatPage() {
+  console.log('[ChatPage] Component rendering');
+  
   /** @type {[Array<Message>, React.Dispatch<React.SetStateAction<Array<Message>>>]} */
   const [messages, setMessages] = useState([]);
   /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
@@ -933,6 +935,7 @@ export default function ChatPage() {
 
   // Show loading while auth is being determined
   if (authLoading) {
+    console.log('[ChatPage] Auth still loading, showing spinner');
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -962,8 +965,11 @@ export default function ChatPage() {
   }
 
   if (!user) {
+    console.log('[ChatPage] No user found, returning null');
     return null;
   }
+
+  console.log('[ChatPage] User authenticated, rendering chat interface for:', user.email);
 
   return (
     <div className="min-h-screen flex flex-col bg-background transition-colors duration-300">

@@ -24,30 +24,37 @@ export function LoadingSpinner() {
  * @returns {JSX.Element|null} The protected content or loading spinner
  */
 export function ProtectedRoute({ children }) {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, user } = useAuth();
   const [, setLocation] = useLocation();
-  const [isRedirecting, setIsRedirecting] = useState(false);
 
   useEffect(() => {
-    /** @type {ReturnType<typeof safeSetTimeout> | undefined} */
-    let redirectTimeout;
+    console.log('[ProtectedRoute] Auth state changed:', { 
+      isAuthenticated, 
+      isLoading, 
+      user: user?.email,
+      timestamp: new Date().toISOString()
+    });
+    
+    // Only redirect if we're not loading and definitely not authenticated
     if (!isLoading && !isAuthenticated) {
-      setIsRedirecting(true);
-      redirectTimeout = safeSetTimeout(() => {
-        setLocation('/login');
-      }, 100);
-    } else if (!isLoading && isAuthenticated) {
-      // Clear redirecting state if user becomes authenticated
-      setIsRedirecting(false);
+      console.log('[ProtectedRoute] Redirecting to login - not authenticated');
+      setLocation('/login');
     }
-    return () => {
-      if (redirectTimeout) safeClearTimeout(redirectTimeout);
-    };
-  }, [isAuthenticated, isLoading, setLocation]);
+  }, [isAuthenticated, isLoading, setLocation, user]);
 
-  if (isLoading || isRedirecting) {
+  // Show loading spinner while determining auth state
+  if (isLoading) {
+    console.log('[ProtectedRoute] Still loading auth state');
     return <LoadingSpinner />;
   }
 
-  return isAuthenticated ? <>{children}</> : null;
+  // If not authenticated, don't render anything (redirect will happen in useEffect)
+  if (!isAuthenticated) {
+    console.log('[ProtectedRoute] Not authenticated, returning null');
+    return null;
+  }
+
+  // Authenticated - render the protected content
+  console.log('[ProtectedRoute] Rendering protected content for user:', user?.email);
+  return <>{children}</>;
 }

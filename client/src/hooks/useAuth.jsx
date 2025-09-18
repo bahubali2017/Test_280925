@@ -47,18 +47,27 @@ export function AuthProvider({ children }) {
 
     const initAuth = async () => {
       try {
+        console.log('[Auth] Initializing authentication...');
         const { data: { session } } = await supabaseClient.auth.getSession();
 
         if (session?.user && isMounted) {
+          console.log('[Auth] Found existing session:', session.user.email);
           setUser(/** @type {User} */ (session.user));
+          setIsLoading(false);
+        } else if (isMounted) {
+          console.log('[Auth] No existing session found');
+          setIsLoading(false);
         }
 
         if (!authListener && isMounted) {
           const { data } = supabaseClient.auth.onAuthStateChange(
-            (_event, session) => {
+            (event, session) => {
+              console.log('[Auth] Auth state change:', event, session?.user?.email);
               if (isMounted) {
                 setUser(session?.user ? /** @type {User} */ (session.user) : null);
-                setIsLoading(false);
+                if (event !== 'INITIAL_SESSION') {
+                  setIsLoading(false);
+                }
               }
             }
           );
@@ -66,7 +75,6 @@ export function AuthProvider({ children }) {
         }
       } catch (err) {
         console.error('Auth initialization error:', err);
-      } finally {
         if (isMounted) {
           setIsLoading(false);
         }
@@ -96,6 +104,7 @@ export function AuthProvider({ children }) {
       // Allow test users for demo purposes (works in all environments)
       if ((email === 'test@example.com' && password === 'testpass123') ||
           (email === 'demo@example.com' && password === 'password')) {
+        console.log('[Auth] Test user login detected:', email);
         /** @type {User} */
         const testUser = { 
           id: 'test-user-id',
@@ -104,6 +113,7 @@ export function AuthProvider({ children }) {
         };
         setUser(testUser);
         setIsLoading(false);
+        console.log('[Auth] Test user authenticated successfully');
         // For test users, return immediately since we set the user state directly
         return { success: true, error: null };
       }
