@@ -172,7 +172,7 @@ class SessionTracker {
         this.completedSessions = this.completedSessions.slice(-1000);
       }
 
-      console.debug(`[SESSION-TRACKER] Ended session ${sessionId}: ${status}, duration ${session.duration}ms, ${session.messages.length} messages`);
+      console.debug(`[SESSION-TRACKER] Ended session ${sessionId}: ${status}, duration ${session.duration}ms, ${session.messages ? session.messages.length : 0} messages`);
     }
   }
 
