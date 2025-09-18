@@ -7,19 +7,19 @@
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
 
 /**
- * @typedef {Object} Message
+ * @typedef {object} Message
  * @property {string} role - The message role (system, user, assistant)
  * @property {string} content - The message content
  */
 
 /**
- * @typedef {Object} APIResponse
+ * @typedef {object} APIResponse
  * @property {string} content - The response content
- * @property {Object} metadata - Response metadata
+ * @property {object} metadata - Response metadata
  * @property {number} metadata.requestTime - Request time in milliseconds
  * @property {string} metadata.modelName - Model name used
  * @property {boolean} [metadata.isStreaming] - Whether response was streamed
- * @property {Object} metadata.medicalSafety - Medical safety information
+ * @property {object} metadata.medicalSafety - Medical safety information
  * @property {boolean} [metadata.medicalSafety.blocked] - Whether AI was blocked
  * @property {string} [metadata.medicalSafety.reason] - Blocking reason
  * @property {boolean} [metadata.medicalSafety.hasWarnings] - Whether there are warnings
@@ -27,7 +27,7 @@ import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing }
  */
 
 /**
- * @typedef {Object} APIError
+ * @typedef {object} APIError
  * @property {string} type - Error type (network, api, timeout, validation, abort)
  * @property {string} message - Human-readable error message
  * @property {number} [status] - HTTP status code if available
@@ -35,11 +35,11 @@ import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing }
  */
 
 /**
- * @typedef {Object} SendMessageOptions
+ * @typedef {object} SendMessageOptions
  * @property {AbortSignal} [abortSignal] - Abort signal for cancellation
  * @property {Function} [onStreamingUpdate] - Callback for streaming updates
  * @property {string} [region] - User's region for medical safety processing
- * @property {Object} [demographics] - User demographics for safety processing
+ * @property {object} [demographics] - User demographics for safety processing
  * @property {string} [sessionId] - Session identifier
  */
 
@@ -76,7 +76,7 @@ function containsHighRiskTerms(message) {
  * Creates a standardized error object
  * @param {string} type - The error type
  * @param {string} message - Human-readable error message
- * @param {Object} [details={}] - Additional error details
+ * @param {object} [details={}] - Additional error details
  * @returns {APIError} Standardized error object
  */
 function createAPIError(type, message, details = {}) {
@@ -113,7 +113,7 @@ function addMedicalDisclaimers(content, isHighRisk) {
 }
 
 /**
- * @typedef {Object} SSEData
+ * @typedef {object} SSEData
  * @property {boolean} [done] - Whether the stream is complete
  * @property {string} [content] - Content chunk
  * @property {string} [error] - Error message if any
@@ -196,7 +196,7 @@ async function processStream(stream, onUpdate, abortSignal) {
 /**
  * Makes API request to the chat endpoint
  * @param {string} endpoint - API endpoint (/api/chat or /api/chat/stream)
- * @param {Object} requestBody - Request payload
+ * @param {object} requestBody - Request payload
  * @param {AbortSignal} [abortSignal] - Abort signal
  * @returns {Promise<Response>} Fetch response
  */

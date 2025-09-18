@@ -311,7 +311,26 @@ export default function ChatPage() {
       const result = await sendMessage(
         messageContent,
         conversationHistory,
-        undefined // queryIntent - let API determine intent
+        {
+          /**
+           * @param {string} chunk - Content chunk from stream
+           * @param {{fullContent?: string, streaming?: boolean}} info - Streaming info with fullContent
+           */
+          onStreamingUpdate: (chunk, info) => {
+            // Update the message content in real-time as chunks arrive
+            setMessages(prev => prev.map(msg =>
+              msg.id === `${retryId}_response`
+                ? {
+                    ...msg,
+                    content: info.fullContent || msg.content + chunk,
+                    isStreaming: true,
+                    status: 'streaming'
+                  }
+                : msg
+            ));
+          },
+          sessionId: retryId
+        }
       );
 
       // Log API metadata for monitoring/debugging
@@ -531,7 +550,26 @@ export default function ChatPage() {
       const result = await sendMessage(
         newMessage,
         conversationHistory,
-        undefined // queryIntent - let API determine intent
+        {
+          /**
+           * @param {string} chunk - Content chunk from stream
+           * @param {{fullContent?: string, streaming?: boolean}} info - Streaming info with fullContent
+           */
+          onStreamingUpdate: (chunk, info) => {
+            // Update the message content in real-time as chunks arrive
+            setMessages(prev => prev.map(msg =>
+              msg.id === assistantMessageId
+                ? {
+                    ...msg,
+                    content: info.fullContent || msg.content + chunk,
+                    isStreaming: true,
+                    status: 'streaming'
+                  }
+                : msg
+            ));
+          },
+          sessionId: sessionId
+        }
       );
 
       // Log API metadata for monitoring/debugging
@@ -789,7 +827,7 @@ export default function ChatPage() {
   /**
    * Create stable reference for onStopAI prop to prevent race conditions
    * @param {string} messageId - The message ID to check for stop handler
-   * @returns {function|undefined} Stop handler function or undefined
+   * @returns {Function | undefined} Stop handler function or undefined
    */
   const getStopHandler = useCallback(/** @param {string} messageId */ (messageId) => {
     if (streamingMessageId && messageId === streamingMessageId) {
