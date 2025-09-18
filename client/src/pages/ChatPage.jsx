@@ -84,8 +84,6 @@ export default function ChatPage() {
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
-  const [streamingMessageId, setStreamingMessageId] = useState(/** @type {string|null} */(null));
-  /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
   const [currentStreamingId, setCurrentStreamingId] = useState(/** @type {string|null} */(null));
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isStoppingAI, setIsStoppingAI] = useState(false);
@@ -358,13 +356,13 @@ export default function ChatPage() {
       const errorMessage = getErrorMessage(/** @type {Error|unknown} */(error));
 
       // If we have a streaming message in progress, convert it to an error
-      if (streamingMessageId) {
+      if (currentStreamingId) {
         setMessages((prev) => {
           // Enhanced status checking logic
           // Instead of using this variable directly, we use it as part of commented code below
-          // const streamingMessage = prev.find(msg => msg.id === streamingMessageId);
+          // const streamingMessage = prev.find(msg => msg.id === currentStreamingId);
           // Check delivery status for debugging purposes
-          // const isDelivered = prev.find(msg => msg.id === streamingMessageId)?.status === 'delivered';
+          // const isDelivered = prev.find(msg => msg.id === currentStreamingId)?.status === 'delivered';
           // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
 
           // Check if this was a deliberate abort/stop action
@@ -400,7 +398,7 @@ export default function ChatPage() {
 
           // Otherwise, convert it to an error
           return prev.map(msg =>
-            msg.id === streamingMessageId
+            msg.id === currentStreamingId
               ? {
                   ...msg,
                   content: errorMessage,
@@ -605,13 +603,13 @@ export default function ChatPage() {
       const errorMessage = getErrorMessage(typedError);
 
       // If we have a streaming message in progress, check if it was already delivered
-      if (streamingMessageId) {
+      if (currentStreamingId) {
         setMessages((prev) => {
           // Enhanced status checking logic
           // Variable commented out to avoid unused variable warning
-          // const streamingMessage = prev.find(msg => msg.id === streamingMessageId);
+          // const streamingMessage = prev.find(msg => msg.id === currentStreamingId);
           // Status flags for debugging purposes (commented to avoid unused var warnings)
-          // const isDelivered = prev.find(msg => msg.id === streamingMessageId)?.status === 'delivered';
+          // const isDelivered = prev.find(msg => msg.id === currentStreamingId)?.status === 'delivered';
           // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
 
           // Check if this was a deliberate abort/stop action
@@ -642,7 +640,7 @@ export default function ChatPage() {
 
           // Otherwise, convert it to an error
           return prev.map(msg =>
-            msg.id === streamingMessageId
+            msg.id === currentStreamingId
               ? {
                   ...msg,
                   content: errorMessage,
@@ -798,7 +796,7 @@ export default function ChatPage() {
       // Error handling: Mark message as failed to stop
       setMessages(prev =>
         prev.map(msg =>
-          msg.id === streamingMessageId
+          msg.id === currentStreamingId
             ? {
                 ...msg,
                 isStreaming: false,
@@ -822,7 +820,7 @@ export default function ChatPage() {
       setIsStoppingAI(false);
       setIsLoading(false);
     }
-  }, [streamingMessageId, isStoppingAI, messages]);
+  }, [currentStreamingId, isStoppingAI, messages]);
 
   /**
    * Create stable reference for onStopAI prop to prevent race conditions
@@ -830,11 +828,11 @@ export default function ChatPage() {
    * @returns {Function | undefined} Stop handler function or undefined
    */
   const getStopHandler = useCallback(/** @param {string} messageId */ (messageId) => {
-    if (streamingMessageId && messageId === streamingMessageId) {
+    if (currentStreamingId && messageId === currentStreamingId) {
       return handleStopAI;
     }
     return undefined; // Use undefined instead of null to prevent conditional rendering issues
-  }, [streamingMessageId, handleStopAI]);
+  }, [currentStreamingId, handleStopAI]);
 
   /**
    * Handles user logout
@@ -1044,7 +1042,7 @@ export default function ChatPage() {
                     isStoppingAI={isStoppingAI}
                     isStreaming={msg.status === 'streaming'}
                     status={msg.status || 'sent'}
-                    streamingMessageId={currentStreamingId}
+                    currentStreamingId={currentStreamingId}
                     sessionId={msg.sessionId || ''}
                     userQuery={msg.content || ''}
                     userRole={'user'}
