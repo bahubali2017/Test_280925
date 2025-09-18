@@ -72,7 +72,7 @@ export function InstallationNotice() {
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} PWA installation status */
   const [isInstalled, setIsInstalled] = useState(false);
   
-  /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} User dismissal preference */
+  /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} Temporary dismissal for current session */
   const [isDismissed, setIsDismissed] = useState(false);
 
   /**
@@ -86,26 +86,6 @@ export function InstallationNotice() {
    * @returns {Function} Cleanup function for timeout
    */
   useEffect(() => {
-    // Check if user has previously dismissed this notice (temporary dismissal for 24 hours)
-    const dismissedData = localStorage.getItem('anamnesis-install-notice-dismissed');
-    if (dismissedData) {
-      try {
-        const dismissedTime = parseInt(dismissedData, 10);
-        const now = Date.now();
-        const twentyFourHours = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-        
-        if (now - dismissedTime < twentyFourHours) {
-          setIsDismissed(true);
-          return;
-        } else {
-          // Clear expired dismissal
-          localStorage.removeItem('anamnesis-install-notice-dismissed');
-        }
-      } catch (e) {
-        // If invalid data, clear it
-        localStorage.removeItem('anamnesis-install-notice-dismissed');
-      }
-    }
 
     /**
      * Checks if the PWA is currently installed/running in standalone mode
@@ -201,9 +181,8 @@ export function InstallationNotice() {
   /**
    * Handles user dismissal of the installation notice
    * - Immediately hides the banner with slide-up animation
-   * - Updates component state to prevent re-showing
-   * - Persists dismissal preference in localStorage
-   * - Uses specific key to avoid conflicts with other app data
+   * - Temporarily dismisses for current session only
+   * - Will reappear on next page load/refresh
    * 
    * @function
    * @returns {void}
@@ -215,7 +194,6 @@ export function InstallationNotice() {
   const handleDismiss = () => {
     setIsVisible(false);
     setIsDismissed(true);
-    localStorage.setItem('anamnesis-install-notice-dismissed', Date.now().toString());
   };
 
   /**
