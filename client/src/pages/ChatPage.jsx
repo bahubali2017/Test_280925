@@ -829,7 +829,7 @@ export default function ChatPage() {
    * @param {string} messageId - The message ID to check for stop handler
    * @returns {Function | undefined} Stop handler function or undefined
    */
-  const getStopHandler = useCallback((messageId) => {
+  const getStopHandler = useCallback(/** @param {string} messageId */ (messageId) => {
     if (streamingMessageId && messageId === streamingMessageId) {
       return handleStopAI;
     }

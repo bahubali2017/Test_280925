@@ -1158,8 +1158,11 @@ router.get("/app-config.json", async (req, res) => {
           }
         } finally {
           // Fire-and-forget upstream cleanup - do NOT await
-          try { reader.cancel(); } catch { /* ignore cleanup errors */ }
-          try { deepSeekResponse.body?.cancel(); } catch { /* ignore cleanup errors */ }
+          try { 
+            // Cancel through the reader, not the stream directly to avoid ERR_INVALID_STATE
+            reader.cancel(); 
+          } catch { /* ignore cleanup errors */ }
+          // Don't call deepSeekResponse.body.cancel() as reader.cancel() handles it
         }
 
         // Early exit check - don't process anything if connection was aborted
