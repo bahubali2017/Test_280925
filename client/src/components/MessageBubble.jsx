@@ -4,6 +4,25 @@ import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 
 /**
+ * @typedef {object} MessageMetadata
+ * @property {object} [queryIntent] - Query analysis results
+ * @property {string} [queryIntent.type] - Intent type
+ * @property {number} [queryIntent.confidence] - Confidence score
+ * @property {string[]} [queryIntent.disclaimers] - Disclaimers
+ * @property {'emergency'|'urgent'|'non_urgent'} [triageLevel] - Triage classification
+ * @property {boolean} [isHighRisk] - High risk flag
+ * @property {object} [layerStatus] - Layer processing status
+ * @property {number} [layerProcessingTime] - Processing time
+ * @property {string} [fallbackReason] - Fallback reason
+ * @property {number} [requestTime] - Request timestamp
+ * @property {number} [attemptCount] - Retry count
+ * @property {boolean} [isCancelled] - Cancelled flag
+ * @property {boolean} [isTimeout] - Timeout flag
+ * @property {boolean} [delivered] - Delivery status
+ * @property {boolean} [isStreaming] - Streaming status
+ */
+
+/**
  * Clean up markdown formatting while preserving bold titles for better readability
  * @param {string} text - Text with markdown formatting
  * @returns {string} Clean text with bolded titles and proper formatting
