@@ -4,6 +4,9 @@
  * Features: streaming support, proper error handling, medical safety integration
  */
 
+/* eslint-env browser */
+/* global TextDecoder, AbortController, setTimeout */
+
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
 
 /**
