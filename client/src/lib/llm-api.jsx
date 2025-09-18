@@ -1008,20 +1008,20 @@ function stopStreaming(isDelivered = false) {
   console.debug(`[LLM] Stopping stream for session: ${sessionToCancel}, message: ${messageIdToStop}`);
 
   // Clear any pending timeouts immediately
-  if (globalErrorTimeout) {
+  if (typeof window !== 'undefined' && window.globalErrorTimeout) {
     console.debug("Clearing global error timeout on stop");
-    clearTimeout(globalErrorTimeout);
-    globalErrorTimeout = null;
+    clearTimeout(window.globalErrorTimeout);
+    window.globalErrorTimeout = null;
   }
 
   // Cancel the reader if it exists
-  if (globalStreamReader) {
+  if (typeof window !== 'undefined' && window.globalStreamReader) {
     try {
       console.debug("STOP_AI: Cancelling active reader immediately");
-      globalStreamReader.cancel("User cancelled");
-      globalStreamReader = null;
+      window.globalStreamReader.cancel("User cancelled");
+      window.globalStreamReader = null;
     } catch (e) {
-      console.debug("Reader already cancelled or unavailable:", e.message);
+      console.debug("Reader already cancelled or unavailable:", e?.message || e);
     }
   }
 
@@ -1115,7 +1115,9 @@ currentStream.controller.abort('timeout');
 }
 }, 120000); // 120 second timeout to allow complete medical responses
 // Store reference globally for immediate cleanup
-globalErrorTimeout = errorTimeout;
+if (typeof window !== 'undefined') {
+  window.globalErrorTimeout = errorTimeout;
+}
 // Set up abort handling for when the request is canceled
 const onAbort = () => {
 console.debug("AI stream request aborted");
@@ -1173,8 +1175,13 @@ console.error("Received HTML instead of streaming data:", contentType);
 throw new Error("Server returned HTML instead of streaming data. The API route may be misconfigured.");
 }
 // Handle the streaming response
+if (!response.body) {
+  throw new Error("Response body is null - streaming not supported");
+}
 const reader = response.body.getReader();
-globalStreamReader = reader; // Track for immediate cancellation
+if (typeof window !== 'undefined') {
+  window.globalStreamReader = reader; // Track for immediate cancellation
+}
 const decoder = new window.TextDecoder();
 // Initialize the SSE processing state
 let currentEvent = null;
