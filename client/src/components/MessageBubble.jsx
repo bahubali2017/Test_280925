@@ -80,10 +80,9 @@ function cleanMarkdownFormatting(text) {
  * @returns {JSX.Element|null} Formatted content with line breaks and bold titles
  */
 function formatMessageContent(content, isStreaming = false, partialContent = '', status = 'sent') {
-  // If streaming and status is not 'delivered', display the partial content
-  // Otherwise show the full content
-  const rawContent = (isStreaming && status !== 'delivered') 
-    ? (partialContent || content) 
+  // For streaming messages, always show the live content as it arrives
+  const rawContent = isStreaming && status === 'streaming'
+    ? content  // Show the live updating content directly
     : content;
 
   if (!rawContent) return null;
