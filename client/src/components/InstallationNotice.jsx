@@ -298,13 +298,8 @@ export function InstallationNotice() {
    * 
    * @returns {null} When component should not be displayed
    */
-  // Debug current state
-  console.log('[InstallationNotice] Render check - isInstalled:', isInstalled, 'isDismissed:', isDismissed, 'isVisible:', isVisible);
-  
-  // TEMP FIX: Force component to always show for debugging
-  console.log('[InstallationNotice] TEMP: Forcing component to show for debugging');
-  
-  if (false) { // Temporarily disable all blocking conditions
+  // Check if component should be hidden
+  if (isInstalled || isDismissed || !isVisible) {
     if (isInstalled) {
       console.log('[InstallationNotice] Not rendering - PWA is installed');
     } else if (isDismissed) {
