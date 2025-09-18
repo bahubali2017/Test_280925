@@ -9,6 +9,7 @@
  * @param req
  * @param res
  * @param next
+ * @returns {void}
  */
 export function securityHeadersMiddleware(req, res, next) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -70,6 +71,7 @@ export function securityHeadersMiddleware(req, res, next) {
  * @param req
  * @param res
  * @param next
+ * @returns {void}
  */
 export function productionCorsMiddleware(req, res, next) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -96,9 +98,9 @@ export function productionCorsMiddleware(req, res, next) {
     // Production allowed origins with strict regex patterns - NO substring matching
     allowedPatterns = [
       // Strict regex patterns for Replit preview domains (supports subdomains like spock.replit.dev)
-      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?repl\.co$/,
-      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.dev$/,
-      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.app$/,
+      /^https:\/\/[a-z0-9-]+\.([a-z0-9-]+\.)?repl\.co$/,
+      /^https:\/\/[a-z0-9-]+\.([a-z0-9-]+\.)?replit\.dev$/,
+      /^https:\/\/[a-z0-9-]+\.([a-z0-9-]+\.)?replit\.app$/,
       
       // Specific production domains (exact matches only)
       'https://mvp.anamnesis.health',
@@ -106,7 +108,7 @@ export function productionCorsMiddleware(req, res, next) {
       'https://admin.anamnesis.health',
       
       // Strict Anamnesis domain pattern - prevents subdomain spoofing
-      /^https:\/\/([a-z0-9\-]+\.)*anamnesis\.health$/,
+      /^https:\/\/([a-z0-9-]+\.)*anamnesis\.health$/,
       
       // Localhost for Replit webview preview
       'http://localhost:3000',
@@ -118,9 +120,9 @@ export function productionCorsMiddleware(req, res, next) {
     // Development - strict patterns for development origins
     allowedPatterns = [
       // Strict regex patterns for Replit domains (supports subdomains like spock.replit.dev)
-      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?repl\.co$/,
-      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.dev$/,
-      /^https:\/\/[a-z0-9\-]+\.([a-z0-9\-]+\.)?replit\.app$/,
+      /^https:\/\/[a-z0-9-]+\.([a-z0-9-]+\.)?repl\.co$/,
+      /^https:\/\/[a-z0-9-]+\.([a-z0-9-]+\.)?replit\.dev$/,
+      /^https:\/\/[a-z0-9-]+\.([a-z0-9-]+\.)?replit\.app$/,
       
       // Local development
       'http://localhost:3000',
@@ -132,7 +134,7 @@ export function productionCorsMiddleware(req, res, next) {
       'https://admin.anamnesis.health',
       
       // Anamnesis domains with strict pattern
-      /^https:\/\/([a-z0-9\-]+\.)*anamnesis\.health$/
+      /^https:\/\/([a-z0-9-]+\.)*anamnesis\.health$/
     ];
   }
   
@@ -175,6 +177,7 @@ export function productionCorsMiddleware(req, res, next) {
  * @param req
  * @param res
  * @param next
+ * @returns {void}
  */
 export function securityLoggingMiddleware(req, res, next) {
   const timestamp = new Date().toISOString();
