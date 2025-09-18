@@ -34,6 +34,9 @@ function logSecurityIncident(type, req, details = {}) {
 
 /**
  * Generic honeypot response
+ * @param req
+ * @param res
+ * @param endpointType
  */
 function honeypotResponse(req, res, endpointType) {
   logSecurityIncident('HONEYPOT_TRIGGERED', req, { endpointType });
@@ -125,4 +128,7 @@ router.all('/api/test/*', (req, res) => {
   honeypotResponse(req, res, 'test_api');
 });
 
+/**
+ *
+ */
 export default router;

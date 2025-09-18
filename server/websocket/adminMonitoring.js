@@ -17,7 +17,7 @@ class AdminWebSocketServer {
     this.connectedClients = new Set();
     
     /**
-     * @type {Map<WebSocket, Object>}
+     * @type {Map<WebSocket, object>}
      */
     this.clientInfo = new Map();
     
@@ -49,7 +49,7 @@ class AdminWebSocketServer {
   
   /**
    * Verify client authentication and rate limits
-   * @param {Object} info - WebSocket connection info
+   * @param {object} info - WebSocket connection info
    * @returns {boolean} Whether client is authorized
    */
   verifyClient(info) {
@@ -279,7 +279,7 @@ class AdminWebSocketServer {
   /**
    * Send message to specific client
    * @param {WebSocket} ws - WebSocket connection
-   * @param {Object} message - Message object
+   * @param {object} message - Message object
    */
   sendToClient(ws, message) {
     try {
@@ -293,7 +293,7 @@ class AdminWebSocketServer {
   
   /**
    * Broadcast message to all connected admin clients
-   * @param {Object} message - Message object to broadcast
+   * @param {object} message - Message object to broadcast
    */
   broadcast(message) {
     const messageStr = JSON.stringify(message);
@@ -335,7 +335,7 @@ class AdminWebSocketServer {
   /**
    * Handle session events and broadcast in admin dashboard format
    * @param {string} eventType - Type of session event
-   * @param {Object} eventData - Event data
+   * @param {object} eventData - Event data
    */
   handleSessionEvent(eventType, eventData) {
     let adminEvent = null;
@@ -411,7 +411,7 @@ class AdminWebSocketServer {
   
   /**
    * Get connection statistics
-   * @returns {Object} Connection statistics
+   * @returns {object} Connection statistics
    */
   getConnectionStats() {
     return {
@@ -428,4 +428,7 @@ class AdminWebSocketServer {
 }
 
 // Export singleton instance
+/**
+ *
+ */
 export const adminWebSocketServer = new AdminWebSocketServer();

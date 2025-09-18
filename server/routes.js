@@ -1606,4 +1606,7 @@ router.get('/api/legal/license', (req, res) => {
   }
 });
 
+/**
+ *
+ */
 export default router;

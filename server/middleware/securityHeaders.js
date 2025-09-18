@@ -6,6 +6,9 @@
 /**
  * Production-grade security headers middleware
  * Implements HSTS, CSP, and other security best practices
+ * @param req
+ * @param res
+ * @param next
  */
 export function securityHeadersMiddleware(req, res, next) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -64,6 +67,9 @@ export function securityHeadersMiddleware(req, res, next) {
 /**
  * Production CORS configuration
  * Dynamically allows Replit preview domains and custom domains
+ * @param req
+ * @param res
+ * @param next
  */
 export function productionCorsMiddleware(req, res, next) {
   const isProduction = process.env.NODE_ENV === 'production';
@@ -166,6 +172,9 @@ export function productionCorsMiddleware(req, res, next) {
 
 /**
  * Request logging middleware for security monitoring
+ * @param req
+ * @param res
+ * @param next
  */
 export function securityLoggingMiddleware(req, res, next) {
   const timestamp = new Date().toISOString();

@@ -46,6 +46,9 @@ export function getBuildInfo() {
 /**
  * Create build fingerprint middleware
  * Injects build info into HTML responses
+ * @param req
+ * @param res
+ * @param next
  */
 export function buildFingerprintMiddleware(req, res, next) {
   const originalSend = res.send;

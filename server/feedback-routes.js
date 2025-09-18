@@ -121,6 +121,15 @@ export function createFeedbackRoutes() {
 
 /**
  * Store feedback in database
+ * @param root0
+ * @param root0.messageId
+ * @param root0.sessionId
+ * @param root0.userId
+ * @param root0.feedbackType
+ * @param root0.userQuery
+ * @param root0.aiResponse
+ * @param root0.userRole
+ * @param root0.responseMetadata
  */
 async function storeFeedback({ messageId, sessionId, userId, feedbackType, userQuery, aiResponse, userRole, responseMetadata }) {
   try {
@@ -144,6 +153,12 @@ async function storeFeedback({ messageId, sessionId, userId, feedbackType, userQ
 
 /**
  * Machine Learning Engine for Processing Feedback
+ * @param root0
+ * @param root0.feedbackType
+ * @param root0.userQuery
+ * @param root0.aiResponse
+ * @param root0.userRole
+ * @param root0.sessionId
  */
 async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole, sessionId }) {
   try {
@@ -208,6 +223,7 @@ async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole
 
 /**
  * Extract meaningful patterns from user queries for ML learning
+ * @param query
  */
 function extractQueryPatterns(query) {
   const patterns = [];
@@ -242,6 +258,7 @@ function extractQueryPatterns(query) {
 
 /**
  * Extract meaningful patterns from AI responses for ML learning
+ * @param response
  */
 function extractResponsePatterns(response) {
   const patterns = [];

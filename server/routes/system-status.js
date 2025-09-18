@@ -146,4 +146,7 @@ router.get('/status', adminAuthMiddleware, async (req, res) => {
   }
 });
 
+/**
+ *
+ */
 export default router;

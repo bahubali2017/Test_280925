@@ -4,7 +4,7 @@
  */
 
 /**
- * @typedef {Object} Session
+ * @typedef {object} Session
  * @property {string} sessionId - Unique session identifier
  * @property {number} startTime - Session start timestamp
  * @property {number|null} endTime - Session end timestamp
@@ -13,7 +13,7 @@
  * @property {string[]} flagReasons - Reasons for flagging
  * @property {string} userRole - Role of the user (general_public, medical_professional, etc.)
  * @property {string} status - Session status (active, completed, terminated, cancelled)
- * @property {Object} metrics - Performance metrics
+ * @property {object} metrics - Performance metrics
  * @property {string} [cancellationReason] - Reason for cancellation if applicable
  */
 
@@ -178,7 +178,7 @@ class SessionTracker {
 
   /**
    * Get current system metrics
-   * @returns {Object} System metrics object
+   * @returns {object} System metrics object
    */
   getSystemMetrics() {
     const activeSessionCount = this.activeSessions.size;
@@ -217,7 +217,7 @@ class SessionTracker {
 
   /**
    * Get detailed AI metrics for admin dashboard
-   * @returns {Object} Detailed metrics object
+   * @returns {object} Detailed metrics object
    */
   getDetailedMetrics() {
     const baseMetrics = this.getSystemMetrics();
@@ -274,7 +274,7 @@ class SessionTracker {
   /**
    * Emit event to all listeners
    * @param {string} eventType - Type of event
-   * @param {Object} eventData - Event data payload
+   * @param {object} eventData - Event data payload
    */
   emitEvent(eventType, eventData) {
     this.eventListeners.forEach(listener => {
@@ -322,4 +322,7 @@ class SessionTracker {
 }
 
 // Export singleton instance
+/**
+ *
+ */
 export const sessionTracker = new SessionTracker();

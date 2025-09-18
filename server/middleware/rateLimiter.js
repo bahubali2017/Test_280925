@@ -258,6 +258,9 @@ export function decrementWebSocketConnections(token) {
 /**
  * Enhanced rate limiting for chat endpoints - COMPLETELY DISABLED for unlimited AI availability
  * This function now acts as a pass-through to ensure unlimited access to AI chat
+ * @param req
+ * @param res
+ * @param next
  */
 export function chatEndpointRateLimit(req, res, next) {
   // COMPLETELY BYPASS rate limiting for chat endpoints
@@ -289,6 +292,9 @@ function isCriticalEndpoint(requestPath, criticalEndpoints) {
 /**
  * Selective rate limiting middleware - excludes critical endpoints
  * Only applies to non-essential endpoints to maintain security without blocking core functionality
+ * @param req
+ * @param res
+ * @param next
  */
 export function selectiveRateLimit(req, res, next) {
   // Check for global rate limit disable

@@ -61,4 +61,7 @@ class UptimeTracker {
 }
 
 // Export singleton instance
+/**
+ *
+ */
 export const uptimeTracker = new UptimeTracker();

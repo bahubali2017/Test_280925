@@ -25,7 +25,7 @@ class AdminLogger {
   
   /**
    * Log admin access event
-   * @param {Object} logData - Log data object
+   * @param {object} logData - Log data object
    * @param {string} logData.endpoint - API endpoint accessed
    * @param {string} logData.method - HTTP method
    * @param {string} logData.adminToken - Masked admin token
@@ -68,7 +68,7 @@ class AdminLogger {
   
   /**
    * Log admin error event
-   * @param {Object} errorData - Error data object
+   * @param {object} errorData - Error data object
    * @param {string} errorData.component - Component where error occurred
    * @param {string} errorData.error - Error message
    * @param {string} errorData.severity - Error severity
@@ -105,7 +105,7 @@ class AdminLogger {
    * Get recent log entries for admin dashboard
    * @param {string} logType - Type of logs to retrieve (access, error)
    * @param {number} hours - Number of hours to look back (default 24)
-   * @returns {Promise<Object[]>} Array of log entries
+   * @returns {Promise<object[]>} Array of log entries
    */
   async getRecentLogs(logType = 'access', hours = 24) {
     try {
@@ -180,4 +180,7 @@ class AdminLogger {
 }
 
 // Export singleton instance
+/**
+ *
+ */
 export const adminLogger = new AdminLogger();

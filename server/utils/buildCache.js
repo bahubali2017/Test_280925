@@ -9,7 +9,13 @@ const __dirname = path.dirname(__filename);
 
 const CACHE_FILE = path.join(__dirname, '../../.build-cache.json');
 
+/**
+ *
+ */
 class BuildCache {
+  /**
+   *
+   */
   static getBuildInfo() {
     try {
       if (fs.existsSync(CACHE_FILE)) {
@@ -21,6 +27,10 @@ class BuildCache {
     return null;
   }
 
+  /**
+   *
+   * @param info
+   */
   static setBuildInfo(info) {
     try {
       fs.writeFileSync(CACHE_FILE, JSON.stringify({
@@ -35,6 +45,10 @@ class BuildCache {
     }
   }
 
+  /**
+   *
+   * @param currentHash
+   */
   static shouldRebuild(currentHash) {
     const cached = this.getBuildInfo();
     if (!cached) {
@@ -60,10 +74,17 @@ class BuildCache {
     return false;
   }
 
+  /**
+   *
+   */
   static generateBuildId() {
     return crypto.randomBytes(8).toString('hex');
   }
 
+  /**
+   *
+   * @param filePaths
+   */
   static generateFileHash(filePaths) {
     const hash = crypto.createHash('sha256');
     
@@ -77,6 +98,9 @@ class BuildCache {
     return hash.digest('hex').substring(0, 16);
   }
 
+  /**
+   *
+   */
   static checkBuildNecessity() {
     const importantFiles = [
       path.join(__dirname, '../../package.json'),
@@ -89,6 +113,10 @@ class BuildCache {
     return this.shouldRebuild(currentHash);
   }
 
+  /**
+   *
+   * @param success
+   */
   static markBuildComplete(success = true) {
     const info = {
       success,
@@ -110,6 +138,9 @@ class BuildCache {
     this.setBuildInfo(info);
   }
 
+  /**
+   *
+   */
   static clearCache() {
     try {
       if (fs.existsSync(CACHE_FILE)) {
@@ -122,4 +153,7 @@ class BuildCache {
   }
 }
 
+/**
+ *
+ */
 export { BuildCache };
