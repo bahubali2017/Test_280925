@@ -1,9 +1,9 @@
+/* global AbortController */
 /**
  * @file API routes for the Anamnesis Medical AI Assistant
  */
 
 import express from "express";
-import { createServer } from "http";
 import { storage } from "./storage.js";
 import { z } from "zod";
 import { authenticateUser, createUser, verifyToken } from "./auth-api.js";
@@ -1006,7 +1006,7 @@ router.get("/app-config.json", async (req, res) => {
             if (res.flush) res.flush();
             res.end();
           }
-        } catch (writeError) {
+        } catch {
           // Silent fail - connection might already be closed
         }
 
@@ -1018,7 +1018,7 @@ router.get("/app-config.json", async (req, res) => {
           try {
             sessionTracker.updateSession(sessionId, Date.now() - startTime, false);
             sessionTracker.endSession(sessionId, 'stopped');
-          } catch (sessionError) {
+          } catch {
             // Silent fail - session tracking is not critical
           }
         });
@@ -1158,8 +1158,8 @@ router.get("/app-config.json", async (req, res) => {
           }
         } finally {
           // Fire-and-forget upstream cleanup - do NOT await
-          try { reader.cancel(); } catch {}
-          try { response.body?.cancel(); } catch {}
+          try { reader.cancel(); } catch { /* ignore cleanup errors */ }
+          try { deepSeekResponse.body?.cancel(); } catch { /* ignore cleanup errors */ }
         }
 
         // Early exit check - don't process anything if connection was aborted
