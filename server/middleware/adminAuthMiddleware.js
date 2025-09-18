@@ -1,3 +1,4 @@
+/* global URL */
 /**
  * @file Authentication middleware for admin endpoints
  * Validates Bearer tokens for admin dashboard access
