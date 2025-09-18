@@ -1,0 +1,113 @@
+🔧 STRICT AGENT PROMPT — FIX client/src/lib/llm-api.jsx
+Objective
+
+Eliminate all ESLint errors and warnings in llm-api.jsx.
+No suppressions, no new scripts, no diversions — only targeted fixes.
+
+Errors to Fix
+🔴 Unused imports / functions / vars
+
+Line 7: routeMedicalQuery → unused
+
+Line 9: setTimeout → unused import
+
+Line 933: e unused
+
+Line 974: getCachedLayerResult → unused
+
+Line 991: setCachedLayerResult → unused
+
+Line 1113: handleStreamingRequest → unused
+
+Line 1495: retryApiRequest → unused
+
+Fix:
+
+Remove if truly unused
+
+If kept for future use → prefix with _ (e.g. _retryApiRequest)
+
+🔴 Undefined globals
+
+Line 788: TextDecoder not defined
+
+Line 1044: clearTimeout not defined
+
+Line 1076: AbortSignal not defined
+
+Line 1092: AbortSignal not defined
+
+Line 1182: options not defined
+
+Fix:
+
+Add safe imports or global references:
+
+/* global TextDecoder, AbortSignal, setTimeout, clearTimeout */
+
+
+Or ensure these come from window in browser:
+
+const decoder = new window.TextDecoder();
+
+
+For options, define it properly in scope or remove if unused.
+
+🔴 Empty block
+
+Line 1377: Empty {} block
+
+Fix:
+
+Remove block if unused
+
+Or add a comment placeholder:
+
+{ 
+  // TODO: Implementation will be added later
+}
+
+⚠️ Missing JSDoc
+
+Line 1728: Missing @returns
+
+Fix:
+Add proper JSDoc annotation:
+
+/**
+ * Handles [functionName].
+ * @param {object} params - function parameters
+ * @returns {Promise<any>} - description of return value
+ */
+
+Instructions to Agent
+
+Remove or rename all unused imports/vars
+
+Do NOT leave “defined but never used”
+
+If future-use → prefix _
+
+Fix undefined globals by:
+
+Adding /* global ... */ header
+
+OR safely referencing window.*
+
+Fix empty block with removal or placeholder comment
+
+Add missing JSDoc @returns at line 1728
+
+Run ESLint again → ensure 0 errors, 0 warnings
+
+Acceptance Criteria
+
+✅ llm-api.jsx has no ESLint errors/warnings
+
+✅ No suppressions used (eslint-disable)
+
+✅ No duplicate logic created
+
+✅ App functionality unchanged
+
+✅ Codebase remains stable and production-safe
