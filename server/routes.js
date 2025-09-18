@@ -28,7 +28,7 @@ const activeSessions = new Map();
 /**
  * Circuit breaker middleware for Supabase-dependent APIs
  * @param {import('express').Request} req - Express request object
- * @param {import('express').Response} res - Express response object  
+ * @param {import('express').Response} res - Express response object
  * @param {import('express').NextFunction} next - Next middleware function
  * @returns {void}
  */
@@ -72,11 +72,11 @@ async function processAIResponse(response, sessionId) {
 
   // Apply watermarking and logging
   const watermarkedResponse = injectWatermark(cleaned, sessionId, { enabled: true });
-  await logAIResponse(watermarkedResponse, sessionId, { 
-    model: 'deepseek', 
+  await logAIResponse(watermarkedResponse, sessionId, {
+    model: 'deepseek',
     watermarked: true,
     originalLength: response.length,
-    processedLength: watermarkedResponse.length 
+    processedLength: watermarkedResponse.length
   });
 
   return watermarkedResponse;
@@ -168,8 +168,8 @@ testSupabaseConnection()
    */
 router.get("/health", (req, res) => {
     const config = getDeepSeekConfig();
-    res.json({ 
-      status: "ok", 
+    res.json({
+      status: "ok",
       timestamp: new Date().toISOString(),
       api: {
         deepseek: {
@@ -189,14 +189,14 @@ router.get("/health", (req, res) => {
    * Chat API test endpoint to check if the API routes are correctly mounted
    */
   router.get("/chat/test", (req, res) => {
-    res.json({ 
-      status: "ok", 
+    res.json({
+      status: "ok",
       message: "Chat API is available",
       routes: {
         standard: "/api/chat",
         streaming: "/api/chat/stream"
       },
-      timestamp: new Date().toISOString() 
+      timestamp: new Date().toISOString()
     });
   });
 
@@ -458,7 +458,7 @@ router.get("/app-config.json", async (req, res) => {
       }
 
       // Mask token for security (show first 4 and last 4 characters)
-      debugInfo.token_preview = token.length > 8 
+      debugInfo.token_preview = token.length > 8
         ? `${token.substring(0, 4)}***${token.substring(token.length - 4)}`
         : "***";
 
@@ -581,13 +581,13 @@ router.get("/app-config.json", async (req, res) => {
       if (req.body && Array.isArray(req.body.conversationHistory)) {
         req.body.conversationHistory = req.body.conversationHistory.filter(entry => {
           // Only include entries with non-empty content after trimming
-          return entry && 
-                 typeof entry === 'object' && 
-                 entry.content && 
-                 typeof entry.content === 'string' && 
+          return entry &&
+                 typeof entry === 'object' &&
+                 entry.content &&
+                 typeof entry.content === 'string' &&
                  entry.content.trim().length > 0 &&
-                 entry.role && 
-                 typeof entry.role === 'string' && 
+                 entry.role &&
+                 typeof entry.role === 'string' &&
                  entry.role.trim().length > 0;
         });
         console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
@@ -607,15 +607,29 @@ router.get("/app-config.json", async (req, res) => {
       const { message, conversationHistory, isHighRisk } = validation.data;
       const config = getDeepSeekConfig();
 
-      if (!config.apiKey) {
-        console.error("Missing DeepSeek API key - API will be unresponsive");
-        console.error("Environment check - DEEPSEEK_API_KEY:", process.env.DEEPSEEK_API_KEY ? 'SET' : 'MISSING');
+      // Enhanced API key validation
+      const deepSeekApiKey = process.env.DEEPSEEK_API_KEY;
+      console.log("DeepSeek API Key validation:", {
+        exists: !!deepSeekApiKey,
+        length: deepSeekApiKey ? deepSeekApiKey.length : 0,
+        preview: deepSeekApiKey ? `${deepSeekApiKey.substring(0, 8)}...` : 'NONE'
+      });
+
+      if (!deepSeekApiKey || deepSeekApiKey.trim() === '' || deepSeekApiKey === 'your-deepseek-api-key-here') {
+        console.error("Invalid DeepSeek API key configuration");
         return res.status(500).json({
           success: false,
-          message: "DeepSeek API key is missing. Please set the DEEPSEEK_API_KEY environment variable.",
-          error_type: "configuration"
+          message: "DeepSeek API key is not properly configured. Please check your environment variables.",
+          error_type: "configuration",
+          debug: {
+            hasKey: !!deepSeekApiKey,
+            keyLength: deepSeekApiKey ? deepSeekApiKey.length : 0
+          }
         });
       }
+
+      // Update config with validated key
+      config.apiKey = deepSeekApiKey;
 
       // Log the incoming request for analytics
       // Detect user role for appropriate response level
@@ -642,7 +656,7 @@ router.get("/app-config.json", async (req, res) => {
 
         CRITICAL RULES:
         1. NO # symbols or markdown
-        2. Complete ALL responses 
+        2. Complete ALL responses
         3. Use simple headers with colons
         4. Educational information only
 
@@ -739,7 +753,7 @@ router.get("/app-config.json", async (req, res) => {
             const userId = req.user?.id || "anonymous";
 
             // Create metadata for messages
-            const messageMetadata = { 
+            const messageMetadata = {
               timestamp: new Date(),
               sessionId,
               isHighRisk,
@@ -799,8 +813,8 @@ router.get("/app-config.json", async (req, res) => {
       return res.status(500).json({
         success: false,
         message: "We're having trouble connecting to our AI service. Please try again in a moment.",
-        error_type: lastError?.name === 'AbortError' || lastError?.message?.includes('timed out') 
-          ? "timeout" 
+        error_type: lastError?.name === 'AbortError' || lastError?.message?.includes('timed out')
+          ? "timeout"
           : "service_unavailable",
         metadata: {
           sessionId,
@@ -831,17 +845,17 @@ router.get("/app-config.json", async (req, res) => {
       // Generate a unique session ID if not provided
       const sessionId = req.headers['x-session-id'] || `session_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
 
-      // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors  
+      // CRITICAL FIX: Pre-sanitize conversationHistory before Zod validation to prevent empty content errors
       if (req.body && Array.isArray(req.body.conversationHistory)) {
         req.body.conversationHistory = req.body.conversationHistory.filter(entry => {
           // Only include entries with non-empty content after trimming
-          return entry && 
-                 typeof entry === 'object' && 
-                 entry.content && 
-                 typeof entry.content === 'string' && 
+          return entry &&
+                 typeof entry === 'object' &&
+                 entry.content &&
+                 typeof entry.content === 'string' &&
                  entry.content.trim().length > 0 &&
-                 entry.role && 
-                 typeof entry.role === 'string' && 
+                 entry.role &&
+                 typeof entry.role === 'string' &&
                  entry.role.trim().length > 0;
         });
         console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
@@ -862,15 +876,29 @@ router.get("/app-config.json", async (req, res) => {
       const { message, conversationHistory, isHighRisk } = validation.data;
       const config = getDeepSeekConfig();
 
-      if (!config.apiKey) {
-        console.error("Missing DeepSeek API key - API will be unresponsive");
-        console.error("Environment check - DEEPSEEK_API_KEY:", process.env.DEEPSEEK_API_KEY ? 'SET' : 'MISSING');
+      // Enhanced API key validation
+      const deepSeekApiKey = process.env.DEEPSEEK_API_KEY;
+      console.log("DeepSeek API Key validation:", {
+        exists: !!deepSeekApiKey,
+        length: deepSeekApiKey ? deepSeekApiKey.length : 0,
+        preview: deepSeekApiKey ? `${deepSeekApiKey.substring(0, 8)}...` : 'NONE'
+      });
+
+      if (!deepSeekApiKey || deepSeekApiKey.trim() === '' || deepSeekApiKey === 'your-deepseek-api-key-here') {
+        console.error("Invalid DeepSeek API key configuration");
         return res.status(500).json({
           success: false,
-          message: "DeepSeek API key is missing. Please set the DEEPSEEK_API_KEY environment variable.",
-          error_type: "configuration"
+          message: "DeepSeek API key is not properly configured. Please check your environment variables.",
+          error_type: "configuration",
+          debug: {
+            hasKey: !!deepSeekApiKey,
+            keyLength: deepSeekApiKey ? deepSeekApiKey.length : 0
+          }
         });
       }
+
+      // Update config with validated key
+      config.apiKey = deepSeekApiKey;
 
       // Set up SSE headers with no-transform to prevent proxy buffering
       res.setHeader('Content-Type', 'text/event-stream');
@@ -883,11 +911,11 @@ router.get("/app-config.json", async (req, res) => {
 
       // Log the incoming streaming request for analytics
       // Detect user role for appropriate response level
-  const { detectUserRole, getResponseInstructions } = await import('../client/src/lib/user-role-detector.js');
-  const roleAnalysis = detectUserRole(message);
-  const responseInstructions = getResponseInstructions(roleAnalysis.role);
+      const { detectUserRole, getResponseInstructions } = await import('../client/src/lib/user-role-detector.js');
+      const roleAnalysis = detectUserRole(message);
+      const responseInstructions = getResponseInstructions(roleAnalysis.role);
 
-  console.info(`[${sessionId}] Processing streaming chat request${isHighRisk ? ' (HIGH RISK)' : ''} [${roleAnalysis.role.toUpperCase()}]: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`);
+      console.info(`[${sessionId}] Processing streaming chat request${isHighRisk ? ' (HIGH RISK)' : ''} [${roleAnalysis.role.toUpperCase()}]: ${message.substring(0, 100)}${message.length > 100 ? '...' : ''}`);
 
       // Start session tracking for admin monitoring
       sessionTracker.startSession(sessionId, roleAnalysis.role);
@@ -912,7 +940,7 @@ router.get("/app-config.json", async (req, res) => {
         CRITICAL RULES:
         1. NO # symbols or markdown
         2. Complete ALL responses - finish every thought and section
-        3. Use simple headers with colons  
+        3. Use simple headers with colons
         4. Educational information only
         5. If response is getting long, prioritize the most important information first
 
@@ -1200,9 +1228,9 @@ router.get("/app-config.json", async (req, res) => {
             console.error(`[${sessionId}] Streaming error:`, apiError);
             // Send error event with proper SSE formatting
             try {
-              res.write(`event: error\ndata: ${JSON.stringify({ 
+              res.write(`event: error\ndata: ${JSON.stringify({
                 error: apiError.message,
-                code: 'streaming_error' 
+                code: 'streaming_error'
               })}\n\n`);
 
               // Send done event to complete the stream
@@ -1254,9 +1282,9 @@ router.get("/app-config.json", async (req, res) => {
         // If headers were already sent, we need to use SSE format
         try {
           if (!res.destroyed && !res.closed) {
-            res.write(`event: error\ndata: ${JSON.stringify({ 
+            res.write(`event: error\ndata: ${JSON.stringify({
               error: error.message,
-              code: 'request_error' 
+              code: 'request_error'
             })}\n\n`);
           }
 
@@ -1286,9 +1314,9 @@ router.get("/app-config.json", async (req, res) => {
 
     try {
       // IMMEDIATE RESPONSE: Send success immediately to prevent client timeout
-      res.json({ 
-        success: true, 
-        sessionId: sessionId, 
+      res.json({
+        success: true,
+        sessionId: sessionId,
         message: 'Stream cancellation initiated',
         timestamp: new Date().toISOString()
       });
@@ -1320,11 +1348,11 @@ router.get("/app-config.json", async (req, res) => {
       console.error(`[${sessionId}] Cancellation error:`, error);
       // Still try to send a response if headers haven't been sent
       if (!res.headersSent) {
-        res.status(500).json({ 
-          success: false, 
-          message: 'Cancellation failed', 
+        res.status(500).json({
+          success: false,
+          message: 'Cancellation failed',
           sessionId: sessionId,
-          error: error.message 
+          error: error.message
         });
       }
     }
@@ -1462,7 +1490,7 @@ router.get("/app-config.json", async (req, res) => {
             </div>
 
             <div class="timeline">
-                ${Object.keys(debugData.processingStages).map(stage => 
+                ${Object.keys(debugData.processingStages).map(stage =>
                   `<div class="timeline-item">
                     <div style="background-color: ${stageColors[stage]}; color: white; padding: 8px 12px; border-radius: 20px; font-size: 12px; font-weight: 600;">
                       ${stage.replace(/([A-Z])/g, ' $1').toLowerCase()}
@@ -1491,7 +1519,7 @@ router.get("/app-config.json", async (req, res) => {
                 </div>
             </div>
 
-            ${Object.entries(debugData.processingStages).map(([stageName, stageData]) => 
+            ${Object.entries(debugData.processingStages).map(([stageName, stageData]) =>
               `<div class="stage">
                 <div class="stage-header" style="background-color: ${stageColors[stageName]};">
                   <span>${stageName.replace(/([A-Z])/g, ' $1')} Stage</span>
@@ -1527,10 +1555,10 @@ router.get("/app-config.json", async (req, res) => {
 
     } catch (error) {
       console.error('Debug endpoint error:', error);
-      res.status(500).json({ 
+      res.status(500).json({
         error: 'Failed to load debug data',
         sessionId: sessionId,
-        message: error.message 
+        message: error.message
       });
     }
   });

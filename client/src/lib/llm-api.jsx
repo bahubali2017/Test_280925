@@ -673,25 +673,55 @@ return await handleStreamingResponse(endpoint, requestBody, onStreamingUpdate, o
 } else {
 // Handle regular response  
 console.debug('[AI] Using standard endpoint');
-const response = await apiRequest('POST', endpoint, requestBody);
-const data = await response.json();
+// FIX: Handle streaming response properly - don't parse as JSON for SSE
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "text/event-stream",
+      },
+      body: JSON.stringify(requestBody),
+      credentials: "include",
+      signal: options.abortSignal // Use the provided abortSignal
+    });
+// Original non-streaming handling code:
+    // const response = await apiRequest('POST', endpoint, requestBody);
+    // const data = await response.json();
 
-if (!data.success) {
-throw createAPIError('api', data.message || 'API request failed');
-}
+    // Check for streaming errors (e.g., HTML response)
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Streaming API error:", errorText);
+      throw createAPIError('api', `API error: ${response.status} ${response.statusText}`);
+    }
 
-const requestTime = Date.now() - startTime;
-return {
-content: data.response,
-metadata: {
-requestTime,
-sessionId: data.metadata?.sessionId,
-isHighRisk: data.metadata?.isHighRisk,
-attemptsMade: data.metadata?.attemptsMade || 1,
-modelName: data.metadata?.modelName || 'deepseek-chat',
-usage: data.usage
-}
-};
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("text/html")) {
+      console.error("Received HTML instead of streaming data:", contentType);
+      throw createAPIError('api', "Server returned HTML instead of streaming data. The API route may be misconfigured.");
+    }
+
+    // If streaming is enabled, the response is handled by handleStreamingResponse
+    // This part of the code should only execute for non-streaming requests
+    if (!shouldStream) {
+      const data = await response.json(); // Parse JSON only for non-streaming
+      if (!data.success) {
+        throw createAPIError('api', data.message || 'API request failed');
+      }
+
+      const requestTime = Date.now() - startTime;
+      return {
+        content: data.response,
+        metadata: {
+          requestTime,
+          sessionId: data.metadata?.sessionId,
+          isHighRisk: data.metadata?.isHighRisk,
+          attemptsMade: data.metadata?.attemptsMade || 1,
+          modelName: data.metadata?.modelName || 'deepseek-chat',
+          usage: data.usage
+        }
+      };
+    }
 }
 } catch (error) {
 console.error('[AI] Error in sendMessage:', error);

@@ -256,13 +256,12 @@ export function decrementWebSocketConnections(token) {
 }
 
 /**
- * Enhanced rate limiting for chat endpoints - REMOVED for unlimited AI availability
+ * Enhanced rate limiting for chat endpoints - COMPLETELY DISABLED for unlimited AI availability
  * This function now acts as a pass-through to ensure unlimited access to AI chat
  */
 export function chatEndpointRateLimit(req, res, next) {
-  // Chat endpoints should have unlimited availability for optimal user experience
-  console.log(`[RATE-LIMIT] Chat request from IP ${req.ip}: ${req.path}`);
-  console.log(`[RATE-LIMIT] Request headers:`, req.headers['content-type']);
+  // COMPLETELY BYPASS rate limiting for chat endpoints
+  console.log(`[RATE-LIMIT] Chat request BYPASSED from IP ${req.ip}: ${req.path}`);
   next();
 }
 
