@@ -33,6 +33,17 @@ dotenv.config();
 // For Replit compatibility, we run production mode with built assets
 process.env.NODE_ENV = "production";
 
+// Build cache integration
+const { BuildCache } = require('./utils/buildCache.js');
+
+// Check if rebuild is necessary
+const needsRebuild = BuildCache.checkBuildNecessity();
+if (needsRebuild) {
+  console.log('[BUILD] Rebuild required - assets may be outdated');
+} else {
+  console.log('[BUILD] Using cached build - assets are current');
+}
+
 // Build fingerprinting to track rebuild necessity
 const BUILD_TIMESTAMP = Date.now();
 console.log(`[ENV-OVERRIDE] NODE_ENV set to: ${process.env.NODE_ENV}`);
