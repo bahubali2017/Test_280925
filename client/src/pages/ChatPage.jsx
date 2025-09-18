@@ -7,34 +7,11 @@ import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-l
 import { apiRequest } from '../lib/queryClient';
 import { getRandomStarterQuestions } from '../lib/suggestions';
 
-// Use native timeout function directly
-const safeSetTimeout = window.setTimeout;
-
-/**
- * Generate a UUID v4 compatible ID using browser crypto API with fallback
- * @returns {string} A unique identifier
- */
+// Simple UUID generator using crypto API with fallback
 const generateUUID = () => {
-  // Check if browser supports crypto.randomUUID (modern browsers)
   if (window.crypto && window.crypto.randomUUID) {
     return window.crypto.randomUUID();
   }
-  
-  // Fallback for older browsers using crypto.getRandomValues
-  if (window.crypto && window.crypto.getRandomValues) {
-    // Generate UUID v4 format: xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx
-    const randomValues = new Uint8Array(16);
-    window.crypto.getRandomValues(randomValues);
-    
-    // Set version (4) and variant bits according to RFC 4122
-    randomValues[6] = (randomValues[6] & 0x0f) | 0x40;
-    randomValues[8] = (randomValues[8] & 0x3f) | 0x80;
-    
-    const hex = Array.from(randomValues, byte => byte.toString(16).padStart(2, '0')).join('');
-    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20, 32)}`;
-  }
-  
-  // Final fallback using Math.random (less secure but functional)
   return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
     const r = Math.random() * 16 | 0;
     const v = c === 'x' ? r : (r & 0x3 | 0x8);
@@ -53,7 +30,6 @@ const generateUUID = () => {
  * @property {boolean} [isHighRisk] - Whether this message contains high-risk content
  * @property {object} [metadata] - Additional metadata about the message
  * @property {string} [originalMessage] - Original message text (for error messages)
- * @property {boolean} [isStreaming] - Whether this message is currently streaming
  * @property {string} [sessionId] - Session ID for this message
  * @property {boolean} [isRetry] - Whether this message is a retry attempt
  * @property {boolean} [isCancelled] - Whether this message was cancelled
@@ -102,9 +78,7 @@ export default function ChatPage() {
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
-  const [streamingMessageId, setStreamingMessageId] = useState(/** @type {string|null} */(null));
-  /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
-  const [partialContent, setPartialContent] = useState('');
+  const [currentStreamingId, setCurrentStreamingId] = useState(/** @type {string|null} */(null));
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isStoppingAI, setIsStoppingAI] = useState(false);
   /** @type {[Array<string>, React.Dispatch<React.SetStateAction<Array<string>>>]} */
@@ -125,8 +99,8 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   /** @type {React.RefObject<HTMLInputElement>} */
   const inputRef = useRef(null);
-  /** @type {React.MutableRefObject<string>} - Ref to track latest partial content, avoiding stale state in closures */
-  const partialContentRef = useRef('');
+  /** @type {React.MutableRefObject<AbortController|null>} */
+  const abortControllerRef = useRef(/** @type {AbortController|null} */(null));
 
   /**
    * Scrolls to the bottom of the chat container
@@ -211,12 +185,11 @@ export default function ChatPage() {
 
         // For assistant messages, only include if:
         // - Status is 'delivered' (not pending/streaming)
-        // - Not cancelled and not streaming
+        // - Not cancelled
         // - Has actual content (not empty/whitespace)
         return (
           msg.status === 'delivered' &&
           !msg.isCancelled &&
-          !msg.isStreaming &&
           msg.content &&
           msg.content.trim().length > 0
         );
@@ -322,8 +295,7 @@ export default function ChatPage() {
       ]);
 
       // Set as current streaming message for display
-      setStreamingMessageId(`${retryId}_response`);
-      setPartialContent('');
+      setCurrentStreamingId(`${retryId}_response`);
 
       // Track if we've added the message to the array yet
       let messageAdded = true; // Already added above
@@ -331,8 +303,7 @@ export default function ChatPage() {
       // Streaming update handler
       const handleStreamingUpdate = (content = '', metadata = {}) => {
         // Update the partial content for display AND the ref for latest state
-        setPartialContent(content);
-        partialContentRef.current = content;
+        // Update message content directly in the state
 
         // Update the existing placeholder message with streaming content
         if (content && content.trim().length > 0) {
@@ -381,8 +352,7 @@ export default function ChatPage() {
           }
 
           // Clear streaming state immediately to prevent any lingering animations
-          setStreamingMessageId(null);
-          setPartialContent('');
+          setCurrentStreamingId(null);
         }
       };
 
@@ -421,15 +391,15 @@ export default function ChatPage() {
               error.message.includes('Request aborted')))
           );
           if (isManualAbort) {
-            console.debug(`Message ${streamingMessageId} was manually aborted, adding cancellation message`);
+            console.debug(`Message ${currentStreamingId} was manually aborted, adding cancellation message`);
 
             // Get the original message so we can extract any partial content already delivered
-            const originalMessage = prev.find(msg => msg.id === streamingMessageId);
-            const partialContent = originalMessage?.content || partialContentRef.current || '';
+            const originalMessage = prev.find(msg => msg.id === currentStreamingId);
+            const partialContent = originalMessage?.content || '';
 
             // Add a cancellation notice to the content
             return prev.map(msg =>
-              msg.id === streamingMessageId
+              msg.id === currentStreamingId
                 ? {
                     ...msg,
                     content: partialContent + "\n\n*AI response cancelled by user.*",
@@ -458,8 +428,8 @@ export default function ChatPage() {
         });
 
         // Clear streaming state
-        setStreamingMessageId(null);
-        setPartialContent('');
+        setCurrentStreamingId(null);
+  
       } else {
         // Add error message
         setMessages(prev => [...prev, {
@@ -584,17 +554,12 @@ export default function ChatPage() {
       ]);
 
       // Set as current streaming message for display using stable assistantMessageId
-      setStreamingMessageId(assistantMessageId);
-      setPartialContent('');
+      setCurrentStreamingId(assistantMessageId);
 
       // Track if we've added the message to the array yet
       let messageAdded = true; // Already added above
 
       // Note: streaming handled internally by sendMessageClientSide
-                : msg
-            )
-          );
-        }
 
         // Phase 7: Handle dynamic disclaimer updates based on streaming content (only if message has been added)
         if (messageAdded && metadata && typeof metadata === 'object' && 'dynamicDisclaimers' in metadata && metadata.dynamicDisclaimers) {
@@ -622,8 +587,8 @@ export default function ChatPage() {
 
           // Only finalize if we have actual content and the message was added
       // Clear streaming state
-      setStreamingMessageId(null);
-      setPartialContent('');
+      setCurrentStreamingId(null);
+
       };
 
       // Call the enhanced API with streaming support
@@ -664,15 +629,15 @@ export default function ChatPage() {
             (('name' in error && error.name === 'AbortError') || 
              ('message' in error && typeof error.message === 'string' && error.message.includes('Request aborted')));
           if (isManualAbort) {
-            console.debug(`Message ${streamingMessageId} was manually aborted, adding cancellation message`);
+            console.debug(`Message ${currentStreamingId} was manually aborted, adding cancellation message`);
 
             // Get the original message so we can extract any partial content already delivered
-            const originalMessage = prev.find(msg => msg.id === streamingMessageId);
-            const partialContent = originalMessage?.content || partialContentRef.current || '';
+            const originalMessage = prev.find(msg => msg.id === currentStreamingId);
+            const partialContent = originalMessage?.content || '';
 
             // Add a cancellation notice to the content
             return prev.map(msg =>
-              msg.id === streamingMessageId
+              msg.id === currentStreamingId
                 ? {
                     ...msg,
                     content: partialContent + "\n\n*AI response cancelled by user.*",
@@ -701,8 +666,8 @@ export default function ChatPage() {
         });
 
         // Clear streaming state
-        setStreamingMessageId(null);
-        setPartialContent('');
+        setCurrentStreamingId(null);
+  
       } else {
         // Add error message
         setMessages((prev) => [
@@ -736,7 +701,7 @@ export default function ChatPage() {
     inputRef.current?.focus();
 
     // Auto-submit the follow-up question for better UX
-    safeSetTimeout(() => {
+    setTimeout(() => {
       handleSendMessage({ preventDefault: () => {}, target: inputRef.current });
     }, 100);
   };
@@ -748,7 +713,7 @@ export default function ChatPage() {
     console.debug('[Chat] handleStopAI invoked');
 
     // CRITICAL FIX: Check if we have an active streaming message
-    if (!streamingMessageId) {
+    if (!currentStreamingId) {
       console.warn('[Chat] handleStopAI called but no streaming message ID found');
       return;
     }
@@ -760,20 +725,20 @@ export default function ChatPage() {
     }
 
     setIsStoppingAI(true);
-    console.debug(`[Chat] Stopping AI response for message: ${streamingMessageId}`);
+    console.debug(`[Chat] Stopping AI response for message: ${currentStreamingId}`);
 
     try {
       // Store the current streaming message ID to prevent race conditions
-      const currentStreamingId = streamingMessageId;
+      const activeStreamingId = currentStreamingId;
 
       // Get the current message status before stopping
-      const currentMessage = messages.find(msg => msg.id === currentStreamingId);
+      const currentMessage = messages.find(msg => msg.id === activeStreamingId);
       const isDelivered = currentMessage?.status === 'delivered';
 
       // IMMEDIATE UI UPDATE: Mark message as stopping
       setMessages(prev =>
         prev.map(msg =>
-          msg.id === currentStreamingId
+          msg.id === activeStreamingId
             ? {
                 ...msg,
                 isStreaming: false,
@@ -796,15 +761,15 @@ export default function ChatPage() {
 
       // FINAL UI UPDATE: Update message with final stopped state
       setMessages(prev => {
-        const targetMessage = prev.find(msg => msg.id === currentStreamingId);
+        const targetMessage = prev.find(msg => msg.id === activeStreamingId);
 
         if (!targetMessage) {
-          console.debug(`[Stop AI] Message ${currentStreamingId} not found in state`);
+          console.debug(`[Stop AI] Message ${activeStreamingId} not found in state`);
           return prev;
         }
 
         // Get the latest partial content from either the message or the ref
-        const latestContent = targetMessage.content || partialContentRef.current || '';
+        const latestContent = targetMessage.content || '';
 
         // If there's no content at all (stream just started), remove the message
         if (!latestContent || latestContent.trim().length === 0) {
@@ -863,7 +828,7 @@ export default function ChatPage() {
     } finally {
       // CRITICAL FIX: Always clear streaming state, even if there was an error
       setStreamingMessageId(null);
-      setPartialContent('');
+
       setIsStoppingAI(false);
       setIsLoading(false);
     }
@@ -1085,10 +1050,9 @@ export default function ChatPage() {
                     isLast={isLast}
                     onStopAI={getStopHandler(msg.id)}
                     isStoppingAI={isStoppingAI}
-                    isStreaming={msg.id === streamingMessageId || msg.isStreaming}
-                    partialContent={msg.id === streamingMessageId ? partialContent : ''}
+                    isStreaming={msg.status === 'streaming'}
                     status={msg.status || 'sent'}
-                    streamingMessageId={streamingMessageId}
+                    streamingMessageId={currentStreamingId}
                   />
                 );
               })

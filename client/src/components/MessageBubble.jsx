@@ -270,16 +270,12 @@ export function MessageBubble({
   // State for feedback status
   const [feedbackStatus, setFeedbackStatus] = React.useState('');
   const [feedbackType, setFeedbackType] = React.useState('');
-  
-  // Add local button state for immediate UI feedback
-  const [isStoppingLocal, setIsStoppingLocal] = React.useState(false);
 
   
-  // Create stop click handler with immediate UI feedback
+  // Create stop click handler
   const handleStopClick = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsStoppingLocal(true); // Immediate UI feedback
     console.debug('[Chat] Stop AI clicked');
     onStopAI?.(e);
   };
@@ -640,17 +636,17 @@ export function MessageBubble({
                   data-testid="button-stop-ai"
                   type="button"
                   onClick={handleStopClick}
-                  disabled={isStoppingAI || isStoppingLocal || status === 'stopping'}
+                  disabled={isStoppingAI || status === 'stopping' || status === 'streaming'}
                   className={cn(
                     "flex items-center text-xs py-1.5 px-3 rounded-md font-medium transition-all duration-200",
-                    (isStoppingAI || isStoppingLocal || status === 'stopping')
+                    (isStoppingAI || status === 'stopping')
                       ? "bg-amber-100 text-amber-700 cursor-not-allowed opacity-75 border border-amber-300"
                       : "bg-red-100 hover:bg-red-200 text-red-700 border border-red-300 hover:border-red-400 active:scale-95 cursor-pointer"
                   )}
-                  title={(isStoppingAI || isStoppingLocal || status === 'stopping') ? "Stopping AI response..." : "Stop the AI response"}
-                  aria-label={(isStoppingAI || isStoppingLocal || status === 'stopping') ? "Stopping AI response" : "Stop AI response"}
+                  title={(isStoppingAI || status === 'stopping') ? "Stopping AI response..." : "Stop the AI response"}
+                  aria-label={(isStoppingAI || status === 'stopping') ? "Stopping AI response" : "Stop AI response"}
                 >
-                  {(isStoppingAI || isStoppingLocal || status === 'stopping') ? (
+                  {(isStoppingAI || status === 'stopping') ? (
                     <span className="flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5 animate-spin">
                         <circle cx="12" cy="12" r="10"></circle>
