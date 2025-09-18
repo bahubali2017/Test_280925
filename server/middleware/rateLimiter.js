@@ -1,3 +1,4 @@
+/* global setInterval */
 /**
  * @file Rate limiting middleware for admin endpoints
  * Protects admin endpoints from abuse and ensures system stability
@@ -181,6 +182,7 @@ const rateLimiter = new RateLimiter();
  * @param {import('express').Request} req - Express request object
  * @param {import('express').Response} res - Express response object  
  * @param {import('express').NextFunction} next - Next middleware function
+ * @returns {void}
  */
 export function systemStatusRateLimit(req, res, next) {
   // Check for global rate limit disable
@@ -208,6 +210,7 @@ export function systemStatusRateLimit(req, res, next) {
  * @param {import('express').Request} req - Express request object
  * @param {import('express').Response} res - Express response object  
  * @param {import('express').NextFunction} next - Next middleware function
+ * @returns {void}
  */
 export function adminEndpointRateLimit(req, res, next) {
   // Check for global rate limit disable
@@ -295,6 +298,7 @@ function isCriticalEndpoint(requestPath, criticalEndpoints) {
  * @param req
  * @param res
  * @param next
+ * @returns {void}
  */
 export function selectiveRateLimit(req, res, next) {
   // Check for global rate limit disable
