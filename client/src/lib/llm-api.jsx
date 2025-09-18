@@ -260,6 +260,12 @@ export async function sendMessage(message, history = [], options = {}) {
   const isHighRisk = containsHighRiskTerms(message);
   const isStreaming = typeof onStreamingUpdate === 'function';
 
+  // Create and store AbortController for stopping functionality
+  if (isStreaming) {
+    activeAbortController = createAbortController();
+    console.debug('[API] Created AbortController for streaming request');
+  }
+
   try {
     // Prepare request body
     const requestBody = {
@@ -278,8 +284,8 @@ export async function sendMessage(message, history = [], options = {}) {
     // Choose endpoint based on streaming requirement
     const endpoint = isStreaming ? '/api/chat/stream' : '/api/chat';
     
-    // Make API request
-    const response = await makeAPIRequest(endpoint, requestBody, abortSignal);
+    // Make API request  
+    const response = await makeAPIRequest(endpoint, requestBody, activeAbortController?.signal || abortSignal);
     
     let content;
     let metadata = {
@@ -303,7 +309,7 @@ export async function sendMessage(message, history = [], options = {}) {
       content = await processStream(
         response.body,
         onStreamingUpdate,
-        abortSignal
+        activeAbortController?.signal || abortSignal
       );
       
     } else {
@@ -401,16 +407,33 @@ export async function sendMessage(message, history = [], options = {}) {
       error.message : 'An unexpected error occurred';
     
     throw createAPIError('unknown', errorMessage, { originalError: error });
+  } finally {
+    // Clear the active abort controller when streaming completes/fails
+    if (isStreaming && activeAbortController) {
+      console.debug('[API] Clearing AbortController after streaming');
+      activeAbortController = null;
+    }
   }
 }
+
+// Global AbortController for active streaming requests
+let activeAbortController = null;
 
 /**
  * Stops any active streaming request
  * @returns {boolean} Whether a stream was stopped
- * @deprecated Use AbortSignal instead for better control
  */
 export function stopStreaming() {
-  console.warn('[API] stopStreaming is deprecated. Use AbortSignal for better control.');
+  console.debug('[API] stopStreaming called');
+  
+  if (activeAbortController) {
+    console.debug('[API] Aborting active streaming request');
+    activeAbortController.abort(new Error('Stream stopped by user'));
+    activeAbortController = null;
+    return true;
+  }
+  
+  console.debug('[API] No active streaming request to stop');
   return false;
 }
 
