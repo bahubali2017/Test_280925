@@ -23,7 +23,7 @@ let lastKnownVersion = null;
 let isCheckingVersion = false;
 
 /**
- * @typedef {Object} VersionCheckConfig
+ * @typedef {object} VersionCheckConfig
  * @property {number} FOCUS_CHECK_THROTTLE - How often to check for updates when window gains focus (ms)
  * @property {number} REQUEST_TIMEOUT - Timeout for version check requests (ms)
  * @property {number} MAX_RETRIES - Retry attempts for failed version checks
@@ -71,7 +71,7 @@ function setInitialClientVersion(version) {
 }
 
 /**
- * @typedef {Object} ServerConfig
+ * @typedef {object} ServerConfig
  * @property {string} version - Server version string
  * @property {boolean} [mustRefresh] - Whether client must refresh
  * @property {boolean} [swKillSwitch] - Whether to disable service worker
@@ -338,7 +338,7 @@ export function initializeVersionChecking() {
 }
 
 /**
- * @typedef {Object} VersionStatus
+ * @typedef {object} VersionStatus
  * @property {string|null} clientVersion - Current client version
  * @property {string|null} lastKnownServerVersion - Last known server version
  * @property {boolean} isChecking - Whether currently checking for updates

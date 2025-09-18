@@ -72,7 +72,7 @@ const GENERAL_PUBLIC_INDICATORS = {
 /**
  * Analyze query to determine if user is likely a healthcare professional
  * @param {string} query - The user's medical query
- * @returns {Object} Analysis results
+ * @returns {object} Analysis results
  */
 export function detectUserRole(query) {
   const queryLower = query.toLowerCase();
@@ -179,8 +179,8 @@ Emphasize the importance of consulting with healthcare providers.
 /**
  * Enhance query analysis with role-specific context
  * @param {string} query - Original query
- * @param {Object} roleAnalysis - Role detection results
- * @returns {Object} Enhanced query context
+ * @param {object} roleAnalysis - Role detection results
+ * @returns {object} Enhanced query context
  */
 export function enhanceQueryContext(query, roleAnalysis) {
   const context = {

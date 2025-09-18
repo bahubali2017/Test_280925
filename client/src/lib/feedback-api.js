@@ -4,15 +4,15 @@
 
 /**
  * Submit feedback for AI response
- * @param {Object} feedbackData - Feedback data
+ * @param {object} feedbackData - Feedback data
  * @param {string} feedbackData.messageId - Message ID
  * @param {string} feedbackData.sessionId - Session ID
  * @param {string} feedbackData.feedbackType - 'helpful' or 'could_improve'
  * @param {string} feedbackData.userQuery - Original user question
  * @param {string} feedbackData.aiResponse - AI's response
  * @param {string} feedbackData.userRole - User role (healthcare_professional or general_public)
- * @param {Object} feedbackData.responseMetadata - Response metadata
- * @returns {Promise<Object>} API response
+ * @param {object} feedbackData.responseMetadata - Response metadata
+ * @returns {Promise<object>} API response
  */
 export async function submitFeedback(feedbackData) {
   try {
@@ -42,7 +42,7 @@ export async function submitFeedback(feedbackData) {
 
 /**
  * Get ML insights and patterns
- * @returns {Promise<Object>} ML insights data
+ * @returns {Promise<object>} ML insights data
  */
 export async function getMLInsights() {
   try {
@@ -62,7 +62,7 @@ export async function getMLInsights() {
 
 /**
  * Create feedback handler for use in components
- * @param {Object} messageContext - Context about the message
+ * @param {object} messageContext - Context about the message
  * @returns {Function} Feedback handler function
  */
 export function createFeedbackHandler(messageContext) {

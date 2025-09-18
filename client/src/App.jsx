@@ -11,6 +11,9 @@ import { ToastProvider } from './components/ToastProvider.jsx';
 import { GlobalErrorBoundary } from './components/GlobalErrorBoundary.jsx';
 import './index.css';
 
+/**
+ *
+ */
 export default function App() {
   console.log('[App] Rendering main application');
   

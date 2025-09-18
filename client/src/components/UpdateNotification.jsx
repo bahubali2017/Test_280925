@@ -225,6 +225,9 @@ export function UpdateNotification() {
 }
 
 // CSS Animation (add to your global CSS or component styles)
+/**
+ *
+ */
 export const updateNotificationStyles = `
 @keyframes slide-up {
   from {

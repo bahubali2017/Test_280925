@@ -1,9 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useLocation } from 'wouter';
 import { useAuth } from '../hooks/useAuth';
-import { Button } from "../components/ui/button";
 import { MessageBubble } from '../components/MessageBubble';
-import { Input } from "../components/ui/input";
 import AnimatedNeuralLogo from '../components/AnimatedNeuralLogo.jsx'; // eslint-disable-line no-unused-vars
 import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-line no-unused-vars
 import { InstallationNotice } from '../components/InstallationNotice.jsx';
@@ -41,10 +39,11 @@ const safeSetTimeout = window.setTimeout;
  */
 
 // Cache for llm-api module to avoid repeated dynamic imports
+/** @type {Promise<typeof import('../lib/llm-api')> | null} */
 let llmApiModule = null;
 const getLLMApi = async () => {
   if (!llmApiModule) {
-    llmApiModule = await import('../lib/llm-api');
+    llmApiModule = import('../lib/llm-api');
   }
   return llmApiModule;
 };
@@ -77,7 +76,7 @@ export default function ChatPage() {
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   /** @type {[string|null, React.Dispatch<React.SetStateAction<string|null>>]} */
-  const [streamingMessageId, setStreamingMessageId] = useState(null);
+  const [streamingMessageId, setStreamingMessageId] = useState(/** @type {string|null} */(null));
   /** @type {[string, React.Dispatch<React.SetStateAction<string>>]} */
   const [partialContent, setPartialContent] = useState('');
   /** @type {[boolean, React.Dispatch<React.SetStateAction<boolean>>]} */
@@ -100,7 +99,7 @@ export default function ChatPage() {
   const messagesEndRef = useRef(null);
   /** @type {React.RefObject<HTMLInputElement>} */
   const inputRef = useRef(null);
-  /** @type {React.RefObject<string>} - Ref to track latest partial content, avoiding stale state in closures */
+  /** @type {React.MutableRefObject<string>} - Ref to track latest partial content, avoiding stale state in closures */
   const partialContentRef = useRef('');
 
   /**
@@ -205,10 +204,10 @@ export default function ChatPage() {
 
   /**
    * Retry sending the last failed message
-   * @param {string} messageToRetry - The message to retry sending
+   * @param {string} [messageToRetry] - The message to retry sending
    * @returns {Promise<void>}
    */
-  const handleRetryMessage = useCallback(async (messageToRetry) => {
+  const handleRetryMessage = useCallback(async (messageToRetry = '') => {
     // Use either the provided message or the last saved user message
     const messageContent = messageToRetry || lastUserMessage;
 
@@ -274,7 +273,7 @@ export default function ChatPage() {
       const conversationHistory = prepareConversationHistory(recentMessages);
 
       // Get cached llm-api module
-      const { sendMessage } = await getLLMApi();
+      const { sendMessageClientSide } = await getLLMApi();
 
       // CRITICAL FIX: Immediately push placeholder assistant message
       // This ensures MessageBubble exists instantly so Stop AI button can render
@@ -304,9 +303,7 @@ export default function ChatPage() {
       let messageAdded = true; // Already added above
 
       // Streaming update handler
-      const handleStreamingUpdate = (content, metadata = {}) => {
-        handleStreamingUpdate.messageId = `${retryId}_response`; // Store for reference
-        handleStreamingUpdate.sessionId = retryId; // Attach sessionId for cancellation
+      const handleStreamingUpdate = (content = '', metadata = {}) => {
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
         partialContentRef.current = content;
@@ -327,7 +324,7 @@ export default function ChatPage() {
         }
 
         // If this is the final update (streaming complete)
-        if (metadata.isComplete) {
+        if (metadata && typeof metadata === 'object' && 'isComplete' in metadata && metadata.isComplete) {
           console.debug(`[Chat] Stream complete for retry message ${`${retryId}_response`}, updating status to delivered`);
 
           // Only finalize if we have actual content and the message was added
@@ -364,10 +361,9 @@ export default function ChatPage() {
       };
 
       // Call the enhanced API with streaming support
-      const result = await sendMessage(
+      const result = await sendMessageClientSide(
         messageContent,
         conversationHistory,
-        {}, // Default options
         handleStreamingUpdate // Streaming callback
       );
 
@@ -540,7 +536,7 @@ export default function ChatPage() {
       const conversationHistory = prepareConversationHistory(recentMessages);
 
       // Get cached llm-api module
-      const { sendMessage } = await getLLMApi();
+      const { sendMessageClientSide } = await getLLMApi();
 
       // CRITICAL FIX: Immediately push placeholder assistant message
       // This ensures MessageBubble exists instantly so Stop AI button can render
@@ -569,12 +565,9 @@ export default function ChatPage() {
       let messageAdded = true; // Already added above
 
       // Continue with streaming update handler logic
-      const handleStreamingUpdate = (content, metadata = {}) => {
-        handleStreamingUpdate.messageId = assistantMessageId; // Store for reference
-        handleStreamingUpdate.sessionId = sessionId; // Attach sessionId for cancellation
-
+      const handleStreamingUpdate = (content = '', metadata = {}) => {
         // CRITICAL DEBUG: Log streaming updates
-        console.debug(`[Chat] Streaming update received: ${content.length} chars, streaming: ${metadata.isStreaming}, complete: ${metadata.isComplete}`);
+        console.debug(`[Chat] Streaming update received: ${content.length} chars, streaming: ${metadata && typeof metadata === 'object' && 'isStreaming' in metadata && metadata.isStreaming}, complete: ${metadata && typeof metadata === 'object' && 'isComplete' in metadata && metadata.isComplete}`);
 
         // Update the partial content for display AND the ref for latest state
         setPartialContent(content);
@@ -589,7 +582,7 @@ export default function ChatPage() {
                 ? {
                     ...msg,
                     content: content, // Update with latest content
-                    sessionId: metadata.sessionId || msg.sessionId // Update sessionId if available
+                    sessionId: (metadata && typeof metadata === 'object' && 'sessionId' in metadata && metadata.sessionId) || msg.sessionId // Update sessionId if available
                   }
                 : msg
             )
@@ -597,7 +590,7 @@ export default function ChatPage() {
         }
 
         // Phase 7: Handle real-time medical layer status updates (only if message has been added)
-        if (messageAdded && metadata.layerStatus) {
+        if (messageAdded && metadata && typeof metadata === 'object' && 'layerStatus' in metadata && metadata.layerStatus) {
           console.debug(`[Medical Layer] Status update: ${metadata.layerStatus}`);
 
           // Update message with layer processing status
@@ -609,9 +602,9 @@ export default function ChatPage() {
                     metadata: {
                       ...msg.metadata,
                       layerStatus: metadata.layerStatus,
-                      layerProcessingTime: metadata.layerProcessingTime,
-                      triageLevel: metadata.triageLevel,
-                      isHighRisk: metadata.isHighRisk
+                      layerProcessingTime: 'layerProcessingTime' in metadata ? metadata.layerProcessingTime : undefined,
+                      triageLevel: 'triageLevel' in metadata ? metadata.triageLevel : undefined,
+                      isHighRisk: 'isHighRisk' in metadata ? metadata.isHighRisk : undefined
                     }
                   }
                 : msg
@@ -620,7 +613,7 @@ export default function ChatPage() {
         }
 
         // Phase 7: Handle dynamic disclaimer updates based on streaming content (only if message has been added)
-        if (messageAdded && metadata.dynamicDisclaimers) {
+        if (messageAdded && metadata && typeof metadata === 'object' && 'dynamicDisclaimers' in metadata && metadata.dynamicDisclaimers) {
           setMessages((prev) =>
             prev.map(msg =>
               msg.id === assistantMessageId
@@ -629,8 +622,8 @@ export default function ChatPage() {
                     metadata: {
                       ...msg.metadata,
                       queryIntent: {
-                        ...msg.metadata.queryIntent,
-                        disclaimers: metadata.dynamicDisclaimers
+                        ...(msg.metadata && typeof msg.metadata === 'object' && 'queryIntent' in msg.metadata ? msg.metadata.queryIntent : {}),
+                        disclaimers: 'dynamicDisclaimers' in metadata ? metadata.dynamicDisclaimers : undefined
                       }
                     }
                   }
@@ -640,7 +633,7 @@ export default function ChatPage() {
         }
 
         // If this is the final update (streaming complete)
-        if (metadata.isComplete) {
+        if (metadata && typeof metadata === 'object' && 'isComplete' in metadata && metadata.isComplete) {
           console.debug(`[Chat] Stream complete for message ${assistantMessageId}, updating status to delivered`);
 
           // Only finalize if we have actual content and the message was added
@@ -652,7 +645,7 @@ export default function ChatPage() {
                   ? {
                       ...msg,
                       content: content,
-                      sessionId: metadata.sessionId || msg.sessionId, // Update sessionId if available
+                      sessionId: (metadata && metadata.sessionId) || msg.sessionId, // Update sessionId if available
                       isStreaming: false,
                       status: 'delivered', // Ensure delivered status is set
                       metadata: {
@@ -678,10 +671,9 @@ export default function ChatPage() {
       };
 
       // Call the enhanced API with streaming support
-      const result = await sendMessage(
+      const result = await sendMessageClientSide(
         newMessage,
         conversationHistory,
-        { sessionId, assistantMessageId }, // Pass sessionId and assistantMessageId in options
         handleStreamingUpdate // Streaming callback
       );
 
@@ -692,10 +684,10 @@ export default function ChatPage() {
     } catch (error) {
       console.error('Error sending message:', error);
       console.error('Error details:', {
-        name: error.name,
-        message: error.message,
-        stack: error.stack,
-        type: error.type || 'unknown'
+        name: error && typeof error === 'object' && 'name' in error ? error.name : 'unknown',
+        message: error && typeof error === 'object' && 'message' in error ? error.message : String(error),
+        stack: error && typeof error === 'object' && 'stack' in error ? error.stack : undefined,
+        type: error && typeof error === 'object' && 'type' in error ? error.type : 'unknown'
       });
 
       // Get appropriate user-friendly error message
@@ -712,7 +704,9 @@ export default function ChatPage() {
           // const isTimeout = error?.type === 'timeout' || error?.message?.includes('timeout');
 
           // Check if this was a deliberate abort/stop action
-          const isManualAbort = error && (error.name === 'AbortError' || error.message === 'Request aborted');
+          const isManualAbort = error && typeof error === 'object' && 
+            (('name' in error && error.name === 'AbortError') || 
+             ('message' in error && typeof error.message === 'string' && error.message.includes('Request aborted')));
           if (isManualAbort) {
             console.debug(`Message ${streamingMessageId} was manually aborted, adding cancellation message`);
 
@@ -1145,7 +1139,6 @@ export default function ChatPage() {
                     isStreaming={msg.id === streamingMessageId || msg.isStreaming}
                     partialContent={msg.id === streamingMessageId ? partialContent : ''}
                     status={msg.status || 'sent'}
-                    messageId={msg.id}
                     streamingMessageId={streamingMessageId}
                   />
                 );

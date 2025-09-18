@@ -633,6 +633,7 @@ return promptParts.join("\n\n");
 * @param {string} message - The message to send
 * @param {Array<{role: string, content: string}>} [history=[]] - Previous conversation history
 * @param {object} [_options={}] - Additional options for the request (unused, kept for API compatibility)
+* @param options
 * @param {Function} [onStreamingUpdate=null] - Callback for streaming updates
 * @returns {Promise<{content: string, metadata: object}>} The AI response
 */
@@ -1724,6 +1725,12 @@ function extractMedicalSafetyInfo(response) {
   };
 }
 
+/**
+ *
+ * @param message
+ * @param history
+ * @param queryIntent
+ */
 async function sendMessageClientSide(message, history = [], queryIntent = null) {
 const config = getDeepSeekConfig();
 // Default isHighRisk if no query intent
@@ -1812,4 +1819,7 @@ throw createAPIError("unknown", errorMessage, { originalError: error });
 } // Close sendMessageClientSide function
 
 // Additional internal exports for backward compatibility
+/**
+ *
+ */
 export { sendMessageClientSide, getFollowUpSuggestions, extractMedicalSafetyInfo, _addBasicDisclaimers, _containsHighRiskTerms, stopStreaming };

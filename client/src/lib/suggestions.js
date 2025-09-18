@@ -496,7 +496,7 @@ function analyzeQuestionContext(question) {
 /**
  * Extract key medical terms and concepts from user question
  * @param {string} question - The user's question
- * @returns {Object} Object with extracted terms and question type
+ * @returns {object} Object with extracted terms and question type
  */
 function extractQuestionContext(question) {
   const lowerQuestion = question.toLowerCase();
@@ -585,6 +585,12 @@ function generateIntelligentFollowups(userQuestion, context) {
   return [...new Set(suggestions)].slice(0, 4); // Remove duplicates and limit to 4
 }
 
+/**
+ *
+ * @param userQuestion
+ * @param conversationHistory
+ * @param count
+ */
 export function getContextualFollowups(userQuestion, conversationHistory = [], count = 4) {
   // Generate intelligent, specific follow-ups first
   const context = analyzeQuestionContext(userQuestion);

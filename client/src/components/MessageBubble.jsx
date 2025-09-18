@@ -215,6 +215,10 @@ function formatTimestamp(date) {
  * @param {boolean} [props.isStreaming=false] - Whether this message is being streamed character by character
  * @param {string} [props.partialContent] - Partial content during streaming
  * @param {string} [props.status] - Message status (sent, delivered, failed)
+ * @param props.sessionId
+ * @param props.streamingMessageId
+ * @param props.userQuery
+ * @param props.userRole
  * @returns {JSX.Element} The rendered message bubble component
  */
 export function MessageBubble({

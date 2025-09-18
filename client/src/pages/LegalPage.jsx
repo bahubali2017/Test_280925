@@ -2,6 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'wouter';
 import { ArrowLeft, Download, FileText, Shield } from 'lucide-react';
 
+/**
+ *
+ */
 export default function LegalPage() {
   const [termsContent, setTermsContent] = useState('');
   const [licenseContent, setLicenseContent] = useState('');

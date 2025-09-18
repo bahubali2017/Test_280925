@@ -26,6 +26,8 @@ export class GlobalErrorBoundary extends Component {
    *
    * @param err
    * @param info
+   * @param error
+   * @param errorInfo
    */
   componentDidCatch(error, errorInfo) {
     console.error('UI error boundary caught:', error, errorInfo);
