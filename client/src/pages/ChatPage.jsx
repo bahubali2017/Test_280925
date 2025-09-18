@@ -69,7 +69,6 @@ const getLLMApi = async () => {
  * @returns {JSX.Element} The ChatPage component
  */
 export default function ChatPage() {
-  console.log('[ChatPage] Component rendering');
   
   /** @type {[Array<Message>, React.Dispatch<React.SetStateAction<Array<Message>>>]} */
   const [messages, setMessages] = useState(/** @type {Array<Message>} */([]));
@@ -215,7 +214,6 @@ export default function ChatPage() {
     const messageContent = messageToRetry || lastUserMessage;
 
     if (!messageContent) {
-      console.warn("No message to retry");
       return;
     }
 
@@ -331,8 +329,6 @@ export default function ChatPage() {
         }
       );
 
-      // Log API metadata for monitoring/debugging
-      console.info("Retry API response metadata:", result.metadata);
 
       // CRITICAL FIX: Update the placeholder message with the actual AI response
       if (result && result.content) {
@@ -554,16 +550,13 @@ export default function ChatPage() {
            * @param {{fullContent?: string, streaming?: boolean}} info - Streaming info with fullContent
            */
           onStreamingUpdate: (chunk, info) => {
-            // Update the message content in real-time as chunks arrive
-            console.log(`🔄 STREAMING: Got chunk "${chunk.substring(0, 20)}..." - Full length: ${info.fullContent?.length || 0}`);
             setMessages(prev => prev.map(msg =>
               msg.id === assistantMessageId
                 ? {
                     ...msg,
                     content: info.fullContent || msg.content + chunk,
                     isStreaming: true,
-                    status: 'streaming',
-                    _updateCount: (msg._updateCount || 0) + 1 // Force React to detect changes
+                    status: 'streaming'
                   }
                 : msg
             ));
@@ -572,8 +565,6 @@ export default function ChatPage() {
         }
       );
 
-      // Log API metadata for monitoring/debugging
-      console.info("API response metadata:", result.metadata);
 
       // CRITICAL FIX: Update the placeholder message with the actual AI response
       if (result && result.content) {

@@ -88,10 +88,6 @@ function formatMessageContent(content, isStreaming = false, partialContent = '',
   // Clean up markdown formatting while preserving bold titles
   const displayContent = cleanMarkdownFormatting(rawContent);
   
-  // Debug logging to see if bold formatting is preserved
-  if (displayContent.includes('**')) {
-    console.log('🔤 Bold formatting detected in content:', displayContent.substring(0, 200));
-  }
 
   // Convert newlines to JSX and handle bold formatting
   const formattedContent = [];
@@ -102,7 +98,6 @@ function formatMessageContent(content, isStreaming = false, partialContent = '',
     
     // Check if line contains bold formatting
     if (line.includes('**')) {
-      console.log('📝 Processing bold line:', line);
       // Split by bold markers and create spans with bold styling
       const parts = line.split(/\*\*(.*?)\*\*/g);
       const lineContent = [];

@@ -142,7 +142,6 @@ function parseSSEData(data) {
     // Handle direct JSON
     return JSON.parse(data);
   } catch (error) {
-    console.warn('[SSE] Failed to parse data:', error);
     return null;
   }
 }
