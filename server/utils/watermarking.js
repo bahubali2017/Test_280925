@@ -1,3 +1,4 @@
+/* global Buffer */
 /**
  * @file AI Output Watermarking Utility
  * Implements zero-width character injection for AI response tracing
@@ -65,8 +66,7 @@ export function injectWatermark(text, sessionId, options = {}) {
   
   const {
     enabled = process.env.WATERMARKING_ENABLED === 'true',
-    frequency = 3, // Insert watermark every N sentences
-    method = 'zero-width'
+    frequency = 3 // Insert watermark every N sentences
   } = options;
   
   if (!enabled) {
@@ -110,7 +110,7 @@ export function injectWatermark(text, sessionId, options = {}) {
 export function extractWatermark(text) {
   try {
     // Find zero-width character sequences
-    const zeroWidthPattern = new RegExp(`[${Object.values(ZERO_WIDTH_CHARS).join('')}]+`, 'g');
+    const zeroWidthPattern = new RegExp(`(?:${Object.values(ZERO_WIDTH_CHARS).join('|')})+`, 'gu');
     const matches = text.match(zeroWidthPattern);
     
     if (!matches || matches.length === 0) {
@@ -139,6 +139,7 @@ export function extractWatermark(text) {
  * @param {string} response - AI response text
  * @param {string} sessionId - Session identifier
  * @param {object} metadata - Additional metadata
+ * @returns {Promise<string|null>} Response hash or null if error
  */
 export async function logAIResponse(response, sessionId, metadata = {}) {
   try {
