@@ -1,4 +1,3 @@
-import React from 'react';
 import { Router, Route, Switch, Redirect } from 'wouter';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from './hooks/useAuth.jsx';

@@ -246,6 +246,7 @@ export function useAuth() {
     console.warn('useAuth used outside AuthProvider, providing fallback');
     return {
       user: null,
+      isAuthenticated: false,
       login: async () => ({ success: false, error: 'Authentication not available' }),
       register: async () => ({ success: false, error: 'Authentication not available' }),
       logout: async () => {},
