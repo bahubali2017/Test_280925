@@ -532,10 +532,10 @@ function extractQuestionContext(question) {
 /**
  * Generate intelligent follow-up questions based on specific question analysis
  * @param {string} userQuestion - The user's original question
- * @param {string} context - Medical context category
+ * @param {string} _context - Medical context category (unused but kept for API compatibility)
  * @returns {string[]} Array of tailored follow-up suggestions
  */
-function generateIntelligentFollowups(userQuestion, context) {
+function generateIntelligentFollowups(userQuestion, _context) {
   const { medicalTerms, symptoms, bodyParts, intent } = extractQuestionContext(userQuestion);
   const suggestions = [];
   
@@ -586,12 +586,13 @@ function generateIntelligentFollowups(userQuestion, context) {
 }
 
 /**
- *
- * @param userQuestion
- * @param conversationHistory
- * @param count
+ * Get contextual follow-up suggestions based on the user's question and conversation history
+ * @param {string} userQuestion - The user's original question
+ * @param {Array} _conversationHistory - Previous messages for context (unused but kept for API compatibility)
+ * @param {number} count - Number of suggestions to return (default: 4)
+ * @returns {string[]} Array of follow-up suggestions
  */
-export function getContextualFollowups(userQuestion, conversationHistory = [], count = 4) {
+export function getContextualFollowups(userQuestion, _conversationHistory = [], count = 4) {
   // Generate intelligent, specific follow-ups first
   const context = analyzeQuestionContext(userQuestion);
   const intelligentSuggestions = generateIntelligentFollowups(userQuestion, context);
