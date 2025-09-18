@@ -29,6 +29,10 @@ import honeypotRoutes from "./routes/honeypot.js";
 // Load environment variables
 dotenv.config();
 
+// BETA TESTING: Disable rate limiting for unlimited AI access
+process.env.DISABLE_RATE_LIMIT = 'true';
+console.log('🎯 [BETA-TESTING] Rate limiting disabled for unlimited AI access');
+
 // CRITICAL: Determine NODE_ENV for proper asset serving
 // For Replit compatibility, we run production mode with built assets
 process.env.NODE_ENV = "production";
