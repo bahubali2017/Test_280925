@@ -24,9 +24,15 @@ export default function App() {
               <Switch>
                 <Route path="/login" component={LoginPage} />
                 <Route path="/legal" component={LegalPage} />
-                <ProtectedRoute path="/chat" component={ChatPage} />
+                <Route path="/chat">
+                  <ProtectedRoute>
+                    <ChatPage />
+                  </ProtectedRoute>
+                </Route>
                 <Route path="/">
-                  <Redirect to="/chat" />
+                  <ProtectedRoute>
+                    <Redirect to="/chat" />
+                  </ProtectedRoute>
                 </Route>
                 <Route component={NotFoundPage} />
               </Switch>

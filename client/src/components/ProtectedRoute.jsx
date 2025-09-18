@@ -35,10 +35,13 @@ export function ProtectedRoute({ children }) {
       timestamp: new Date().toISOString()
     });
     
-    // Only redirect if we're not loading and definitely not authenticated
-    if (!isLoading && !isAuthenticated) {
+    // Only redirect if we're certain user is not authenticated
+    if (!isLoading && !isAuthenticated && !user) {
       console.log('[ProtectedRoute] Redirecting to login - not authenticated');
-      setLocation('/login');
+      // Use a small delay to ensure state has settled
+      setTimeout(() => {
+        setLocation('/login');
+      }, 100);
     }
   }, [isAuthenticated, isLoading, setLocation, user]);
 
@@ -48,13 +51,19 @@ export function ProtectedRoute({ children }) {
     return <LoadingSpinner />;
   }
 
-  // If not authenticated, don't render anything (redirect will happen in useEffect)
-  if (!isAuthenticated) {
-    console.log('[ProtectedRoute] Not authenticated, returning null');
-    return null;
+  // If authenticated, render the protected content immediately
+  if (isAuthenticated && user) {
+    console.log('[ProtectedRoute] Rendering protected content for user:', user?.email);
+    return <>{children}</>;
   }
 
-  // Authenticated - render the protected content
-  console.log('[ProtectedRoute] Rendering protected content for user:', user?.email);
-  return <>{children}</>;
+  // If clearly not authenticated, show loading while redirecting
+  if (!isAuthenticated && !user) {
+    console.log('[ProtectedRoute] Not authenticated, showing loading before redirect');
+    return <LoadingSpinner />;
+  }
+
+  // Fallback: show loading for any uncertain state
+  console.log('[ProtectedRoute] Uncertain auth state, showing loading');
+  return <LoadingSpinner />;
 }

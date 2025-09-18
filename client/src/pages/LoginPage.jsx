@@ -141,11 +141,10 @@ export default function LoginPage() {
             description: "Welcome back to Anamnesis!",
             variant: "success"
           });
-          // Wait a bit longer to ensure auth state is fully updated
-          setTimeout(() => {
-            console.log('[LoginPage] Redirecting to chat page');
-            setLocation('/chat');
-          }, 200);
+          
+          // Ensure auth state is ready before redirect
+          console.log('[LoginPage] Redirecting to chat page');
+          setLocation('/chat');
         } else {
           console.log('[LoginPage] Login failed:', error);
           setError(error || 'Invalid credentials');

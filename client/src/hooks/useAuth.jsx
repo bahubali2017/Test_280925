@@ -112,10 +112,15 @@ export function AuthProvider({ children }) {
           email: email,
           role: 'user'
         };
+        
+        // Set user state and wait for it to be applied
         setUser(testUser);
+        
+        // Use a small delay to ensure state is updated
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
         setIsLoading(false);
         console.log('[Auth] Test user authenticated successfully');
-        // For test users, return immediately since we set the user state directly
         return { success: true, error: null };
       }
 
@@ -125,72 +130,39 @@ export function AuthProvider({ children }) {
       });
 
       if (error) {
+        setIsLoading(false);
         return { success: false, error: error.message };
       }
 
-      // Wait for the auth state to be updated before returning success
-      // This prevents the race condition where login returns success but
-      // the user state hasn't been updated yet by onAuthStateChange
-      return new Promise((resolve, reject) => {
-        /** @type {{subscription: any}|null} */
-        let tempAuthListener = null;
-        let isResolved = false;
-
-        // Helper function to clean up and resolve/reject
-        /** @param {any} result @param {boolean} isSuccess */
-        const cleanup = (result, isSuccess = true) => {
-          if (isResolved) return; // Prevent multiple resolutions
-          isResolved = true;
-
-          // Always clean up the temporary listener
-          if (tempAuthListener?.subscription) {
-            tempAuthListener.subscription.unsubscribe();
-          }
-
-          if (timeout) {
-            clearTimeout(timeout);
-          }
-
-          // Always clear loading state
+      // For Supabase auth, wait for session to be established
+      try {
+        const { data: { session } } = await supabaseClient.auth.getSession();
+        if (session?.user) {
+          setUser(/** @type {User} */ (session.user));
           setIsLoading(false);
+          return { success: true, error: null };
+        }
+      } catch (sessionError) {
+        console.warn('Session check error during login:', sessionError);
+      }
 
-          if (isSuccess) {
-            resolve(result);
-          } else {
-            reject(result);
-          }
-        };
-
+      // If no immediate session, wait for auth state change
+      return new Promise((resolve) => {
         const timeout = setTimeout(() => {
-          cleanup(new Error('Authentication state update timeout'), false);
-        }, 10000); // 10 second timeout
+          setIsLoading(false);
+          resolve({ success: false, error: 'Authentication timeout' });
+        }, 5000); // 5 second timeout
 
-        // Check if we already have a session
-        const checkSession = async () => {
-          try {
-            const { data: { session } } = await supabaseClient.auth.getSession();
-            if (session?.user && !isResolved) {
-              cleanup({ success: true, error: null });
-            }
-          } catch (sessionError) {
-            console.warn('Session check error during login:', sessionError);
-          }
-        };
-
-        // First, check if session is already available
-        checkSession();
-
-        // Also listen for auth state change as backup
         const { data: authListener } = supabaseClient.auth.onAuthStateChange(
           (event, session) => {
-            if (event === 'SIGNED_IN' && session?.user && !isResolved) {
-              cleanup({ success: true, error: null });
+            if (event === 'SIGNED_IN' && session?.user) {
+              clearTimeout(timeout);
+              authListener.subscription.unsubscribe();
+              setIsLoading(false);
+              resolve({ success: true, error: null });
             }
           }
         );
-
-        // Store reference for cleanup
-        tempAuthListener = authListener;
       });
 
     } catch (err) {
