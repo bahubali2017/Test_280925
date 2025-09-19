@@ -1037,18 +1037,22 @@ export default function ChatPage() {
 
         {/* Message Input */}
         <form onSubmit={handleSendMessage} className="flex space-x-2 relative">
-          <input
+          <textarea
             ref={inputRef}
             value={newMessage}
             onChange={(e) => setNewMessage(e.target.value)}
             placeholder="Type your medical question..."
-            className="flex-1 h-12 sm:h-14 px-4 py-3 rounded-full border-border shadow-sm focus:ring-2 focus:ring-primary/30 bg-background dark:bg-sidebar-background text-foreground dark:text-foreground placeholder:text-muted-foreground transition-all duration-200"
+            className="flex-1 min-h-[3rem] sm:min-h-[3.5rem] max-h-32 px-4 py-3 rounded-2xl border-border shadow-sm focus:ring-2 focus:ring-primary/30 bg-background dark:bg-sidebar-background text-foreground dark:text-foreground placeholder:text-muted-foreground transition-all duration-200 resize-none"
             disabled={isLoading || isFetchingHistory}
-            type="text"
             aria-label="Message input"
             maxLength={1000}
+            rows={1}
+            style={{
+              scrollbarWidth: 'thin',
+              scrollbarColor: 'var(--primary) transparent'
+            }}
             onKeyDown={(e) => {
-              /** @type {React.KeyboardEvent<HTMLInputElement>} */
+              /** @type {React.KeyboardEvent<HTMLTextAreaElement>} */
               const keyEvent = e;
               if (keyEvent.key === 'Enter' && !keyEvent.shiftKey && newMessage.trim()) {
                 e.preventDefault();
@@ -1058,6 +1062,12 @@ export default function ChatPage() {
                   inputRef.current.form.requestSubmit();
                 }
               }
+            }}
+            onInput={(e) => {
+              // Auto-resize textarea based on content
+              const textarea = e.target;
+              textarea.style.height = 'auto';
+              textarea.style.height = Math.min(textarea.scrollHeight, 128) + 'px';
             }}
           />
           <button
