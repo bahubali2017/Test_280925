@@ -418,8 +418,8 @@ adminWebSocketServer.initialize(httpServer);
     });
 
     // Simple cloud-friendly server startup
-    httpServer.listen(port, "0.0.0.0", () => {
-      console.log(`🚀 Production server started on port ${port}`);
+    httpServer.listen(PORT, "0.0.0.0", () => {
+      console.log(`🚀 Production server started on port ${PORT}`);
       console.log(`📁 Static files served from: ${staticPath}`);
       
       // Mark build as completed successfully
