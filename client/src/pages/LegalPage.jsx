@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'wouter';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, FileText, Shield, Download } from 'lucide-react';
 
 /**
  * Legal information page with terms and conditions.
