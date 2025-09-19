@@ -334,16 +334,9 @@ export function InstallationNotice() {
               
               {/* Text Content */}
               <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-cyan-900 dark:text-cyan-100 mb-1">
-                  {instructions.title}
+                <h3 className="text-sm font-semibold text-cyan-900 dark:text-cyan-100">
+                  {instructions.title} - Get faster access and work offline with the app
                 </h3>
-                
-                {/* Simple message for all devices */}
-                <div>
-                  <p className="text-xs text-cyan-700 dark:text-cyan-300">
-                    Get faster access and work offline with the app
-                  </p>
-                </div>
               </div>
             </div>
 
