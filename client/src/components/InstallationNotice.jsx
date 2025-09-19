@@ -334,12 +334,14 @@ export function InstallationNotice() {
               
               {/* Text Content */}
               <div className="flex-1 min-w-0 overflow-hidden">
-                <h3 
-                  className="text-sm font-semibold text-[var(--notice-fg)] whitespace-nowrap truncate"
-                  title={`${instructions.title} - Get faster access and work offline with the app`}
-                >
-                  {instructions.title}<span className="hidden sm:inline"> - Get faster access and work offline with the app</span>
-                </h3>
+                <div className="flex items-baseline gap-2 whitespace-nowrap truncate">
+                  <h3 className="text-sm font-semibold text-[var(--notice-fg)]">
+                    {instructions.title}
+                  </h3>
+                  <span className="hidden sm:inline text-xs text-[var(--notice-fg)]/80">
+                    - Get faster access and work offline with the app
+                  </span>
+                </div>
               </div>
             </div>
 
