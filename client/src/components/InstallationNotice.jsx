@@ -315,27 +315,30 @@ export function InstallationNotice() {
 
   return (
     <div className={`fixed top-0 left-0 right-0 z-50 transform transition-transform duration-500 ease-out translate-y-0`}>
-      <div className="bg-gradient-to-r from-cyan-50 to-blue-50 dark:from-cyan-950/50 dark:to-blue-950/50 border-b border-cyan-200 dark:border-cyan-800/50 shadow-md">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-start justify-between gap-4">
+      <div className="bg-[var(--notice-bg)] border-b border-[color:var(--notice-accent)]/35 shadow-md">
+        <div className="max-w-7xl mx-auto px-4 py-2">
+          <div className="flex items-center justify-between gap-4">
             {/* Icon and Content */}
-            <div className="flex items-start gap-3 flex-1">
+            <div className="flex items-center gap-3 flex-1 min-w-0">
               {/* App Icon */}
-              <div className="flex-shrink-0 mt-0.5">
+              <div className="flex-shrink-0">
                 <img 
                   src="/favicon-32x32.png" 
                   alt="Anamnesis" 
-                  className="w-6 h-6"
+                  className="w-5 h-5"
                   style={{ 
-                    filter: 'drop-shadow(0 0 4px rgba(6, 182, 212, 0.5))' 
+                    filter: 'drop-shadow(0 0 4px color-mix(in hsl, var(--notice-accent) 60%, transparent))' 
                   }}
                 />
               </div>
               
               {/* Text Content */}
-              <div className="flex-1 min-w-0">
-                <h3 className="text-sm font-semibold text-cyan-900 dark:text-cyan-100">
-                  {instructions.title} - Get faster access and work offline with the app
+              <div className="flex-1 min-w-0 overflow-hidden">
+                <h3 
+                  className="text-sm font-semibold text-[var(--notice-fg)] whitespace-nowrap truncate"
+                  title={`${instructions.title} - Get faster access and work offline with the app`}
+                >
+                  {instructions.title}<span className="hidden sm:inline"> - Get faster access and work offline with the app</span>
                 </h3>
               </div>
             </div>
@@ -344,7 +347,7 @@ export function InstallationNotice() {
             <div className="flex items-center gap-2 flex-shrink-0">
               <button
                 onClick={handleInstall}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-cyan-700 hover:text-cyan-800 dark:text-cyan-300 dark:hover:text-cyan-200 bg-cyan-100 hover:bg-cyan-200 dark:bg-cyan-900/30 dark:hover:bg-cyan-800/40 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-[var(--notice-fg)] bg-[color:var(--notice-accent)]/15 hover:bg-[color:var(--notice-accent)]/25 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[color:var(--notice-accent)]/30"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -356,7 +359,7 @@ export function InstallationNotice() {
               
               <button
                 onClick={handleDismiss}
-                className="inline-flex items-center justify-center w-6 h-6 text-cyan-600 hover:text-cyan-800 dark:text-cyan-400 dark:hover:text-cyan-200 hover:bg-cyan-100 dark:hover:bg-cyan-900/30 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                className="inline-flex items-center justify-center w-6 h-6 text-[var(--notice-fg)] hover:bg-[color:var(--notice-accent)]/15 rounded-md transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[color:var(--notice-accent)]/30"
                 aria-label="Dismiss installation notice"
               >
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
