@@ -608,6 +608,15 @@ router.get("/app-config.json", async (req, res) => {
       }
 
       const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
+      
+      // Debug logging for enhanced prompts
+      console.log('[DEBUG] Server received enhanced prompts:', {
+        hasSystemPrompt: !!systemPrompt,
+        hasEnhancedPrompt: !!enhancedPrompt,
+        userRole,
+        systemPromptLength: systemPrompt?.length || 0,
+        enhancedPromptLength: enhancedPrompt?.length || 0
+      });
       const config = getDeepSeekConfig();
 
       // Enhanced API key validation
@@ -880,6 +889,15 @@ router.get("/app-config.json", async (req, res) => {
       }
 
       const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
+      
+      // Debug logging for enhanced prompts
+      console.log('[DEBUG] Server received enhanced prompts:', {
+        hasSystemPrompt: !!systemPrompt,
+        hasEnhancedPrompt: !!enhancedPrompt,
+        userRole,
+        systemPromptLength: systemPrompt?.length || 0,
+        enhancedPromptLength: enhancedPrompt?.length || 0
+      });
       const config = getDeepSeekConfig();
 
       // Enhanced API key validation
