@@ -1,0 +1,157 @@
+# 🔹 REPLIT AGENT PROMPT — HIGH-YIELD MEDICAL AI LAYER (DeepSeek)
+
+GOAL:
+Enhance the Medical AI layer to provide high-yield, exam-style and clinical-reference 
+information to both general users and professionals. 
+Reduce unnecessary restriction, focus on delivering concise but informative answers, 
+always followed by a strong disclaimer.
+
+==================================================
+1. FILES TO CREATE / UPDATE
+- `server/ai/medical-middleware.js`
+- `server/ai/index.js`
+- `server/config/systemPrompt.js`
+
+==================================================
+2. IMPLEMENTATION DETAILS
+
+### A) Medication query classifier (keep as is)
+Keeps detection for medication queries. (dosage, interactions, contraindications, etc.)
+
+```js
+// server/ai/medical-middleware.js
+export function classifyQueryType(query) {
+  const medKeywords = [
+    "dosage", "dose", "mg", "ml", "iu",
+    "contraindication", "interaction",
+    "side effect", "pharmacology", "prescribe", "tablet", "capsule"
+  ];
+  const lowered = query.toLowerCase();
+  return medKeywords.some(k => lowered.includes(k))
+    ? "medication"
+    : "general";
+}
+B) Role-based output strategy
+Both roles get useful information, but format differs.
+
+js
+Copy code
+// server/ai/medical-middleware.js
+export function handleMedicalQuery(query, userRole) {
+  const queryType = classifyQueryType(query);
+
+  if (queryType !== "medication") {
+    return { mode: "general", systemPrompt: null };
+  }
+
+  if (userRole === "doctor" || userRole === "verified_healthcare") {
+    return {
+      mode: "professional",
+      systemPrompt: `
+        You are a Medical AI Assistant. 
+        Provide structured, clinically oriented, guideline-based responses.
+        - Include reference ranges, dosing, adjustment criteria, algorithms, 
+          and clinical pearls.
+        - Use bullet points or numbered steps when possible.
+        - Keep answers concise and high-yield, similar to medical board review notes.
+        - Always include: "⚠️ Professional reference only. Verify with official prescribing info."
+      `
+    };
+  } else {
+    return {
+      mode: "public",
+      systemPrompt: `
+        You are a Medical AI Assistant. 
+        For general users, provide clear, concise, high-yield information.
+        - You may include typical dosages and ranges, but present them in simple, 
+          easy-to-understand format.
+        - Avoid overwhelming detail — focus on practical takeaways.
+        - Present answers exam-style: short, direct, and focused on the core facts.
+        - Always include: "⚠️ Informational purposes only. Not a substitute for professional medical advice."
+      `
+    };
+  }
+}
+C) Integrate into AI pipeline
+Use the modified role-based safety prompts.
+
+js
+Copy code
+// server/ai/index.js
+import { handleMedicalQuery } from "./medical-middleware.js";
+import { SYSTEM_PROMPT } from "../config/systemPrompt.js";
+import { callDeepSeek } from "./llm-client.js";
+
+export async function generateAIResponse(query, userRole = "public") {
+  const { systemPrompt } = handleMedicalQuery(query, userRole);
+
+  const finalPrompt = `
+    ${SYSTEM_PROMPT}
+    ${systemPrompt ? systemPrompt : ""}
+  `;
+
+  return await callDeepSeek(finalPrompt, query);
+}
+D) Global base prompt
+Focus on high-yield medical knowledge.
+
+js
+Copy code
+// server/config/systemPrompt.js
+export const SYSTEM_PROMPT = `
+You are the Anamnesis Medical AI Assistant.
+Always deliver high-yield medical information, concise and practical.
+Balance clarity for general users with clinical depth for professionals.
+Structure answers clearly with bullet points, steps, or tables if useful.
+Conclude every answer with:
+"⚠️ Informational purposes only. Not a substitute for professional medical advice."
+`;
+==================================================
+3. TEST CASES
+
+Public User Query:
+Q: "What is the dosage of Ursosan Forte for 100kg patient?"
+✅ Output: "Typical range: 10–15 mg/kg/day (~1000–1500 mg/day). Taken in divided doses. Used for liver/gallbladder conditions. ⚠️ Informational purposes only…"
+
+Doctor User Query:
+Q: "What is the dosage of Ursosan Forte for 100kg patient?"
+✅ Output:
+
+10–15 mg/kg/day in 2–3 divided doses
+
+For 100 kg: ~1000–1500 mg/day
+
+Adjust if hepatic function impaired
+
+Contraindicated in biliary obstruction
+
+Monitor LFTs every 4–6 weeks
+⚠️ Professional reference only.
+
+Non-med Query:
+Q: "What is diabetes?"
+✅ Output: concise, structured explanation.
+
+==================================================
+4. NEXT STEPS
+
+Tie userRole into your auth system (doctor vs public).
+
+Add logging for all medication queries (auditing).
+
+Consider a “short answer mode” toggle for exam-prep style queries.
+
+==================================================
+
+DELIVERABLE:
+
+Reduced restriction, high-yield medical layer
+
+Dosages allowed for all users with disclaimers
+
+Professional mode adds algorithms, adjustments, and clinical orientation
+
+Public mode remains simple, safe, exam-style
+
+yaml
+Copy code
