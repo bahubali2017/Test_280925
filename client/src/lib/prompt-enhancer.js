@@ -114,22 +114,40 @@ export function classifyQuestionType(query) {
   if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
 
   const q = query.toLowerCase().trim();
+  
+  // Debug logging for classification
+  console.log('[DEBUG] Classification check:', {
+    query: query,
+    normalizedQuery: q,
+    classifierEnabled: CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER,
+    educationalKeywords: CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL
+  });
 
   // Educational questions (immediate detailed response)
-  if (CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL.some(k => q.startsWith(k) || q.includes(k))) {
+  const isEducational = CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL.some(k => {
+    const matches = q.startsWith(k) || q.includes(k);
+    console.log(`[DEBUG] Checking "${k}" against "${q}": startsWith=${q.startsWith(k)}, includes=${q.includes(k)}, matches=${matches}`);
+    return matches;
+  });
+  
+  if (isEducational) {
+    console.log('[DEBUG] Classified as EDUCATIONAL');
     return "educational";
   }
 
   // Medication / treatment questions (concise first, expand on request)
   if (CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => q.includes(k))) {
+    console.log('[DEBUG] Classified as MEDICATION');
     return "medication";
   }
 
   // Symptom / risk assessment (triage workflow)
   if (CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => q.includes(k))) {
+    console.log('[DEBUG] Classified as SYMPTOM');
     return "symptom";
   }
 
+  console.log('[DEBUG] Classified as GENERAL (fallback)');
   return "general";
 }
 
