@@ -1,0 +1,147 @@
+🔹 REPLIT AGENT PROMPT — STEP 2.5 (Intelligent Question Classification)
+# ANAMNESIS MEDICAL AI ENHANCEMENT — STEP 2.5 (Question Classification)
+
+GOAL
+Introduce intelligent classification of user questions to decide whether to start in:
+- Concise mode (short, high-yield, expand if needed)
+- Detailed mode (immediate detailed answer)
+- Triage mode (existing emergency/urgent/non-urgent templates)
+
+==================================================
+FILES TO UPDATE
+- client/src/lib/prompt-enhancer.js
+- client/src/config/ai-flags.js
+
+==================================================
+1) ADD CLASSIFICATION SETTINGS
+In `client/src/config/ai-flags.js` add:
+
+```js
+export const CLASSIFIER_SETTINGS = {
+  ENABLE_INTELLIGENT_CLASSIFIER: true,
+  CATEGORIES: {
+    EDUCATIONAL: ["what is", "explain", "how does", "why"],
+    MEDICATION: ["dosage", "dose", "mg", "milligram", "tablet", "capsule",
+                 "iu", "side effect", "interaction", "contraindication"],
+    SYMPTOM: ["pain", "fever", "cough", "rash", "vomit", "dizzy", "symptom"]
+  }
+};
+
+
+==================================================
+2) IMPLEMENT CLASSIFICATION FUNCTION
+In client/src/lib/prompt-enhancer.js:
+
+import { CLASSIFIER_SETTINGS } from "@/config/ai-flags";
+
+export function classifyQuestionType(query) {
+  if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
+
+  const q = query.toLowerCase();
+
+  // Educational questions
+  if (CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL.some(k => q.startsWith(k))) {
+    return "educational";
+  }
+
+  // Medication / treatment
+  if (CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => q.includes(k))) {
+    return "medication";
+  }
+
+  // Symptom / risk assessment
+  if (CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => q.includes(k))) {
+    return "symptom";
+  }
+
+  return "general";
+}
+
+
+==================================================
+3) UPDATE PROMPT BUILDER
+Modify buildPrompt() in prompt-enhancer.js:
+
+import { classifyQuestionType } from "./prompt-enhancer-utils.js"; // or same file
+import { AI_FLAGS } from "@/config/ai-flags";
+import { applyConciseMode } from "./concise-mode.js";
+import { buildExpansionPrompt } from "./expansion-handler.js";
+
+function buildPrompt(userInput, userRole, triageLevel) {
+  const type = classifyQuestionType(userInput);
+
+  if (type === "educational") {
+    // Always start detailed
+    return `
+      You are a Medical AI Assistant.
+      Provide a detailed, structured explanation suitable for ${userRole}.
+      - Cover definitions, key features, and management overview.
+      - Use clear formatting (bullets or short sections).
+      - End with role-specific disclaimer.
+    `;
+  }
+
+  if (type === "medication") {
+    // Start concise → expansion if requested
+    let basePrompt = `
+      You are a Medical AI Assistant.
+      This is a medication query: "${userInput}"
+      Start with concise, high-yield answer (≤5 bullets).
+      Include typical dosage ranges if asked.
+      End with role-specific disclaimer.
+    `;
+    if (AI_FLAGS.ENABLE_CONCISE_MODE) {
+      basePrompt = applyConciseMode(basePrompt, userRole);
+    }
+    return basePrompt;
+  }
+
+  if (type === "symptom") {
+    // Use existing triage templates (MILD/MODERATE/SEVERE)
+    return buildTriageTemplate(userInput, userRole, triageLevel);
+  }
+
+  // Fallback → treat as educational
+  return `
+    You are a Medical AI Assistant.
+    Provide a clear, structured explanation suitable for ${userRole}.
+    End with role-specific disclaimer.
+  `;
+}
+
+
+==================================================
+4) TEST CASES
+
+Case 1: Educational Query
+Q: "What is IBS?"
+→ Immediate detailed explanation: definition, symptoms, causes, management overview.
+⚠️ Informational purposes only.
+
+Case 2: Medication Query
+Q: "What is the dosage of ibuprofen for adults?"
+→ Concise bullets with dosage + disclaimer.
+Ends with: "Would you like me to provide further detailed information?"
+User: "Yes" → expansion flow triggers, detailed side effects, interactions, precautions.
+
+Case 3: Symptom Query
+Q: "I have chest pain and shortness of breath."
+→ Triage system detects emergency (SEVERE).
+→ Outputs urgent ATD response with emergency disclaimer.
+
+Case 4: General Query
+Q: "How to stay healthy during winter?"
+→ Treated as educational, gives structured preventive advice.
+
+==================================================
+DELIVERABLES
+
+Intelligent classification for educational vs medication vs symptom queries.
+
+Educational → Detailed first.
+
+Medication → Concise first → Expansion on request.
+
+Symptom → Existing triage workflow.
+
+Preserves disclaimers, no duplication.

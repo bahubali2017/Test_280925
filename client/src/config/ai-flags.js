@@ -56,6 +56,20 @@ export const EXPANSION_SETTINGS = {
 };
 
 /**
+ * Intelligent question classification settings
+ * Controls automatic question type detection for response mode selection
+ */
+export const CLASSIFIER_SETTINGS = {
+  ENABLE_INTELLIGENT_CLASSIFIER: true,
+  CATEGORIES: {
+    EDUCATIONAL: ["what is", "explain", "how does", "why", "what are", "define"],
+    MEDICATION: ["dosage", "dose", "mg", "milligram", "tablet", "capsule",
+                 "iu", "side effect", "interaction", "contraindication", "prescription"],
+    SYMPTOM: ["pain", "fever", "cough", "rash", "vomit", "dizzy", "symptom", "hurt", "ache"]
+  }
+};
+
+/**
  * Check if any medication enhancement flags are enabled
  * @returns {boolean}
  */
