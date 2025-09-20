@@ -299,6 +299,16 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
     }
   }
   
+  // Classify question type for intelligent response mode selection
+  const questionType = classifyQuestionType(ctx.userInput);
+  
+  // Debug logging for classification
+  console.log('[DEBUG] Question classification:', {
+    userInput: ctx.userInput.substring(0, 100),
+    questionType,
+    classifierEnabled: CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER
+  });
+  
   const triageLevel = ctx.triage?.level || "NON_URGENT";
   // Convert to lowercase for disclaimer system compatibility  
   const disclaimerLevel = triageLevel.toLowerCase().replace("_", "_");
@@ -322,8 +332,29 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
     systemPrompt = rolePolicy + systemPrompt;
   }
   
-  // Apply concise mode if enabled
-  systemPrompt = applyConciseMode(systemPrompt, userRole);
+  // Apply intelligent classification logic for response mode
+  if (questionType === "educational" || questionType === "general") {
+    // Educational/general questions: Skip concise mode, provide detailed response immediately
+    const educationalPrompt = `You are MAIA (Medical AI Assistant). Provide a detailed, structured explanation suitable for ${userRole === "doctor" ? "healthcare professionals" : "general public"}.
+
+- Cover definitions, key features, and management overview
+- Use clear formatting with bullets or short sections
+- Include relevant clinical details ${userRole === "doctor" ? "with medical terminology" : "in patient-friendly language"}
+- End with appropriate disclaimer
+
+EDUCATIONAL MODE: Provide comprehensive information immediately.`;
+    
+    systemPrompt = educationalPrompt;
+  } else if (questionType === "medication") {
+    // Medication questions: Use concise mode with expansion option
+    systemPrompt = applyConciseMode(systemPrompt, userRole);
+  } else if (questionType === "symptom") {
+    // Symptom questions: Use existing triage templates (already handled above)
+    systemPrompt = applyConciseMode(systemPrompt, userRole);
+  } else {
+    // Fallback: Apply concise mode
+    systemPrompt = applyConciseMode(systemPrompt, userRole);
+  }
 
   // Prefix severe with ATD block
   const header = (triageLevel === "EMERGENCY" || triageLevel === "URGENT")
