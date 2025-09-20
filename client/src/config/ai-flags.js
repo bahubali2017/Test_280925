@@ -2,7 +2,11 @@
  * @file AI Feature Flags Configuration
  * Controls rollout of enhanced medical AI features
  * All flags default to OFF for safe incremental testing
+ * Version: 1.1 - Concise mode enabled
  */
+
+// Debug logging to verify flags are loaded
+console.log('[AI-FLAGS] Loading AI flags with concise mode:', { ENABLE_CONCISE_MODE: true });
 
 export const AI_FLAGS = {
   /**
