@@ -110,50 +110,73 @@ function renderTemplate(key, contextBlock) {
  * @param {string} query - User input text
  * @returns {"educational"|"medication"|"symptom"|"general"} - Question type
  */
+/**
+ * Normalize query text for robust classification
+ * @param {string} text - Raw query text
+ * @returns {string} - Normalized text
+ */
+function normalizeQueryText(text) {
+  return text
+    .toLowerCase()
+    .trim()
+    // Expand contractions
+    .replace(/what's/g, 'what is')
+    .replace(/whats/g, 'what is')
+    .replace(/how's/g, 'how is')
+    .replace(/why's/g, 'why is')
+    .replace(/where's/g, 'where is')
+    // Remove punctuation but preserve spaces
+    .replace(/[^\w\s]/g, ' ')
+    // Normalize whitespace
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
 export function classifyQuestionType(query) {
-  console.log('[DEBUG] classifyQuestionType called with:', query);
-  console.log('[DEBUG] CLASSIFIER_SETTINGS:', CLASSIFIER_SETTINGS);
+  if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
+
+  const normalizedQuery = normalizeQueryText(query);
   
-  if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) {
-    console.log('[DEBUG] Classifier disabled, returning general');
-    return "general";
+  // Check for medication terms first to detect mixed queries
+  const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
+  const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
+  
+  // Educational patterns using regex for phrase matching
+  const educationalPatterns = [
+    /\bwhat\s+(?:is|are)\b/,           // "what is", "what are"
+    /\bexplain\b/,                     // "explain"
+    /\bhow\s+does\b/,                  // "how does"
+    /\bwhy\s+(?:is|are|does|do)?\b/,   // "why", "why is", "why does"
+    /\bdefine\b/                       // "define"
+  ];
+  
+  const isEducational = educationalPatterns.some(pattern => pattern.test(normalizedQuery));
+  
+  // Tie-breaking logic: If mixed query, prefer specific over educational
+  if (isEducational && hasMedicationTerms) {
+    // Mixed educational + medication: prioritize medication
+    return "medication";
   }
-
-  const q = query.toLowerCase().trim();
   
-  // Debug logging for classification
-  console.log('[DEBUG] Classification check:', {
-    query: query,
-    normalizedQuery: q,
-    classifierEnabled: CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER,
-    educationalKeywords: CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL
-  });
-
-  // Educational questions (immediate detailed response)
-  const isEducational = CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL.some(k => {
-    const matches = q.startsWith(k) || q.includes(k);
-    console.log(`[DEBUG] Checking "${k}" against "${q}": startsWith=${q.startsWith(k)}, includes=${q.includes(k)}, matches=${matches}`);
-    return matches;
-  });
+  if (isEducational && hasSymptomTerms) {
+    // Mixed educational + symptom: prioritize symptom
+    return "symptom";
+  }
   
   if (isEducational) {
-    console.log('[DEBUG] Classified as EDUCATIONAL');
     return "educational";
   }
 
   // Medication / treatment questions (concise first, expand on request)
-  if (CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => q.includes(k))) {
-    console.log('[DEBUG] Classified as MEDICATION');
+  if (hasMedicationTerms) {
     return "medication";
   }
 
   // Symptom / risk assessment (triage workflow)
-  if (CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => q.includes(k))) {
-    console.log('[DEBUG] Classified as SYMPTOM');
+  if (hasSymptomTerms) {
     return "symptom";
   }
 
-  console.log('[DEBUG] Classified as GENERAL (fallback)');
   return "general";
 }
 
@@ -326,12 +349,6 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   // Classify question type for intelligent response mode selection
   const questionType = classifyQuestionType(ctx.userInput);
   
-  // Debug logging for classification
-  console.log('[DEBUG] Question classification:', {
-    userInput: ctx.userInput.substring(0, 100),
-    questionType,
-    classifierEnabled: CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER
-  });
   
   const triageLevel = ctx.triage?.level || "NON_URGENT";
   // Convert to lowercase for disclaimer system compatibility  
