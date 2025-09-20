@@ -111,7 +111,13 @@ function renderTemplate(key, contextBlock) {
  * @returns {"educational"|"medication"|"symptom"|"general"} - Question type
  */
 export function classifyQuestionType(query) {
-  if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
+  console.log('[DEBUG] classifyQuestionType called with:', query);
+  console.log('[DEBUG] CLASSIFIER_SETTINGS:', CLASSIFIER_SETTINGS);
+  
+  if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) {
+    console.log('[DEBUG] Classifier disabled, returning general');
+    return "general";
+  }
 
   const q = query.toLowerCase().trim();
   
