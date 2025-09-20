@@ -1,5 +1,5 @@
 import { selectDisclaimers } from "./disclaimers.js";
-import { AI_FLAGS } from "../config/ai-flags.js";
+import { AI_FLAGS, CONCISE_SETTINGS } from "../config/ai-flags.js";
 
 /** Inline fallbacks if templates cannot be loaded from disk */
 const FALLBACK_TEMPLATES = {
@@ -153,19 +153,28 @@ function buildRolePolicy(userRole, isMedicationQuery) {
 }
 
 /**
- * Apply concise mode formatting
+ * Apply concise mode formatting with role-specific expansion prompts
  * @param {string} template - Base template
+ * @param {string} [userRole="public"] - User role for role-specific expansion prompts
  * @returns {string}
  */
-function applyConciseMode(template) {
+function applyConciseMode(template, userRole = "public") {
   if (!AI_FLAGS.ENABLE_CONCISE_MODE) return template;
   
+  const expansionLine = (userRole === "doctor" || userRole === "verified_healthcare")
+    ? "Would you like me to expand with further clinical details (algorithms, monitoring, pearls)?"
+    : "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
+
   return template + `
 
-CONCISE MODE:
-- Limit response to 1-5 bullet points or ≤3 sentences
+CONCISE MODE ACTIVE:
+- Keep answers <= ${CONCISE_SETTINGS.MAX_BULLETS} bullets OR ${CONCISE_SETTINGS.MAX_SENTENCES} sentences
+- Stay under ${CONCISE_SETTINGS.MAX_TOKENS} tokens
+- Use exam-style, high-yield formatting
 - Prioritize highest-yield information first
-- Be direct and actionable`;
+- Be direct and actionable
+- At the end of EVERY answer, add: "${expansionLine}"
+- Ensure disclaimers appear BEFORE the expansion question`;
 }
 
 /**
@@ -260,7 +269,7 @@ export function enhancePrompt(ctx, userRole = "public") {
   }
   
   // Apply concise mode if enabled
-  systemPrompt = applyConciseMode(systemPrompt);
+  systemPrompt = applyConciseMode(systemPrompt, userRole);
 
   // Prefix severe with ATD block
   const header = (triageLevel === "EMERGENCY" || triageLevel === "URGENT")
