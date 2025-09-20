@@ -298,6 +298,15 @@ export async function sendMessage(message, history = [], options = {}) {
     const userRole = demographics.role || "public";
     
     // Generate enhanced prompts using the prompt enhancer
+    // Pass conversation history for expansion detection
+    const conversationHistory = Array.isArray(history) ? history.filter(msg => 
+      msg && 
+      typeof msg === 'object' && 
+      typeof msg.role === 'string' && 
+      typeof msg.content === 'string' &&
+      msg.content.trim()
+    ) : [];
+    
     const {
       systemPrompt,
       enhancedPrompt,
@@ -305,7 +314,7 @@ export async function sendMessage(message, history = [], options = {}) {
       disclaimers,
       suggestions,
       expansionPrompt
-    } = enhancePrompt(layerContext, userRole);
+    } = enhancePrompt(layerContext, userRole, conversationHistory);
     
     // Debug logging
     console.log('[DEBUG] Enhanced prompts generated:', {
@@ -319,13 +328,7 @@ export async function sendMessage(message, history = [], options = {}) {
     // Prepare request body with enhanced prompts
     const requestBody = {
       message: message.trim(),
-      conversationHistory: Array.isArray(history) ? history.filter(msg => 
-        msg && 
-        typeof msg === 'object' && 
-        typeof msg.role === 'string' && 
-        typeof msg.content === 'string' &&
-        msg.content.trim()
-      ) : [],
+      conversationHistory, // Use the already filtered conversation history
       isHighRisk,
       // Include enhanced prompts for concise mode and other features
       systemPrompt,
