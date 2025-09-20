@@ -47,6 +47,15 @@ export const CONCISE_SETTINGS = {
 };
 
 /**
+ * Expansion flow configuration settings
+ * Controls automatic expansion from concise to detailed responses
+ */
+export const EXPANSION_SETTINGS = {
+  ENABLE_AUTO_EXPANSION: true,   // master toggle
+  EXPANSION_KEYWORDS: ["yes", "expand", "more", "details"], // triggers for text input
+};
+
+/**
  * Check if any medication enhancement flags are enabled
  * @returns {boolean}
  */

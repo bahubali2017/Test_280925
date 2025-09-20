@@ -1,0 +1,151 @@
+# ANAMNESIS MEDICAL AI ENHANCEMENT — STEP 2 (Expansion Flow)
+
+GOAL
+Implement automatic expansion flow:
+- Concise Mode = ON for first answer
+- If user requests more info (“yes” or clicks Expand), system automatically re-queries with Concise Mode OFF and Detailed Mode ON.
+
+==================================================
+FILES TO UPDATE
+- client/src/config/ai-flags.js
+- client/src/lib/prompt-enhancer.js
+- client/src/lib/expansion-handler.js   ← NEW FILE
+- client/src/components/ChatMessage.jsx (or equivalent chat UI)
+
+==================================================
+1) CONFIGURATION
+In `ai-flags.js`, add expansion settings:
+
+```js
+export const EXPANSION_SETTINGS = {
+  ENABLE_AUTO_EXPANSION: true,   // master toggle
+  EXPANSION_KEYWORDS: ["yes", "expand", "more", "details"], // triggers for text input
+};
+==================================================
+2) NEW EXPANSION HANDLER
+Create client/src/lib/expansion-handler.js:
+
+js
+Copy code
+import { AI_FLAGS, EXPANSION_SETTINGS } from "@/config/ai-flags";
+
+export function detectExpansionRequest(userInput) {
+  if (!AI_FLAGS.ENABLE_EXPANSION_PROMPT) return false;
+  const lowered = userInput.toLowerCase();
+  return EXPANSION_SETTINGS.EXPANSION_KEYWORDS.some(k => lowered.includes(k));
+}
+
+export function buildExpansionPrompt(originalQuery, userRole) {
+  const expansionLine = (userRole === "doctor")
+    ? "Provide a detailed, structured clinical explanation with algorithms, monitoring, contraindications, and references."
+    : "Provide a more detailed, patient-friendly explanation with side effects, interactions, precautions, and references.";
+
+  return `
+    [Expansion Mode Active]
+    Original Query: "${originalQuery}"
+    ${expansionLine}
+    Always include: ⚠️ Informational purposes only. Not a substitute for professional medical advice.
+  `;
+}
+==================================================
+3) PROMPT ENHANCER UPDATE
+In prompt-enhancer.js:
+
+Add a branch to detect expansion flow.
+
+If detectExpansionRequest(userInput) === true → skip concise injection, enable expansion prompt.
+
+js
+Copy code
+import { detectExpansionRequest, buildExpansionPrompt } from "./expansion-handler.js";
+
+function buildPrompt(userInput, userRole, triageLevel, originalQuery) {
+  if (detectExpansionRequest(userInput)) {
+    return buildExpansionPrompt(originalQuery, userRole);
+  }
+  // existing logic for triage + concise
+}
+==================================================
+4) CHAT UI UPDATE
+In ChatMessage.jsx:
+
+Detect expansion prompt line in responses.
+
+Render a button → “Expand Answer”.
+
+On click → resend last user query with a hidden “expand” flag.
+
+jsx
+Copy code
+{message.isAI && message.containsExpansionLine && (
+  <button onClick={() => handleExpand(message.originalQuery)}>
+    Expand Answer
+  </button>
+)}
+
+function handleExpand(originalQuery) {
+  sendMessage("expand", { originalQuery });
+}
+==================================================
+5) SERVER HANDLING
+In server/routes.js:
+
+Accept originalQuery if expansion request.
+
+Pass it to LLM adapter with Concise Mode = false and Expansion Mode = true.
+
+==================================================
+6) TEST CASES
+
+Case 1: Public User
+Q: "What is the dosage of aspirin for adults?"
+→ Concise Mode:
+
+Typical adult dose: 75–325 mg/day.
+⚠️ Informational purposes only.
+Would you like me to provide further detailed information?
+User: "Yes."
+→ Expansion Mode:
+
+Usual range: 75–325 mg daily, often low-dose (81 mg) for antiplatelet therapy.
+
+Higher doses (325–650 mg every 4–6h) for analgesia/fever.
+
+Contraindications: peptic ulcer, bleeding disorders, children (Reye’s).
+
+Interactions: anticoagulants, NSAIDs.
+⚠️ Informational purposes only.
+
+Case 2: Doctor User
+Q: "What is the dosage of aspirin for adults?"
+→ Concise Mode:
+
+75–325 mg daily (cardioprotection).
+
+325–650 mg q4–6h (analgesia/fever).
+⚠️ Professional reference only.
+Would you like me to expand with further clinical details?
+User: "Expand."
+→ Expansion Mode:
+
+Antiplatelet: 75–325 mg daily; guidelines recommend 81 mg (US) or 75–100 mg (EU).
+
+Analgesic/antipyretic: 325–650 mg q4–6h; max 4 g/day.
+
+Anti-inflammatory: 3–6 g/day (less used today).
+
+Contraindications: active bleeding, severe hepatic failure, children (Reye’s).
+
+Monitoring: GI bleeding, renal function, INR if on anticoagulants.
+⚠️ Professional reference only.
+
+==================================================
+DELIVERABLES
+
+Auto-expansion system based on user input or button.
+
+Concise → Expanded workflow fully integrated.
+
+Role-based detailed prompts (doctor vs public).
+
+Preserves disclaimers and avoids duplication.
