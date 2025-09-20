@@ -5,6 +5,8 @@
 
 /* global setTimeout */
 
+import { AI_FLAGS } from "../../config/ai-flags.js";
+
 /**
  * LLM model configurations and capabilities
  * @type {Record<string, {name: string, endpoint: string|null, maxTokens: number, temperature: number, specialties: string[], available: boolean, costPerToken: number}>}
@@ -159,11 +161,43 @@ export function selectOptimalModel(queryType, urgencyLevel, availableModels = []
 }
 
 /**
+ * Check if medication enhancement features are enabled
+ * @returns {boolean}
+ */
+export function isMedicationEnhancementEnabled() {
+  return AI_FLAGS.ENABLE_MED_QUERY_CLASSIFIER || AI_FLAGS.ENABLE_ROLE_MODE;
+}
+
+/**
+ * Check if response formatting features are enabled
+ * @returns {boolean}
+ */
+export function isResponseFormatEnabled() {
+  return AI_FLAGS.ENABLE_CONCISE_MODE || AI_FLAGS.ENABLE_EXPANSION_PROMPT;
+}
+
+/**
+ * Check if disclaimers should be filtered to avoid duplication
+ * @param {string} systemPrompt - System prompt that may already contain disclaimers
+ * @returns {boolean}
+ */
+export function shouldFilterDuplicateDisclaimers(systemPrompt) {
+  const disclaimerIndicators = [
+    "⚠️ Professional reference only",
+    "⚠️ Informational purposes only",
+    "ROLE POLICY"
+  ];
+  
+  return disclaimerIndicators.some(indicator => systemPrompt.includes(indicator));
+}
+
+/**
  * Optimize prompt for specific LLM model
  * @param {string} modelId - Selected model identifier
  * @param {string} systemPrompt - Base system prompt
  * @param {string} userPrompt - User/medical query prompt
  * @param {object} context - Additional context for optimization
+ * @param {string} [context.userRole="public"] - User role for role-based responses
  * @returns {{optimizedSystemPrompt: string, optimizedUserPrompt: string, modelConfig: object}}
  */
 export function optimizePromptForModel(modelId, systemPrompt, userPrompt, context = {}) {
@@ -175,18 +209,33 @@ export function optimizePromptForModel(modelId, systemPrompt, userPrompt, contex
     return optimizePromptForModel("deepseek", systemPrompt, userPrompt, context);
   }
   
-  // Build optimized system prompt
-  const optimizedSystemPrompt = `${optimization.systemPromptPrefix}\n\n${systemPrompt}`;
+  // Build optimized system prompt - check for existing disclaimers to avoid duplication
+  let optimizedSystemPrompt;
+  if (shouldFilterDuplicateDisclaimers(systemPrompt)) {
+    // System prompt already contains role policies/disclaimers, use as-is
+    optimizedSystemPrompt = `${optimization.systemPromptPrefix}\n\n${systemPrompt}`;
+  } else {
+    // Standard optimization
+    optimizedSystemPrompt = `${optimization.systemPromptPrefix}\n\n${systemPrompt}`;
+  }
   
   // Apply model-specific user prompt wrapper
-  const optimizedUserPrompt = optimization.userPromptWrapper(userPrompt);
+  let optimizedUserPrompt = optimization.userPromptWrapper(userPrompt);
+  
+  // Add expansion prompt if enabled and available in context
+  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT && context.expansionPrompt) {
+    optimizedUserPrompt += context.expansionPrompt;
+  }
   
   // Model-specific configurations
   const optimizedConfig = {
     maxTokens: Math.min(modelConfig.maxTokens, context.maxTokens || modelConfig.maxTokens),
     temperature: context.temperature !== undefined ? context.temperature : modelConfig.temperature,
     model: modelId,
-    responseFormat: optimization.responseFormat
+    responseFormat: optimization.responseFormat,
+    // Pass through medication enhancement status for downstream processing
+    isMedicationEnhanced: isMedicationEnhancementEnabled(),
+    userRole: context.userRole || "public"
   };
   
   return {
