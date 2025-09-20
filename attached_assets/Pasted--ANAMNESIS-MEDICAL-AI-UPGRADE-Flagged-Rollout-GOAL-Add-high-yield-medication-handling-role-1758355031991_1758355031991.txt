@@ -1,0 +1,80 @@
+# ANAMNESIS — MEDICAL AI UPGRADE (Flagged Rollout)
+
+GOAL
+Add high-yield medication handling, role-based responses, and short-answer-first — all OFF by default via flags. Then we’ll enable flags one by one in testing.
+
+FILES
+- client/src/config/ai-flags.js        ← NEW
+- client/src/lib/prompt-enhancer.js    ← UPDATE
+- client/src/lib/llm-integration/llm-adapter.js ← UPDATE (read flags + role)
+- client/src/lib/triage-checker.js     ← NO CHANGE
+- client/src/lib/medical-safety-processor.js ← ensure single disclaimer pass
+
+1) Create feature flags (default OFF)
+```js
+// client/src/config/ai-flags.js
+export const AI_FLAGS = {
+  ENABLE_MED_QUERY_CLASSIFIER: false,
+  ENABLE_ROLE_MODE: false,            // doctor vs public
+  ENABLE_CONCISE_MODE: false,         // short-answer-first
+  ENABLE_EXPANSION_PROMPT: false,     // “Want more details?”
+};
+Medication classifier + role/concise policies
+
+In prompt-enhancer.js, add:
+
+classifyMedicationQuery(input) (keywords: dosage, dose, mg, ml, iu, interaction, contraindication, side effect, pharmacology, prescribe).
+
+buildRolePolicy(userRole):
+
+doctor: concise bullets incl. dosages/algorithms + “⚠️ Professional reference only…”
+
+public: concise bullets incl. typical dosage ranges + “⚠️ Informational purposes only…”
+
+If AI_FLAGS.ENABLE_CONCISE_MODE → cap to 1–5 bullets or ≤3 sentences.
+
+If AI_FLAGS.ENABLE_EXPANSION_PROMPT → append:
+
+public: “Would you like side effects / interactions / precautions?”
+
+doctor: “Expand with algorithms / monitoring / pearls?”
+
+If AI_FLAGS.ENABLE_MED_QUERY_CLASSIFIER → for med queries, prepend role policy to chosen MILD/MODERATE/SEVERE template.
+
+Keep existing triage templates; don’t duplicate disclaimers if already present.
+
+Read flags + role in adapter
+
+In llm-adapter.js:
+
+import { AI_FLAGS } from '@/config/ai-flags'
+
+Pass userRole (if available) into prompt builder (fallback 'public').
+
+Ensure single disclaimer injection (skip duplicate if template already appended).
+
+Do not alter SSE streaming or circuit breaker logic.
+
+Safety processor
+
+In medical-safety-processor.js, guard so disclaimer isn’t added twice.
+
+Deliverables
+
+Idempotent edits.
+
+All new behavior gated by flags, default OFF.
+
+TEST PLAN (toggle in order)
+
+Turn ON ENABLE_CONCISE_MODE → check short, precise answers.
+
+Turn ON ENABLE_MED_QUERY_CLASSIFIER → verify med queries get high-yield format.
+
+Turn ON ENABLE_EXPANSION_PROMPT → confirm opt-in expansion line appears.
+
+Turn ON ENABLE_ROLE_MODE → doctor vs public formatting diverges (dosage present for both; doctor gets algorithms).
+
+ROLLBACK
+
+Flip flags to false; no code reverts required.
