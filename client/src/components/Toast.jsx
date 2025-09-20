@@ -54,7 +54,7 @@ export function Toast({ id, title, description, variant = 'default', onDismiss }
   return (
     <div 
       className={`
-        fixed bottom-32 right-4 max-w-sm w-full shadow-lg rounded-md border 
+        fixed bottom-56 right-4 max-w-sm w-full shadow-lg rounded-md border 
         py-3 px-4 flex items-start transition-all duration-300 transform
         ${variantClasses[variant] || variantClasses.default}
         ${animateClasses}
@@ -85,7 +85,7 @@ export function ToastContainer({ toasts = [], dismissToast }) {
   if (toasts.length === 0) return null;
   
   return (
-    <div className="fixed bottom-28 right-0 p-4 z-50 space-y-3">
+    <div className="fixed bottom-52 right-0 p-4 z-50 space-y-3">
       {toasts.map(toast => (
         <Toast
           key={toast.id}
