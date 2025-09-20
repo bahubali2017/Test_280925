@@ -1,5 +1,5 @@
 import { selectDisclaimers } from "./disclaimers.js";
-import { AI_FLAGS, CONCISE_SETTINGS } from "../config/ai-flags.js";
+import { AI_FLAGS, CONCISE_SETTINGS, CLASSIFIER_SETTINGS } from "../config/ai-flags.js";
 import { detectExpansionRequest, buildExpansionPrompt, extractOriginalQuery } from "./expansion-handler.js";
 
 /** Inline fallbacks if templates cannot be loaded from disk */
@@ -106,7 +106,35 @@ function renderTemplate(key, contextBlock) {
 }
 
 /**
- * Classify if query is medication-related
+ * Classify question type for intelligent response mode selection
+ * @param {string} query - User input text
+ * @returns {"educational"|"medication"|"symptom"|"general"} - Question type
+ */
+export function classifyQuestionType(query) {
+  if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
+
+  const q = query.toLowerCase().trim();
+
+  // Educational questions (immediate detailed response)
+  if (CLASSIFIER_SETTINGS.CATEGORIES.EDUCATIONAL.some(k => q.startsWith(k) || q.includes(k))) {
+    return "educational";
+  }
+
+  // Medication / treatment questions (concise first, expand on request)
+  if (CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => q.includes(k))) {
+    return "medication";
+  }
+
+  // Symptom / risk assessment (triage workflow)
+  if (CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => q.includes(k))) {
+    return "symptom";
+  }
+
+  return "general";
+}
+
+/**
+ * Classify if query is medication-related (legacy function for compatibility)
  * @param {string} input - User input text
  * @returns {boolean}
  */
