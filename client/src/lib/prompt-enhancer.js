@@ -1,4 +1,5 @@
 import { selectDisclaimers } from "./disclaimers.js";
+import { AI_FLAGS } from "../config/ai-flags.js";
 
 /** Inline fallbacks if templates cannot be loaded from disk */
 const FALLBACK_TEMPLATES = {
@@ -104,6 +105,90 @@ function renderTemplate(key, contextBlock) {
 }
 
 /**
+ * Classify if query is medication-related
+ * @param {string} input - User input text
+ * @returns {boolean}
+ */
+function classifyMedicationQuery(input) {
+  if (!AI_FLAGS.ENABLE_MED_QUERY_CLASSIFIER) return false;
+  
+  const medKeywords = [
+    "dosage", "dose", "mg", "ml", "iu",
+    "contraindication", "interaction", "interactions",
+    "side effect", "side effects", "pharmacology", 
+    "prescribe", "prescription", "tablet", "capsule",
+    "medication", "medicine", "drug", "pill"
+  ];
+  
+  const lowered = input.toLowerCase();
+  return medKeywords.some(keyword => lowered.includes(keyword));
+}
+
+/**
+ * Build role-based medical policy
+ * @param {"doctor"|"public"|string} userRole - User role
+ * @param {boolean} isMedicationQuery - Whether this is a medication query
+ * @returns {string}
+ */
+function buildRolePolicy(userRole, isMedicationQuery) {
+  if (!AI_FLAGS.ENABLE_ROLE_MODE || !isMedicationQuery) return "";
+  
+  if (userRole === "doctor" || userRole === "verified_healthcare") {
+    return `ROLE POLICY (Healthcare Professional):
+- Provide concise bullets including dosages, algorithms, and clinical pearls
+- Include typical dosing ranges, adjustment criteria, and monitoring parameters  
+- Use clinical terminology and structured format
+- Add disclaimer: "⚠️ Professional reference only. Verify with official prescribing information."
+
+`;
+  } else {
+    return `ROLE POLICY (Public):
+- Provide concise bullets including typical dosage ranges in simple format
+- Focus on practical takeaways and key safety information
+- Use patient-friendly language and clear explanations
+- Add disclaimer: "⚠️ Informational purposes only. Not a substitute for professional medical advice."
+
+`;
+  }
+}
+
+/**
+ * Apply concise mode formatting
+ * @param {string} template - Base template
+ * @returns {string}
+ */
+function applyConciseMode(template) {
+  if (!AI_FLAGS.ENABLE_CONCISE_MODE) return template;
+  
+  return template + `
+
+CONCISE MODE:
+- Limit response to 1-5 bullet points or ≤3 sentences
+- Prioritize highest-yield information first
+- Be direct and actionable`;
+}
+
+/**
+ * Generate expansion prompt based on role and context
+ * @param {"doctor"|"public"|string} userRole - User role
+ * @param {boolean} isMedicationQuery - Whether this is a medication query
+ * @returns {string}
+ */
+function generateExpansionPrompt(userRole, isMedicationQuery) {
+  if (!AI_FLAGS.ENABLE_EXPANSION_PROMPT) return "";
+  
+  if (!isMedicationQuery) {
+    return "\n\nWould you like more detailed information about this topic?";
+  }
+  
+  if (userRole === "doctor" || userRole === "verified_healthcare") {
+    return "\n\nExpand with algorithms / monitoring protocols / clinical pearls?";
+  } else {
+    return "\n\nWould you like side effects / interactions / precautions?";
+  }
+}
+
+/**
  * Generate context-aware follow-up suggestions
  * @param {import("./layer-context.js").LayerContext} ctx
  * @returns {string[]}
@@ -147,21 +232,35 @@ function generateFollowUpSuggestions(ctx) {
 /**
  * Main enhancer: selects template, injects context, and prefixes disclaimers/ATD for high risk.
  * @param {import("./layer-context.js").LayerContext} ctx
- * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[] }}
+ * @param {string} [userRole="public"] - User role for role-based responses
+ * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string }}
  */
-export function enhancePrompt(ctx) {
+export function enhancePrompt(ctx, userRole = "public") {
   const triageLevel = ctx.triage?.level || "NON_URGENT";
   // Convert to lowercase for disclaimer system compatibility  
   const disclaimerLevel = triageLevel.toLowerCase().replace("_", "_");
   const templateKey = chooseTemplateKey(triageLevel, ctx.symptoms || []);
   const contextBlock = buildContextBlock(ctx);
 
+  // Check if this is a medication query
+  const isMedicationQuery = classifyMedicationQuery(ctx.userInput);
+
   const { disclaimers, atdNotices } = selectDisclaimers(
     /** @type {"emergency"|"urgent"|"non_urgent"} */ (disclaimerLevel),
     (ctx.triage && "symptomNames" in ctx.triage) ? /** @type {any} */(ctx.triage).symptomNames : (ctx.symptoms || []).map(s => s.name?.toLowerCase()).filter(Boolean)
   );
 
-  const systemPrompt = renderTemplate(templateKey, contextBlock);
+  // Get base template and apply enhancements
+  let systemPrompt = renderTemplate(templateKey, contextBlock);
+  
+  // Add role-based policy for medication queries
+  const rolePolicy = buildRolePolicy(userRole, isMedicationQuery);
+  if (rolePolicy) {
+    systemPrompt = rolePolicy + systemPrompt;
+  }
+  
+  // Apply concise mode if enabled
+  systemPrompt = applyConciseMode(systemPrompt);
 
   // Prefix severe with ATD block
   const header = (triageLevel === "EMERGENCY" || triageLevel === "URGENT")
@@ -172,6 +271,16 @@ export function enhancePrompt(ctx) {
 
   // Generate context-aware suggestions
   const suggestions = generateFollowUpSuggestions(ctx);
+  
+  // Generate expansion prompt if enabled
+  const expansionPrompt = generateExpansionPrompt(userRole, isMedicationQuery);
 
-  return { systemPrompt, enhancedPrompt, atdNotices, disclaimers, suggestions };
+  return { 
+    systemPrompt, 
+    enhancedPrompt, 
+    atdNotices, 
+    disclaimers, 
+    suggestions,
+    expansionPrompt
+  };
 }
