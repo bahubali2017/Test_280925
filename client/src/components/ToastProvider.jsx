@@ -50,7 +50,7 @@ export function ToastProvider({ children }) {
    */
   const toast = useCallback(options => {
     const id = generateId();
-    const { title, description, variant = 'default', duration = 5000 } = options;
+    const { title, description, variant = 'default', duration = 2500 } = options;
     
     const newToast = {
       id,
