@@ -101,7 +101,10 @@ const chatRequestSchema = z.object({
       content: z.string().min(1)
     })
   ).optional().default([]),
-  isHighRisk: z.boolean().optional().default(false)
+  isHighRisk: z.boolean().optional().default(false),
+  systemPrompt: z.string().optional(),
+  enhancedPrompt: z.string().optional(),
+  userRole: z.string().optional().default("public")
 });
 
 /**
@@ -604,7 +607,7 @@ router.get("/app-config.json", async (req, res) => {
         });
       }
 
-      const { message, conversationHistory, isHighRisk } = validation.data;
+      const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
       const config = getDeepSeekConfig();
 
       // Enhanced API key validation
@@ -876,7 +879,7 @@ router.get("/app-config.json", async (req, res) => {
         });
       }
 
-      const { message, conversationHistory, isHighRisk } = validation.data;
+      const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
       const config = getDeepSeekConfig();
 
       // Enhanced API key validation
@@ -931,24 +934,33 @@ router.get("/app-config.json", async (req, res) => {
       // Prepare messages for the LLM
       let promptMessages = [];
 
-      // Add system message with safety instructions and role information
-      promptMessages.push({
-        role: "system",
-        content: `You are MAIA (Medical AI Assistant) from Anamnesis. Provide complete medical information in plain text format.
-        ${isHighRisk ? 'IMPORTANT: The user may describe an urgent medical situation. Emphasize the importance of seeking immediate professional medical attention for emergencies.' : ''}
+      // Check if enhanced prompts are provided by the client (for concise mode, etc.)
+      if (systemPrompt && typeof systemPrompt === 'string') {
+        // Use enhanced system prompt from client
+        promptMessages.push({
+          role: "system",
+          content: systemPrompt
+        });
+      } else {
+        // Fallback to default system message with safety instructions and role information
+        promptMessages.push({
+          role: "system",
+          content: `You are MAIA (Medical AI Assistant) from Anamnesis. Provide complete medical information in plain text format.
+          ${isHighRisk ? 'IMPORTANT: The user may describe an urgent medical situation. Emphasize the importance of seeking immediate professional medical attention for emergencies.' : ''}
 
-        USER TYPE: ${roleAnalysis.role} (confidence: ${roleAnalysis.confidence}%)
-        ${responseInstructions}
+          USER TYPE: ${roleAnalysis.role} (confidence: ${roleAnalysis.confidence}%)
+          ${responseInstructions}
 
-        CRITICAL RULES:
-        1. NO # symbols or markdown
-        2. Complete ALL responses - finish every thought and section
-        3. Use simple headers with colons
-        4. Educational information only
-        5. If response is getting long, prioritize the most important information first
+          CRITICAL RULES:
+          1. NO # symbols or markdown
+          2. Complete ALL responses - finish every thought and section
+          3. Use simple headers with colons
+          4. Educational information only
+          5. If response is getting long, prioritize the most important information first
 
-        CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`
-      });
+          CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`
+        });
+      }
 
       // Add conversation history for context
       if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
@@ -957,11 +969,20 @@ router.get("/app-config.json", async (req, res) => {
         promptMessages = [...promptMessages, ...recentHistory];
       }
 
-      // Add the current user message
-      promptMessages.push({
-        role: "user",
-        content: message
-      });
+      // Add the current user message (use enhanced prompt if available)
+      if (enhancedPrompt && typeof enhancedPrompt === 'string') {
+        // Use enhanced user prompt from client
+        promptMessages.push({
+          role: "user",
+          content: enhancedPrompt
+        });
+      } else {
+        // Fallback to basic user message
+        promptMessages.push({
+          role: "user",
+          content: message
+        });
+      }
 
       // Send the request to DeepSeek API with streaming enabled
       const deepSeekUrl = "https://api.deepseek.com/v1/chat/completions";

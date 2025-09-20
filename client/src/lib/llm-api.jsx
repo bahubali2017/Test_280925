@@ -8,6 +8,8 @@
 /* global TextDecoder, AbortController, setTimeout */
 
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
+import { enhancePrompt } from './prompt-enhancer.js';
+import { createLayerContext } from './layer-context.js';
 
 /**
  * @typedef {object} Message
@@ -289,7 +291,23 @@ export async function sendMessage(message, history = [], options = {}) {
   // AbortController is created automatically in makeAPIRequest
 
   try {
-    // Prepare request body
+    // Create layer context for prompt enhancement
+    const layerContext = createLayerContext(message.trim());
+    
+    // Get user role from demographics or default to public
+    const userRole = demographics.role || "public";
+    
+    // Generate enhanced prompts using the prompt enhancer
+    const {
+      systemPrompt,
+      enhancedPrompt,
+      atdNotices,
+      disclaimers,
+      suggestions,
+      expansionPrompt
+    } = enhancePrompt(layerContext, userRole);
+    
+    // Prepare request body with enhanced prompts
     const requestBody = {
       message: message.trim(),
       conversationHistory: Array.isArray(history) ? history.filter(msg => 
@@ -300,6 +318,10 @@ export async function sendMessage(message, history = [], options = {}) {
         msg.content.trim()
       ) : [],
       isHighRisk,
+      // Include enhanced prompts for concise mode and other features
+      systemPrompt,
+      enhancedPrompt,
+      userRole,
       ...(sessionId && { sessionId })
     };
 
