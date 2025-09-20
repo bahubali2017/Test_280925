@@ -1040,7 +1040,7 @@ router.get("/app-config.json", async (req, res) => {
           model: config.model || "deepseek-chat",
           messages: promptMessages,
           temperature: 0.2,
-          max_tokens: 4096,
+          max_tokens: systemPrompt && systemPrompt.includes('CONCISE MODE ACTIVE') ? 200 : 4096,
           top_p: 0.95,
           frequency_penalty: 0.1,
           presence_penalty: 0.1,
