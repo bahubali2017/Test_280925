@@ -31,6 +31,18 @@ export const AI_FLAGS = {
 };
 
 /**
+ * Concise mode configuration settings
+ * Controls exam-style, high-yield response formatting
+ */
+export const CONCISE_SETTINGS = {
+  MAX_BULLETS: 5,
+  MAX_SENTENCES: 3,
+  MAX_TOKENS: 200,
+  EXAM_STYLE: true,
+  ALWAYS_ADD_EXPANSION: true
+};
+
+/**
  * Check if any medication enhancement flags are enabled
  * @returns {boolean}
  */

@@ -1,0 +1,112 @@
+# 🔹 ANAMNESIS MEDICAL AI ENHANCEMENT — STEP 1 (Concise Mode with Expansion Follow-Up)
+
+GOAL
+Enhance the `ENABLE_CONCISE_MODE` flag so concise responses are:
+1. Strictly short, exam-style, high-yield.  
+2. Always end with: "Would you like me to provide further detailed information?"  
+   → enabling a follow-up answer with more depth.
+
+==================================================
+FILES TO UPDATE
+- client/src/config/ai-flags.js
+- client/src/lib/prompt-enhancer.js
+- client/src/lib/medical-safety-processor.js (optional safeguard)
+
+==================================================
+TASKS
+
+1) Add Concise Mode Settings
+Extend `ai-flags.js` with expansion prompt setting:
+
+```js
+export const CONCISE_SETTINGS = {
+  MAX_BULLETS: 5,
+  MAX_SENTENCES: 3,
+  MAX_TOKENS: 200,
+  EXAM_STYLE: true,
+  ALWAYS_ADD_EXPANSION: true // new
+};
+Update Concise Mode Injection
+In prompt-enhancer.js, ensure concise mode instructions include the expansion follow-up.
+
+js
+Copy code
+import { AI_FLAGS, CONCISE_SETTINGS } from "@/config/ai-flags";
+
+function applyConciseMode(prompt, userRole) {
+  if (!AI_FLAGS.ENABLE_CONCISE_MODE) return prompt;
+
+  const expansionLine = (userRole === "doctor")
+    ? "Would you like me to expand with further clinical details (algorithms, monitoring, pearls)?"
+    : "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
+
+  return `
+    ${prompt}
+    [Concise Mode Active]
+    - Keep answers <= ${CONCISE_SETTINGS.MAX_BULLETS} bullets 
+      OR ${CONCISE_SETTINGS.MAX_SENTENCES} sentences.
+    - Stay under ${CONCISE_SETTINGS.MAX_TOKENS} tokens.
+    - Use exam-style, high-yield formatting.
+    - At the end of EVERY answer, add:
+      "${expansionLine}"
+  `;
+}
+Expansion Handling (Optional for Next Step)
+
+When user says “yes” or clicks “Expand Answer”, resend the same query with:
+
+Concise Mode OFF.
+
+A system hint: “Provide a detailed, structured explanation with references.”
+
+(We can implement this in Step 2.)
+
+Safeguards
+In medical-safety-processor.js, check so disclaimers remain before the expansion question, e.g.:
+
+vbnet
+Copy code
+Answer…
+⚠️ Informational purposes only. Not a substitute for professional advice.
+Would you like me to provide further detailed information (side effects, interactions, precautions)?
+==================================================
+TEST CASES
+
+Case 1: Concise Mode ON (Public)
+Q: "What is the dosage of Ursosan Forte for 100kg patient?"
+→
+
+Typical: 10–15 mg/kg/day (~1000–1500 mg/day).
+
+Taken in divided doses.
+⚠️ Informational purposes only. Not a substitute for professional medical advice.
+Would you like me to provide further detailed information (side effects, interactions, precautions)?
+
+Case 2: Concise Mode ON (Doctor)
+Q: "What is the dosage of Ursosan Forte for 100kg patient?"
+→
+
+10–15 mg/kg/day (1000–1500 mg/day).
+
+Divide into 2–3 doses.
+
+Contraindicated in biliary obstruction.
+⚠️ Professional reference only. Verify with official prescribing info.
+Would you like me to expand with further clinical details (algorithms, monitoring, pearls)?
+
+Case 3: Concise Mode OFF
+→ Normal triage-based detailed response (unchanged).
+
+==================================================
+DELIVERABLES
+
+Concise Mode always ends with expansion invitation.
+
+Role-specific expansion prompts (public vs doctor).
+
+Disclaimer always shown before expansion line.
+
+Safe toggle in ai-flags.js.
+
+pgsql
+Copy code
