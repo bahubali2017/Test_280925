@@ -184,6 +184,11 @@ CONCISE MODE ACTIVE:
  * @returns {string}
  */
 function generateExpansionPrompt(userRole, isMedicationQuery) {
+  // If concise mode is active, expansion prompts are already included
+  if (AI_FLAGS.ENABLE_CONCISE_MODE && CONCISE_SETTINGS.ALWAYS_ADD_EXPANSION) {
+    return "";
+  }
+  
   if (!AI_FLAGS.ENABLE_EXPANSION_PROMPT) return "";
   
   if (!isMedicationQuery) {
