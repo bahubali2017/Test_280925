@@ -1,5 +1,6 @@
 import { selectDisclaimers } from "./disclaimers.js";
 import { AI_FLAGS, CONCISE_SETTINGS } from "../config/ai-flags.js";
+import { detectExpansionRequest, buildExpansionPrompt, extractOriginalQuery } from "./expansion-handler.js";
 
 /** Inline fallbacks if templates cannot be loaded from disk */
 const FALLBACK_TEMPLATES = {
@@ -247,9 +248,29 @@ function generateFollowUpSuggestions(ctx) {
  * Main enhancer: selects template, injects context, and prefixes disclaimers/ATD for high risk.
  * @param {import("./layer-context.js").LayerContext} ctx
  * @param {string} [userRole="public"] - User role for role-based responses
+ * @param {Array} [conversationHistory=[]] - Previous conversation messages
  * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string }}
  */
-export function enhancePrompt(ctx, userRole = "public") {
+export function enhancePrompt(ctx, userRole = "public", conversationHistory = []) {
+  // Check if this is an expansion request
+  if (detectExpansionRequest(ctx.userInput)) {
+    const originalQuery = extractOriginalQuery(conversationHistory);
+    if (originalQuery) {
+      // Build expansion prompt instead of normal triage flow
+      const expansionPrompt = buildExpansionPrompt(originalQuery, userRole);
+      
+      // Return expansion-specific response structure
+      return {
+        systemPrompt: `EXPANSION MODE: Provide detailed follow-up information for the original query.`,
+        enhancedPrompt: expansionPrompt,
+        atdNotices: [],
+        disclaimers: ["⚠️ Informational purposes only. Not a substitute for professional medical advice."],
+        suggestions: [],
+        expansionPrompt: ""
+      };
+    }
+  }
+  
   const triageLevel = ctx.triage?.level || "NON_URGENT";
   // Convert to lowercase for disclaimer system compatibility  
   const disclaimerLevel = triageLevel.toLowerCase().replace("_", "_");
