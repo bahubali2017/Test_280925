@@ -9,6 +9,7 @@ import { routeToProvider } from './medical-layer/atd-router.js';
 import { processAIResponseForSafety, generateFallbackResponse } from './medical-layer/fallback-engine.js';
 import { sanitizeForPrivacy } from './config/safety-rules.js';
 import { createLayerContext } from './layer-context.js';
+import { AI_FLAGS } from '../config/ai-flags.js';
 
 /**
  * Process user input through complete medical safety pipeline
@@ -112,9 +113,10 @@ export async function processMedicalSafety(userInput, options = {}) {
  * Post-process AI response through safety filters
  * @param {string} aiResponse - Original AI response
  * @param {object} safetyContext - Safety context from processMedicalSafety
+ * @param {string} [systemPrompt] - System prompt to check for existing disclaimers
  * @returns {string} Safety-processed response with disclaimers
  */
-export function postProcessAIResponse(aiResponse, safetyContext) {
+export function postProcessAIResponse(aiResponse, safetyContext, systemPrompt = "") {
   const responseContext = {
     triageLevel: safetyContext.triageResult?.level,
     isEmergency: safetyContext.emergencyDetection?.isEmergency,
@@ -122,15 +124,45 @@ export function postProcessAIResponse(aiResponse, safetyContext) {
     detectedSymptoms: safetyContext.triageResult?.symptomNames || []
   };
   
-  return processAIResponseForSafety(aiResponse, responseContext);
+  // Process response and check if we need to add general disclaimers
+  let processedResponse = processAIResponseForSafety(aiResponse, responseContext);
+  
+  // If role-based disclaimers are present, avoid adding duplicate general disclaimers
+  if (hasRoleBasedDisclaimers(systemPrompt, aiResponse)) {
+    // Role-based disclaimers are already in the response/prompt, don't add general ones
+    return processedResponse;
+  }
+  
+  return processedResponse;
+}
+
+/**
+ * Check if role-based disclaimers are enabled and might be already present
+ * @param {string} [systemPrompt] - System prompt that might contain disclaimers
+ * @param {string} [aiResponse] - AI response that might contain disclaimers  
+ * @returns {boolean}
+ */
+function hasRoleBasedDisclaimers(systemPrompt = "", aiResponse = "") {
+  if (!AI_FLAGS.ENABLE_ROLE_MODE) return false;
+  
+  const roleDisclaimerIndicators = [
+    "⚠️ Professional reference only",
+    "⚠️ Informational purposes only",
+    "ROLE POLICY"
+  ];
+  
+  const textToCheck = `${systemPrompt} ${aiResponse}`;
+  return roleDisclaimerIndicators.some(indicator => textToCheck.includes(indicator));
 }
 
 /**
  * Generate safety notices for UI display
  * @param {object} safetyContext - Safety processing context
+ * @param {string} [systemPrompt] - System prompt to check for existing disclaimers
+ * @param {string} [aiResponse] - AI response to check for existing disclaimers
  * @returns {Array} Array of safety notice props
  */
-function generateSafetyNotices(safetyContext) {
+function generateSafetyNotices(safetyContext, systemPrompt = "", aiResponse = "") {
   const notices = [];
   const { emergencyDetection, atdRouting } = safetyContext;
   
@@ -155,12 +187,14 @@ function generateSafetyNotices(safetyContext) {
     });
   }
   
-  // General medical disclaimer (always present)
-  notices.push({
-    type: 'general',
-    message: '⚠️ This is not a medical diagnosis. Always consult a licensed healthcare provider for medical decisions.',
-    isVisible: true
-  });
+  // General medical disclaimer (add only if role-based disclaimers are not present)
+  if (!hasRoleBasedDisclaimers(systemPrompt, aiResponse)) {
+    notices.push({
+      type: 'general',
+      message: '⚠️ This is not a medical diagnosis. Always consult a licensed healthcare provider for medical decisions.',
+      isVisible: true
+    });
+  }
   
   return notices;
 }
