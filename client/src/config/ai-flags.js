@@ -21,7 +21,7 @@ export const AI_FLAGS = {
    * Enable concise mode for short-answer-first responses
    * Caps responses to 1-5 bullets or ≤3 sentences
    */
-  ENABLE_CONCISE_MODE: false,
+  ENABLE_CONCISE_MODE: true,
   
   /**
    * Enable expansion prompts for additional detail opt-ins
