@@ -65,8 +65,8 @@ function cleanStrayMarkers(text) {
 async function processAIResponse(response, sessionId) {
   if (!response) return response;
 
-  // Remove all # symbols and markdown formatting
-  let cleaned = response.replace(/#/g, '').replace(/\*\*/g, '');
+  // Preserve markdown formatting - removed destructive stripping
+  let cleaned = response;
 
   // Note: Stray marker cleanup moved to client-side for complete responses
 

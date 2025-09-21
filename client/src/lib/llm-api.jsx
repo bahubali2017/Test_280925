@@ -180,7 +180,7 @@ async function processStream(stream, onUpdate, abortSignal) {
       const lines = chunk.split('\n');
       
       for (const line of lines) {
-        if (!line.trim()) continue;
+        if (!line && line !== '') continue; // Only skip completely null/undefined lines, preserve empty strings
         
         // Check abort signal during line processing for immediate response
         if (abortSignal?.aborted) {

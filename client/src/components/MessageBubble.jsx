@@ -425,7 +425,9 @@ export function MessageBubble({
             )}
             data-bubble-status={bubbleStatus}
           >
-            {formatMessageContent(message, isStreaming, _partialContent, status)}
+            <div className="whitespace-pre-wrap break-words">
+              {formatMessageContent(message, isStreaming, _partialContent, status)}
+            </div>
 
             {(timestamp || status !== 'sent') && (
               <div className="text-xs opacity-80 mt-1 text-right flex items-center justify-end gap-1">
@@ -622,7 +624,9 @@ export function MessageBubble({
               </div>
             )}
 
-            {formatMessageContent(message, isStreaming, _partialContent, status)}
+            <div className="whitespace-pre-wrap break-words">
+              {formatMessageContent(message, isStreaming, _partialContent, status)}
+            </div>
 
             {/* Show metadata if available in non-user messages */}
             {/* Show Stop AI button when streaming is active */}
