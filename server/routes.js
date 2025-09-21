@@ -45,10 +45,18 @@ const circuitBreakerMiddleware = (req, res, next) => {
  * @returns {string} Cleaned text without stray markers
  */
 function cleanStrayMarkers(text) {
-  // FORCE CACHE INVALIDATION - Updated cleanup function  
-  return text
+  console.log('[CLEANUP-DEBUG] cleanStrayMarkers called with text preview:', text.substring(0, 200) + '...');
+  
+  // ENHANCED cleanup with more aggressive marker removal
+  const cleaned = text
     // normalize invisible characters (zero-width, NBSP)
     .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ")
+    // AGGRESSIVE: Remove "• --" patterns directly
+    .replace(/•\s*--+/g, "")
+    .replace(/•\s*-\s*-/g, "")
+    // AGGRESSIVE: Remove standalone "--" patterns
+    .replace(/^\s*--+\s*$/gm, "")
+    .replace(/\s--+\s/g, " ")
     // normalize all bullets (•, ◦, ●, *, etc.) to "-"
     .replace(/^[\s]*[•◦●▣*]+/gm, "-")
     // remove bullet followed by multiple dashes ("- --", "• --")
@@ -61,6 +69,9 @@ function cleanStrayMarkers(text) {
     .replace(/\n{3,}/g, "\n\n")
     // trim leading/trailing whitespace
     .trim();
+  
+  console.log('[CLEANUP-DEBUG] Markers removed, cleaned preview:', cleaned.substring(0, 200) + '...');
+  return cleaned;
 }
 
 /**
