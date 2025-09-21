@@ -1226,7 +1226,7 @@ router.get("/app-config.json", async (req, res) => {
 
               res.end();
             } catch (writeError) {
-              console.debug(`[${sessionId}] Could not send error event:`, writeError.message);
+              // Error sending SSE error event - connection likely closed
             }
           } else if (err.message === 'aborted') {
             console.log(`[${sessionId}] [SSE] Stream processing aborted as expected`);

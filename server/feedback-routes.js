@@ -205,7 +205,7 @@ async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole
             WHERE id = $4
           `, [positiveCount, negativeCount, accuracy, existing.id]);
             
-          console.debug(`[ML-Engine] Updated pattern: ${queryPattern} -> ${responsePattern} (${accuracy}% accuracy)`);
+          // Pattern accuracy updated
         } else {
           // Create new pattern
           const positiveCount = feedbackType === 'helpful' ? 1 : 0;
@@ -217,7 +217,7 @@ async function triggerMLLearning({ feedbackType, userQuery, aiResponse, userRole
             VALUES ($1, $2, $3, $4, $5, $6)
           `, [queryPattern, responsePattern, userRole, positiveCount, negativeCount, accuracy]);
           
-          console.debug(`[ML-Engine] Created new pattern: ${queryPattern} -> ${responsePattern}`);
+          // New learning pattern created
         }
       }
     }

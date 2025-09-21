@@ -228,7 +228,7 @@ class AdminWebSocketServer {
       const message = JSON.parse(data.toString());
       const clientInfo = this.clientInfo.get(ws);
       
-      console.debug(`[ADMIN-WS] Received message from ${clientInfo?.ip}: ${message.type}`);
+      // Admin websocket message processed
       
       // Handle different message types
       switch (message.type) {
@@ -317,7 +317,7 @@ class AdminWebSocketServer {
     }
     
     if (this.connectedClients.size > 0) {
-      console.debug(`[ADMIN-WS] Broadcast ${message.type} to ${successCount}/${this.connectedClients.size} clients`);
+      // Message broadcast to admin clients
     }
   }
   

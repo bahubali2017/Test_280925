@@ -96,7 +96,7 @@ class SessionTracker {
       session.metrics.errors++;
     }
 
-    console.debug(`[SESSION-TRACKER] Updated session ${sessionId}: ${session.messageCount} messages, avg latency ${Math.round(session.metrics.avgLatency)}ms`);
+    // Session metrics updated
   }
 
   /**
@@ -140,7 +140,7 @@ class SessionTracker {
       this.completedSessions.push(session);
       this.activeSessions.delete(sessionId);
 
-      console.debug(`[SESSION-TRACKER] Cancelled session ${sessionId}: ${reason}, duration ${session.duration}ms`);
+      // Session cancelled and archived
 
       // Emit session ended event
       this.emitEvent('session_cancelled', {
@@ -173,7 +173,7 @@ class SessionTracker {
         this.completedSessions = this.completedSessions.slice(-1000);
       }
 
-      console.debug(`[SESSION-TRACKER] Ended session ${sessionId}: ${status}, duration ${session.duration}ms, ${session.messages ? session.messages.length : 0} messages`);
+      // Session ended and archived
     }
   }
 
