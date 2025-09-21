@@ -114,23 +114,15 @@ export async function processMedicalSafety(userInput, options = {}) {
  * @param {string} text - Text to clean
  * @returns {string} Cleaned text without stray markers
  */
-function cleanStrayMarkers(text) {
-  // FORCE CACHE INVALIDATION - Updated cleanup function
+export function cleanStrayMarkers(text) {
   return text
-    // normalize invisible characters (zero-width, NBSP)
-    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ")
-    // normalize all bullets (•, ◦, ●, *, etc.) to "-"
-    .replace(/^[\s]*[•◦●▣*]+/gm, "-")
-    // remove bullet followed by multiple dashes ("- --", "• --")
-    .replace(/-\s*[-–]{2,}/g, "-")
-    // remove lines that are only dashes (---, --, etc.)
-    .replace(/^\s*[-–]{2,}\s*$/gm, "")
-    // collapse redundant spaces around bullets
-    .replace(/-\s{2,}/g, "- ")
-    // collapse 3+ newlines into 2
-    .replace(/\n{3,}/g, "\n\n")
-    // trim leading/trailing whitespace
-    .trim();
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ")   // invisible → space
+    .replace(/^[\s]*[•◦●▣*]+/gm, "-")               // bullets → "-"
+    .replace(/-\s*[-–]{2,}/g, "-")                  // "- --" → "-"
+    .replace(/^\s*[-–]{2,}\s*$/gm, "")              // dash-only lines
+    .replace(/\n{3,}/g, "\n\n")                     // normalize extra breaks
+    .replace(/[ \t]{2,}/g, " ")                     // collapse long runs, keep one space
+    .trimEnd();                                      // only trim end; keep leading spaces/newlines
 }
 
 /**
