@@ -1,0 +1,277 @@
+ANAMNESIS — STEP 1 FIX
+Concise vs Expansion Mode + Context Reset (Strict, No Side Effects)
+GOAL
+
+Medication questions (e.g., “dosage of aspirin”) → Concise-first response, then optional expansion only if the user explicitly asks.
+
+Educational questions (e.g., “What is IBS?”) → Detailed immediately (no auto-expansion injection).
+
+Symptom/triage questions (e.g., “I have chest pain”) → Triage template, no auto-expansion state carried over.
+
+“Yes/expand/more/details” should only expand the immediately previous expandable answer (no leakage to older topics).
+
+No duplicate disclaimers, no auto-expansion on new unrelated questions.
+
+FILES TO UPDATE
+
+client/src/lib/prompt-enhancer.js
+
+client/src/lib/llm-api.jsx (or wherever the streaming request is initiated)
+
+client/src/config/ai-flags.js
+
+client/src/lib/expansion-state.js (NEW helper module)
+
+client/src/lib/expansion-prompts.js (OPTIONAL helper for prompt strings)
+
+TASKS
+1) Define explicit expansion state (NEW)
+
+File: client/src/lib/expansion-state.js
+
+// Single source of truth for expansion context
+let lastExpandable = null; // { messageId, questionType, query, role, createdAt }
+let pendingExpansion = false; // true only immediately after we render a concise response
+
+export function setLastExpandable(ctx) {
+  // ctx: { messageId, questionType, query, role }
+  lastExpandable = { ...ctx, createdAt: Date.now() };
+}
+
+export function clearLastExpandable() {
+  lastExpandable = null;
+  pendingExpansion = false;
+}
+
+export function markPendingExpansion(on = true) {
+  pendingExpansion = !!on;
+}
+
+export function getExpansionState() {
+  return { lastExpandable, pendingExpansion };
+}
+
+export function isAffirmativeExpansion(text) {
+  if (!text) return false;
+  const t = text.trim().toLowerCase();
+  return ["yes", "expand", "more", "more details", "details", "tell me more"].some(k => t === k || t.startsWith(k));
+}
+
+2) Fix concise vs expansion injection (NO auto-expansion injection in system prompt)
+
+File: client/src/lib/prompt-enhancer.js
+
+Remove/disable the unconditional instruction that appends “At the end of EVERY answer, add: …”. That line is causing expansion bleed into other flows.
+
+Ensure concise mode is applied only when questionType === "medication".
+
+// BEFORE (problematic):
+// if (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) {
+//   expansionInstruction = `\n- At the end of EVERY answer, add: "${expansionLine}"`;
+// }
+
+// AFTER (fixed): never inject auto-expansion in the system prompt
+let expansionInstruction = ""; // do not inject ANY auto-expansion text here
+
+
+Keep concise formatting short (bullets / ≤3 sentences) but do not force the model to add expansion invitations inside the answer. We’ll render the invitation in the UI, not the LLM prompt (prevents collisions with triage/educational).
+
+3) Enforce classification routing (medication → concise, educational → detailed, symptom → triage)
+
+File: client/src/lib/prompt-enhancer.js
+
+Ensure:
+
+questionType === "medication" → call applyConciseMode(systemPrompt, userRole, "medication")
+
+questionType === "educational" → skip concise, skip expansion injection, go detailed
+
+questionType === "symptom" → triage templates (unchanged)
+
+Also export the decision so the caller knows what mode was chosen:
+
+export function buildPromptsForQuery({ query, userRole, flags }) {
+  const questionType = classifyQuestionType(query);
+  let systemPrompt = baseSystemPrompt(userRole);
+  let mode = "normal";
+
+  if (questionType === "medication" && flags.ENABLE_CONCISE_MODE) {
+    systemPrompt = applyConciseMode(systemPrompt, userRole, "medication");
+    mode = "concise";
+  } else if (questionType === "educational") {
+    // detailed path; do not inject concise or expansion text
+    mode = "detailed";
+  } else if (questionType === "symptom") {
+    systemPrompt = applyTriageTemplate(systemPrompt);
+    mode = "triage";
+  }
+
+  return { systemPrompt, questionType, mode };
+}
+
+4) Wire the state machine at request-time
+
+File: client/src/lib/llm-api.jsx
+
+On new user message:
+
+If it is an affirmative expansion AND we have a lastExpandable → build a detailed expansion request using that context (do not reclassify the “yes”).
+
+Else → clear expansion state, classify the new query, route by the returned mode.
+
+After a concise medication answer is streamed and completed, call markPendingExpansion(true) and set lastExpandable for that message.
+
+Patch (core logic outline):
+
+import { setLastExpandable, clearLastExpandable, markPendingExpansion, getExpansionState, isAffirmativeExpansion } from "./expansion-state";
+import { buildPromptsForQuery } from "./prompt-enhancer";
+import { buildExpansionPrompt } from "./expansion-prompts"; // optional helper
+
+export async function askLLM({ query, userRole, history }) {
+  const { lastExpandable, pendingExpansion } = getExpansionState();
+
+  // 1) Handle pure expansion replies like "yes", "more", "expand"
+  if (isAffirmativeExpansion(query) && lastExpandable) {
+    // build detailed expansion using the lastExpandable context
+    const expPrompt = buildExpansionPrompt({
+      questionType: lastExpandable.questionType,
+      query: lastExpandable.query,
+      role: lastExpandable.role || userRole
+    });
+    clearLastExpandable(); // consume expansion
+    return streamLLM({ systemPrompt: expPrompt.systemPrompt, userPrompt: expPrompt.userPrompt, userRole });
+  }
+
+  // 2) Fresh question: clear previous expansion state
+  clearLastExpandable();
+
+  // 3) Classify and build prompts
+  const flags = await getAIFlags();
+  const { systemPrompt, questionType, mode } = buildPromptsForQuery({ query, userRole, flags });
+
+  // 4) Stream the LLM
+  const res = await streamLLM({ systemPrompt, userPrompt: query, userRole });
+
+  // 5) If concise medication answer completed successfully → arm expansion
+  if (mode === "concise") {
+    setLastExpandable({
+      messageId: res.messageId,
+      questionType,
+      query,
+      role: userRole
+    });
+    markPendingExpansion(true);
+  }
+
+  return res;
+}
+
+
+Notes:
+
+streamLLM is your existing streaming call; keep it untouched.
+
+No auto-expansion injection in prompts. Expansion is UI-driven when pending.
+
+5) Show the expansion invitation in the UI (not in the LLM output)
+
+File: client/src/components/MessageBubble.jsx
+
+When the assistant message metadata indicates mode === "concise" and questionType === "medication" and expansion state is pending, render a small inline prompt under the answer:
+
+Public: “Would you like more details (side effects, interactions, precautions)?”
+
+Doctor: “Expand with clinical details (algorithms, monitoring, pearls)?”
+
+This is UI-only; not part of the LLM answer. Clicking it should send a user message “expand” (or a button that dispatches that exact string), which triggers the expansion branch above.
+
+(If you already render this invitation, ensure it’s only visible when mode === "concise" from this message, not carried over.)
+
+6) Expansion prompts (role-aware, type-aware)
+
+File: client/src/lib/expansion-prompts.js (optional helper)
+
+export function buildExpansionPrompt({ questionType, query, role }) {
+  if (questionType === "medication") {
+    return {
+      systemPrompt: [
+        "You are a medical assistant.",
+        "Provide a detailed medication reference.",
+        role === "doctor" ? "Assume professional reader." : "Assume public reader.",
+      ].join("\n"),
+      userPrompt: `Expand on: ${query}\nInclude: dosage ranges, side effects, interactions, contraindications, monitoring, counseling points.`
+    };
+  }
+  if (questionType === "symptom") {
+    return {
+      systemPrompt: "You are a medical assistant. Provide detailed symptom expansion.",
+      userPrompt: `Expand on the symptom: ${query}\nCover: possible causes (common/serious), red flags, when to seek urgent care, initial management.`
+    };
+  }
+  // educational default
+  return {
+    systemPrompt: "You are a medical assistant. Provide a detailed educational explanation.",
+    userPrompt: `Expand on: ${query}\nInclude: definitions, causes, risk factors, complications, and management overview.`
+  };
+}
+
+7) Safeguards to prevent cross-topic bleed
+
+On every non-affirmative user message, call clearLastExpandable() before classification (already in the code above).
+
+Only set markPendingExpansion(true) after concise responses complete; do not set it after triage or educational answers.
+
+Do not read pendingExpansion to auto-expand — expansion must be explicitly requested by the user.
+
+TEST CASES (must pass)
+
+Aspirin as first question
+Input: “What is the dosage of aspirin for adults?”
+
+Output: Concise bullets (≤5 lines / ≤3 sentences)
+
+UI shows expansion invitation
+
+On “expand” → detailed medication reference
+
+Chest pain → then aspirin
+
+Q1: “I have chest pain” → triage answer (no expansion invitation)
+
+Q2: “What is the dosage of aspirin?” → Concise (NOT expansion)
+
+On “expand” → detailed aspirin info (NOT chest pain)
+
+Educational first question
+Input: “What is IBS?”
+
+Output: Detailed immediately
+
+No expansion invitation auto-injected
+
+Affirmative with no context
+Input: “expand” (first message)
+
+Behavior: ignore expansion (no last expandable), treat as general / ask to clarify
+
+ACCEPTANCE CRITERIA
+
+No more auto-expansion injected by system prompts.
+
+Medication queries are concise-first, expansion only on explicit request.
+
+Symptom triage never arms expansion state.
+
+Second question never inherits expansion state from the first.
+
+“Expand” always targets the immediate last concise result only.
+
+DEPLOYMENT NOTE
+
+After code changes:
+
+npm run build:clean (or your clean build command)
+
+Restart server
+
+Confirm version bump in app-config.json (if used) so the client picks up the new code
