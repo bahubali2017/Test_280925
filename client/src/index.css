@@ -70,6 +70,39 @@
   animation: slide-up 0.3s ease-out;
 }
 
+/* Compact Markdown Styling */
+.markdown-compact h1,
+.markdown-compact h2,
+.markdown-compact h3,
+.markdown-compact h4,
+.markdown-compact h5,
+.markdown-compact h6 {
+  margin-top: 0.25rem;  /* ~4px */
+  margin-bottom: 0.25rem;
+  line-height: 1.25;
+}
+
+.markdown-compact p {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  line-height: 1.35;
+}
+
+.markdown-compact ul,
+.markdown-compact ol {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+  padding-left: 1rem; /* keep bullets aligned */
+}
+
+.markdown-compact li {
+  margin-bottom: 0.15rem;
+}
+
+.markdown-compact strong {
+  font-weight: 600;
+}
+
 @layer base {
   :root {
     /* Neural Theme Colors - Updated Anamnesis Brand */

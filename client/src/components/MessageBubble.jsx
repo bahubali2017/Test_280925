@@ -53,6 +53,7 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
   return (
     <div className="relative" data-status={status}>
       <ReactMarkdown
+        className="markdown-compact"
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ node, ...props }) => (
