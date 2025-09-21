@@ -1,0 +1,84 @@
+# ANAMNESIS — STREAMING FORMAT FIX (no-smash whitespace)
+
+GOAL
+Stop broken “mashed” text. Do NOT clean/trim streaming chunks. Stream raw tokens as-is, and apply formatting cleanup once after completion.
+
+FILES
+- server/routes.js
+- client/src/lib/streaming-handler.js   (or wherever SSE is handled)
+- client/src/lib/medical-safety-processor.js
+- client/src/components/MessageBubble.jsx
+
+TASKS
+
+1) Server: stream raw (no trimming, no cleanup)
+- In routes.js SSE handler, remove ANY `.trim()`, `.replace(...)`, or cleanup on chunk text.
+- Example:
+
+// ❌ remove any per-chunk cleanup
+// const cleaned = cleanStrayMarkers(chunk).trim();
+
+// ✅ send raw
+const text = typeof chunk === "string" ? chunk : chunk.text ?? "";
+res.write(`data: ${JSON.stringify({ token: text })}\n\n`);
+
+- Keep only safety gating/disclaimer logic at END (not per chunk). If you must add disclaimer, append it once after done.
+
+2) Client: buffer chunks verbatim; clean once on “done”
+- In streaming handler:
+
+let buffer = "";
+onChunk = (token) => {
+  // DO NOT trim or collapse spaces
+  buffer += token;              // keep whitespace between chunks
+  renderStreaming(buffer);      // optional live preview
+};
+onDone = () => {
+  const finalText = processFinalResponse(buffer);  // single pass cleanup
+  renderFinal(finalText);
+  buffer = "";
+};
+
+3) medical-safety-processor: end-only cleanup (no trims that kill spacing)
+- Ensure cleanStrayMarkers does NOT remove normal spaces/newlines globally.
+- Use this version:
+
+export function cleanStrayMarkers(text) {
+  return text
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ")   // invisible → space
+    .replace(/^[\s]*[•◦●▣*]+/gm, "-")               // bullets → "-"
+    .replace(/-\s*[-–]{2,}/g, "-")                  // "- --" → "-"
+    .replace(/^\s*[-–]{2,}\s*$/gm, "")              // dash-only lines
+    .replace(/\n{3,}/g, "\n\n")                     // normalize extra breaks
+    .replace(/[ \t]{2,}/g, " ")                     // collapse long runs, keep one space
+    .trimEnd();                                      // only trim end; keep leading spaces/newlines
+}
+
+export function processFinalResponse(aiOutput) {
+  return cleanStrayMarkers(aiOutput);  // called ONLY on done
+}
+
+4) Message renderer: render markdown; preserve whitespace
+- In MessageBubble.jsx (or equivalent), render final text:
+
+<ReactMarkdown>{finalText}</ReactMarkdown>
+
+- Ensure CSS:
+.whiteSpacePreserve {
+  white-space: pre-wrap;
+  word-break: normal;
+  overflow-wrap: anywhere;
+}
+
+5) Remove duplicate formatters
+- Disable any other client/server list/markdown “normalizers” during streaming (e.g., cleanMarkdownFormatting on chunks). Leave only the final-pass cleaner above.
+
+6) Quick verification (IBS / ibuprofen / chest pain)
+- “What is IBS?” → proper headers & bullets; no mashed words.
+- “Dosage of ibuprofen…” → concise bullets, readable.
+- “I have chest pain” → triage template; readable.
+
+RESULT
+- No per-chunk whitespace loss.
+- One end-of-stream cleanup → no “• --”, no walls of text.
+- Markdown preserved and rendered cleanly.
