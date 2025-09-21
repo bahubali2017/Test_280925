@@ -1,0 +1,117 @@
+🩺 ANAMNESIS — MARKDOWN RENDERING FIX
+GOAL
+
+Fix the MessageBubble component so AI responses render clean Markdown with headings, lists, and bold text. Remove stray ###, **, and raw dashes from UI.
+
+TASKS
+1. DEPENDENCIES
+
+Check if these are installed; if not, install:
+
+npm install react-markdown remark-gfm
+
+2. UPDATE MessageBubble.jsx
+
+Import ReactMarkdown + remark-gfm
+
+Replace raw text rendering ({message.text} in <div>) with <ReactMarkdown>.
+
+Add Tailwind classes for spacing + list formatting.
+
+Keep safety disclaimers at the bottom, but styled properly.
+
+PATCH (MessageBubble.jsx):
+
+import React from "react";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
+
+export default function MessageBubble({ message }) {
+  return (
+    <div className="message-bubble whitespace-pre-wrap break-words text-sm leading-relaxed">
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ node, ...props }) => (
+            <h1 className="text-2xl font-bold my-3" {...props} />
+          ),
+          h2: ({ node, ...props }) => (
+            <h2 className="text-xl font-semibold my-2" {...props} />
+          ),
+          h3: ({ node, ...props }) => (
+            <h3 className="text-lg font-semibold my-2" {...props} />
+          ),
+          p: ({ node, ...props }) => (
+            <p className="my-2 text-gray-800" {...props} />
+          ),
+          ul: ({ node, ...props }) => (
+            <ul className="list-disc ml-6 my-2" {...props} />
+          ),
+          ol: ({ node, ...props }) => (
+            <ol className="list-decimal ml-6 my-2" {...props} />
+          ),
+          li: ({ node, ...props }) => (
+            <li className="mb-1" {...props} />
+          ),
+          strong: ({ node, ...props }) => (
+            <strong className="font-bold text-gray-900" {...props} />
+          ),
+          em: ({ node, ...props }) => (
+            <em className="italic" {...props} />
+          ),
+          blockquote: ({ node, ...props }) => (
+            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 my-2" {...props} />
+          ),
+        }}
+      >
+        {message.text}
+      </ReactMarkdown>
+    </div>
+  );
+}
+
+3. TEST CASES
+Educational
+
+Input: What is IBS?
+✅ Should render:
+
+H3 heading: “What is IBS?”
+
+Bulleted list for symptoms
+
+Bold “Definition”
+
+Medication
+
+Input: What is the dosage of ibuprofen for adults?
+✅ Should render:
+
+Concise bullets
+
+Disclaimer at the bottom
+
+No stray - or ###
+
+Symptom
+
+Input: I have chest pain
+✅ Should render:
+
+Structured triage response
+
+Headings + lists intact
+
+Disclaimer at bottom
+
+4. EXPECTED OUTCOME
+
+🟢 No raw ### or stray **
+
+🟢 Headings rendered correctly
+
+🟢 Lists shown with bullets
+
+🟢 Disclaimers formatted cleanly
+
+🟢 One consistent Markdown rendering pipeline across AI messages
