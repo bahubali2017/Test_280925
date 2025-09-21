@@ -46,12 +46,16 @@ const circuitBreakerMiddleware = (req, res, next) => {
  */
 function cleanStrayMarkers(text) {
   return text
-    // remove stray dashes used as separators
+    // remove stray dashes used as separators (anywhere in line)
     .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
     // remove isolated dashes at start of line
     .replace(/^\s*[-–]{2,}\s*$/gm, "")
-    // remove bullet points followed by dashes (• --, • ---, etc.)
-    .replace(/^\s*•\s*[-–]{2,}\s*$/gm, "")
+    // remove bullet points followed by dashes (• --, • ---, etc.) - more comprehensive
+    .replace(/^\s*•\s*[-–]{2,}.*$/gm, "")
+    // remove lines that are just bullet + space + dashes
+    .replace(/^•\s*[-–]{1,}.*$/gm, "")
+    // remove standalone dash lines (catch any missed patterns)
+    .replace(/^[-–\s]{2,}$/gm, "")
     // normalize multiple newlines
     .replace(/\n{3,}/g, "\n\n")
     // remove trailing or leading whitespace
