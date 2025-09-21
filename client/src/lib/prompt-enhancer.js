@@ -137,11 +137,7 @@ export function classifyQuestionType(query) {
 
   const normalizedQuery = normalizeQueryText(query);
   
-  // Check for medication terms first to detect mixed queries
-  const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
-  const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
-  
-  // Educational patterns using regex for phrase matching
+  // Educational patterns using regex for phrase matching - CHECK FIRST for pure educational queries
   const educationalPatterns = [
     /\bwhat\s+(?:is|are)\b/,           // "what is", "what are"
     /\bexplain\b/,                     // "explain"
@@ -152,20 +148,24 @@ export function classifyQuestionType(query) {
   
   const isEducational = educationalPatterns.some(pattern => pattern.test(normalizedQuery));
   
-  // Tie-breaking logic: If mixed query, prefer specific over educational
-  if (isEducational && hasMedicationTerms) {
-    // Mixed educational + medication: prioritize medication
-    return "medication";
-  }
-  
-  if (isEducational && hasSymptomTerms) {
-    // Mixed educational + symptom: prioritize symptom
-    return "symptom";
-  }
-  
+  // For pure educational questions like "What is IBS?", return educational immediately
   if (isEducational) {
+    // Check for medication terms to detect mixed queries
+    const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
+    const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
+    
+    // Only override educational if it's explicitly about medication/symptoms AND medication terms
+    if (hasMedicationTerms && (normalizedQuery.includes("dosage") || normalizedQuery.includes("side effect") || normalizedQuery.includes("interaction"))) {
+      return "medication";
+    }
+    
+    // Return educational for pure informational queries
     return "educational";
   }
+
+  // Check for medication terms for non-educational queries
+  const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
+  const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
 
   // Medication / treatment questions (concise first, expand on request)
   if (hasMedicationTerms) {
@@ -370,12 +370,6 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   // Classify question type for intelligent response mode selection
   const questionType = classifyQuestionType(ctx.userInput);
   
-  // Temporary debugging
-  console.log(`🐛 DEBUG: Query "${ctx.userInput}" classified as "${questionType}"`);
-  console.log(`🐛 DEBUG: Normalized query: "${normalizeQueryText(ctx.userInput)}"`);
-  console.log(`🐛 DEBUG: Educational patterns match:`, /\bwhat\s+(?:is|are)\b/.test(normalizeQueryText(ctx.userInput)));
-  console.log(`🐛 DEBUG: CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER:`, CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER);
-  
   
   const triageLevel = ctx.triage?.level || "NON_URGENT";
   // Convert to lowercase for disclaimer system compatibility  
@@ -403,7 +397,6 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   // Apply intelligent classification logic for response mode
   if (questionType === "educational" || questionType === "general") {
     // Educational/general questions: Skip concise mode, provide detailed response immediately
-    console.log(`🐛 DEBUG: APPLYING EDUCATIONAL MODE for questionType: ${questionType}`);
     const educationalPrompt = `You are MAIA (Medical AI Assistant). Provide a detailed, structured explanation suitable for ${userRole === "doctor" ? "healthcare professionals" : "general public"}.
 
 - Cover definitions, key features, and management overview
@@ -413,7 +406,6 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
 
 EDUCATIONAL MODE: Provide comprehensive information immediately.`;
     
-    console.log(`🐛 DEBUG: Educational prompt length: ${educationalPrompt.length}`);
     systemPrompt = educationalPrompt;
   } else if (questionType === "medication") {
     // Medication questions: Use concise mode with medication-specific expansion option
