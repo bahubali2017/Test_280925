@@ -65,12 +65,27 @@ import { supabaseAdmin } from "../shared/supabase.js";
  */
 
 /**
+ * @callback SaveFeedbackFn
+ * @param {object} feedbackData - The feedback data
+ * @param {string} feedbackData.messageId - Reference to the message that was rated
+ * @param {string} feedbackData.sessionId - Session identifier
+ * @param {string} feedbackData.userId - User identifier
+ * @param {string} feedbackData.feedbackType - 'helpful' or 'could_improve'
+ * @param {string} feedbackData.userQuery - Original user question
+ * @param {string} feedbackData.aiResponse - AI's response that was rated
+ * @param {string} feedbackData.userRole - User role
+ * @param {string} feedbackData.responseMetadata - JSON metadata about the response
+ * @returns {Promise<object>} The saved feedback
+ */
+
+/**
  * @typedef {object} IStorage
  * @property {GetUserFn} getUser - Get a user by ID
  * @property {GetUserByUsernameFn} getUserByUsername - Get a user by username
  * @property {CreateUserFn} createUser - Create a new user
  * @property {SaveMessageFn} saveMessage - Save a message
  * @property {GetMessagesFn} getMessages - Get messages for a user
+ * @property {SaveFeedbackFn} saveFeedback - Save user feedback
  */
 
 /**
@@ -85,8 +100,12 @@ class MemStorage {
     /** @type {Map<string, Array<object>>} */
     this.messages = new Map();
     
+    /** @type {Array<object>} */
+    this.feedback = [];
+    
     this.currentUserId = 1;
     this.currentMessageId = 1;
+    this.currentFeedbackId = 1;
   }
 
   /**
@@ -161,6 +180,22 @@ class MemStorage {
       return [];
     }
     return this.messages.get(userId).slice(-limit);
+  }
+
+  /**
+   * Save user feedback
+   * @param {object} feedbackData - The feedback data
+   * @returns {Promise<object>} The saved feedback
+   */
+  async saveFeedback(feedbackData) {
+    const feedbackObj = {
+      id: this.currentFeedbackId++,
+      ...feedbackData,
+      timestamp: new Date(),
+    };
+
+    this.feedback.push(feedbackObj);
+    return feedbackObj;
   }
 }
 
@@ -289,6 +324,34 @@ export class SupabaseStorage {
     }
     
     return data;
+  }
+
+  /**
+   * Save user feedback
+   * @param {object} feedbackData - The feedback data
+   * @returns {Promise<object>} The saved feedback
+   */
+  async saveFeedback(feedbackData) {
+    const { data, error } = await this.supabase
+      .from('feedback')
+      .insert({
+        message_id: feedbackData.messageId,
+        session_id: feedbackData.sessionId,
+        user_id: feedbackData.userId,
+        feedback_type: feedbackData.feedbackType,
+        user_query: feedbackData.userQuery,
+        ai_response: feedbackData.aiResponse,
+        user_role: feedbackData.userRole,
+        response_metadata: feedbackData.responseMetadata
+      })
+      .select();
+    
+    if (error) {
+      console.error("Save feedback error:", error.message);
+      throw new Error(`Failed to save feedback: ${error.message}`);
+    }
+    
+    return data[0];
   }
 }
 

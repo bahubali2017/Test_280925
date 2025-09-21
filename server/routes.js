@@ -1550,6 +1550,56 @@ router.get('/api/legal/license', (req, res) => {
   }
 });
 
+// Feedback endpoint
+router.post('/api/feedback', async (req, res) => {
+  try {
+    const { 
+      messageId, 
+      sessionId, 
+      userId, 
+      feedbackType, 
+      userQuery, 
+      aiResponse, 
+      userRole, 
+      responseMetadata 
+    } = req.body;
+
+    // Validate required fields
+    if (!messageId || !sessionId || !feedbackType || !userQuery || !aiResponse) {
+      return res.status(400).json({
+        success: false,
+        message: "Missing required feedback fields"
+      });
+    }
+
+    // Save feedback using storage interface
+    const feedback = await storage.saveFeedback({
+      messageId,
+      sessionId,
+      userId: userId || 'anonymous',
+      feedbackType,
+      userQuery,
+      aiResponse,
+      userRole: userRole || 'general_public',
+      responseMetadata: responseMetadata || '{}'
+    });
+
+    console.log(`[${sessionId}] Feedback saved: ${feedbackType} for message ${messageId}`);
+
+    res.json({
+      success: true,
+      message: "Feedback received and saved",
+      feedback
+    });
+  } catch (error) {
+    console.error("Feedback save error:", error);
+    res.status(500).json({
+      success: false,
+      message: "Failed to save feedback"
+    });
+  }
+});
+
 /**
  *
  */
