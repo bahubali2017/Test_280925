@@ -55,22 +55,22 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ node, ...props }) => (
-            <h1 className="text-2xl font-bold my-3 text-gray-900 dark:text-white" {...props} />
+            <h1 className="text-2xl font-bold mt-3 mb-2 text-gray-900 dark:text-white" {...props} />
           ),
           h2: ({ node, ...props }) => (
-            <h2 className="text-xl font-semibold my-2 text-gray-900 dark:text-white" {...props} />
+            <h2 className="text-xl font-semibold mt-2 mb-1 text-gray-900 dark:text-white" {...props} />
           ),
           h3: ({ node, ...props }) => (
-            <h3 className="text-lg font-semibold my-2 text-gray-900 dark:text-white" {...props} />
+            <h3 className="text-lg font-semibold mt-2 mb-1 text-gray-900 dark:text-white" {...props} />
           ),
           p: ({ node, ...props }) => (
-            <p className="my-2 text-foreground dark:text-foreground leading-relaxed" {...props} />
+            <p className="mb-1.5 text-foreground dark:text-foreground leading-relaxed" {...props} />
           ),
           ul: ({ node, ...props }) => (
-            <ul className="list-disc ml-6 my-2 space-y-1" {...props} />
+            <ul className="list-disc ml-6 mb-2 space-y-0.5" {...props} />
           ),
           ol: ({ node, ...props }) => (
-            <ol className="list-decimal ml-6 my-2 space-y-1" {...props} />
+            <ol className="list-decimal ml-6 mb-2 space-y-0.5" {...props} />
           ),
           li: ({ node, ...props }) => (
             <li className="text-foreground dark:text-foreground leading-relaxed" {...props} />
@@ -82,13 +82,13 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
             <em className="italic text-foreground dark:text-foreground" {...props} />
           ),
           blockquote: ({ node, ...props }) => (
-            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300 my-2" {...props} />
+            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300 my-1.5" {...props} />
           ),
           code: ({ node, inline, ...props }) => (
             inline ? (
               <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono" {...props} />
             ) : (
-              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto" {...props} />
+              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto my-2" {...props} />
             )
           ),
         }}
