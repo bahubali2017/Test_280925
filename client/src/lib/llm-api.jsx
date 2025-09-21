@@ -308,7 +308,39 @@ export async function sendMessage(message, history = [], options = {}) {
       msg.content.trim()
     ) : [];
 
-    // Check for expansion requests first
+    // CRITICAL: Run medical safety processing FIRST before any AI processing
+    const safetyResult = await processMedicalSafety(message, {
+      region,
+      demographics,
+      sessionId: currentSession
+    });
+
+    // If medical safety determines AI should be blocked (emergency/high-risk), return fallback immediately
+    if (safetyResult.shouldBlockAI && safetyResult.fallbackResponse) {
+      return {
+        content: safetyResult.fallbackResponse,
+        metadata: {
+          requestTime: Date.now() - startTime,
+          modelName: 'medical-safety-fallback',
+          isStreaming: false,
+          medicalSafety: {
+            blocked: true,
+            reason: safetyResult.safetyContext.emergencyDetection?.isEmergency ? 'emergency_detected' : 'safety_concern',
+            hasWarnings: true,
+            emergencyProtocol: safetyResult.emergencyProtocol
+          },
+          triageLevel: safetyResult.safetyContext.triageResult?.level,
+          triageWarning: safetyResult.triageWarning,
+          safetyNotices: safetyResult.safetyNotices,
+          queryIntent: {
+            isEmergency: safetyResult.emergencyProtocol,
+            atd: safetyResult.routeToProvider ? safetyResult.safetyContext.atdRouting : null
+          }
+        }
+      };
+    }
+
+    // Only proceed with expansion handling if safety checks pass
     const expansionResult = handleExpansionRequest(message, conversationHistory, userRole);
     
     let systemPrompt, enhancedPrompt;
@@ -415,14 +447,11 @@ export async function sendMessage(message, history = [], options = {}) {
     // Add medical disclaimers if needed
     content = addMedicalDisclaimers(content, isHighRisk);
 
-    // Apply medical safety processing if enabled
-    if (options.region || options.demographics) {
+    // Apply post-processing with the safety result we obtained earlier
+    if (safetyResult) {
       try {
-        const safetyResult = await processMedicalSafety(message, {
-          region,
-          demographics,
-          sessionId
-        });
+        // Post-process the AI response through safety filters
+        content = postProcessAIResponse(content, safetyResult.safetyContext);
 
         if (validateSafetyProcessing(safetyResult)) {
           const safetyData = safetyResult;
