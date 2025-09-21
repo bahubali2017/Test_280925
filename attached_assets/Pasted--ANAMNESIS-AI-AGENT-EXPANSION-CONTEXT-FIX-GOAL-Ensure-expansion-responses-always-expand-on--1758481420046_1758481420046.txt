@@ -1,0 +1,65 @@
+# ANAMNESIS AI AGENT – EXPANSION CONTEXT FIX
+
+GOAL  
+Ensure expansion responses always expand on the **immediate last user query**, not older educational contexts.
+
+---
+
+### TASKS
+
+1. **Conversation State Update**
+   - Add a new tracker in conversation state:
+     ```js
+     lastExpandableQuery = {
+       type: "educational" | "medication" | "symptom",
+       query: string,
+       responseId: string
+     }
+     ```
+   - Update this every time a query produces a concise or triage response.
+
+2. **Expansion Handler**
+   - When the user says "yes", "expand", "more", etc.:
+     - Always reference `lastExpandableQuery`.
+     - If `type === "symptom"`, trigger a **Symptom Expansion Prompt** instead of falling back to educational.
+
+3. **Symptom Expansion Prompt**
+   - Build expansion prompt for symptom queries:
+     ```
+     Provide detailed medical expansion for the reported symptom:
+     - Potential causes (common and serious)
+     - Red flag signs
+     - When to seek immediate medical care
+     - General lifestyle and monitoring advice
+     Add disclaimer at the end.
+     ```
+   - Example trigger: "I have chest pain" → expansion should cover:
+     - Possible cardiac, GI, musculoskeletal causes
+     - Emergency red flags
+     - Diagnostic pathways
+     - Safe next steps
+
+4. **Override Misalignment**
+   - If expansion is requested but `lastExpandableQuery` is older than 1 step:
+     → Ignore it and instead re-check the last user message.
+   - This prevents falling back to an unrelated educational answer.
+
+---
+
+### VALIDATION TESTS
+
+1. User: "What is IBS?"  
+   - Gets educational concise → Expand = detailed IBS ✅  
+
+2. User: "What is the dosage of ibuprofen?"  
+   - Gets concise → Expand = detailed ibuprofen info ✅  
+
+3. User: "I have chest pain"  
+   - Gets triage emergency response → Expand = detailed chest pain explanation ✅  
+
+---
+
+### EXPECTED RESULT
+- 🟢 Expansion always follows **the most recent query**, regardless of query type.  
+- 🟢 Symptom triage queries now expand into a **red-flag-focused detailed response**.  
+- 🟢 No more misalignment with older educational queries.
