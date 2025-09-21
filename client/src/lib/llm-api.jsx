@@ -321,6 +321,16 @@ export async function sendMessage(message, history = [], options = {}) {
       const content = typeof fallback === 'string' ? fallback : 
                      (fallback?.response ?? 'Please seek emergency medical care immediately. Call your local emergency services.');
       
+      // Track emergency context for follow-up expansion if available
+      if (fallback?.emergencyContext) {
+        const responseId = `emergency_${currentSession}_${Date.now()}`;
+        updateLastExpandableQuery(
+          fallback.emergencyContext.originalQuery || message, 
+          fallback.emergencyContext.symptom || 'emergency', 
+          responseId
+        );
+      }
+      
       return {
         content,
         metadata: {
@@ -336,8 +346,10 @@ export async function sendMessage(message, history = [], options = {}) {
           triageLevel: safetyResult.safetyContext.triageResult?.level,
           triageWarning: safetyResult.triageWarning,
           safetyNotices: safetyResult.safetyNotices,
+          followUpQuestions: fallback?.followUpQuestions || [],
           queryIntent: {
             isEmergency: safetyResult.emergencyProtocol,
+            emergencyContext: fallback?.emergencyContext,
             atd: safetyResult.routeToProvider ? safetyResult.safetyContext.atdRouting : null
           }
         }

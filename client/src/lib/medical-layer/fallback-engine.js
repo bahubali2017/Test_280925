@@ -6,6 +6,141 @@
 import { SAFETY_DISCLAIMERS, filterOverconfidentLanguage } from '../config/safety-rules.js';
 
 /**
+ * Generate context-aware emergency response based on symptoms
+ * @param {string} originalQuery - User's original query
+ * @param {object} context - Emergency context
+ * @returns {FallbackResponse} Context-specific emergency response
+ */
+function generateContextAwareEmergencyResponse(originalQuery, context) {
+  const queryLower = originalQuery.toLowerCase();
+  
+  // Chest pain specific emergency response
+  if (queryLower.includes('chest pain') || queryLower.includes('chest hurt') || queryLower.includes('heart pain')) {
+    return {
+      response: generateChestPainEmergencyResponse(),
+      type: "emergency",
+      disclaimer: SAFETY_DISCLAIMERS.emergency,
+      requiresHumanIntervention: true,
+      recommendedActions: [
+        "Call emergency services (911) immediately if experiencing severe symptoms",
+        "Sit down and remain calm",
+        "Chew aspirin if not allergic (only if directed by emergency services)",
+        "Monitor for worsening symptoms"
+      ],
+      followUpQuestions: [
+        "Are there support groups for this?",
+        "What symptoms should I watch for?", 
+        "How can I prevent this?",
+        "What treatment options are available?"
+      ],
+      emergencyContext: {
+        symptom: 'chest_pain',
+        severity: 'emergency',
+        originalQuery: originalQuery
+      },
+      fallbackReason: "Chest pain emergency detected"
+    };
+  }
+  
+  // Breathing difficulty emergency response
+  if (queryLower.includes('can\'t breathe') || queryLower.includes('difficulty breathing') || queryLower.includes('shortness of breath')) {
+    return {
+      response: generateBreathingEmergencyResponse(),
+      type: "emergency", 
+      disclaimer: SAFETY_DISCLAIMERS.emergency,
+      requiresHumanIntervention: true,
+      recommendedActions: [
+        "Call emergency services (911) immediately",
+        "Sit upright in a comfortable position",
+        "Loosen tight clothing",
+        "Stay calm and breathe slowly"
+      ],
+      followUpQuestions: [
+        "What breathing techniques can help?",
+        "How can I prevent breathing difficulties?",
+        "What are the warning signs?",
+        "What treatment options exist?"
+      ],
+      emergencyContext: {
+        symptom: 'breathing_difficulty',
+        severity: 'emergency',
+        originalQuery: originalQuery
+      },
+      fallbackReason: "Breathing emergency detected"
+    };
+  }
+  
+  // Generic emergency fallback for other emergencies
+  return {
+    response: "I've detected that this may be a medical emergency. I cannot provide adequate guidance for emergency situations.",
+    type: "emergency",
+    disclaimer: SAFETY_DISCLAIMERS.emergency,
+    requiresHumanIntervention: true,
+    recommendedActions: [
+      "Call emergency services immediately",
+      "Seek immediate medical attention",
+      "Do not rely on AI assistance for emergency care"
+    ],
+    followUpQuestions: [
+      "What are the warning signs?",
+      "How can I get immediate help?",
+      "What should I do while waiting for help?"
+    ],
+    emergencyContext: {
+      symptom: 'general_emergency',
+      severity: 'emergency',
+      originalQuery: originalQuery
+    },
+    fallbackReason: "Emergency situation detected"
+  };
+}
+
+/**
+ * Generate specific chest pain emergency response with immediate red flags
+ * @returns {string} Detailed chest pain emergency guidance
+ */
+function generateChestPainEmergencyResponse() {
+  return `🚨 **CHEST PAIN EMERGENCY DETECTED**
+
+**CALL 911 IMMEDIATELY IF YOU HAVE:**
+• Pain radiating to left shoulder, arm, neck, or jaw
+• Difficulty breathing or shortness of breath  
+• Heart palpitations or irregular heartbeat
+• Sweating, nausea, or lightheadedness
+• Crushing or pressure sensation in chest
+
+**IMMEDIATE ACTIONS:**
+1. **CALL 911 NOW** if experiencing severe symptoms
+2. Sit down and rest immediately
+3. If conscious and not allergic, chew 1 aspirin (only if emergency services advise)
+4. Loosen tight clothing
+5. Stay calm and monitor symptoms
+
+⚠️ **This could be a heart attack or other life-threatening condition. Do not wait - seek emergency care immediately.**`;
+}
+
+/**
+ * Generate specific breathing difficulty emergency response
+ * @returns {string} Detailed breathing emergency guidance  
+ */
+function generateBreathingEmergencyResponse() {
+  return `🚨 **BREATHING EMERGENCY DETECTED**
+
+**CALL 911 IMMEDIATELY - This is a medical emergency**
+
+**IMMEDIATE ACTIONS:**
+1. **CALL 911 NOW**
+2. Sit upright in the most comfortable position
+3. Loosen any tight clothing around neck/chest
+4. Stay as calm as possible
+5. Breathe slowly and deeply if able
+
+**CRITICAL SIGNS:** Difficulty breathing can indicate serious conditions like heart attack, asthma attack, allergic reaction, or pulmonary embolism.
+
+⚠️ **Do not delay emergency care - breathing difficulties require immediate medical attention.**`;
+}
+
+/**
  * Fallback response when AI systems fail or provide inadequate responses
  * @typedef {object} FallbackResponse
  * @property {string} response - Fallback response text
@@ -27,22 +162,11 @@ import { SAFETY_DISCLAIMERS, filterOverconfidentLanguage } from '../config/safet
  * @returns {FallbackResponse} Appropriate fallback response
  */
 export function generateFallbackResponse(context) {
-  const { reason, triageLevel, isEmergency, isMentalHealth } = context;
+  const { originalQuery, reason, triageLevel, isEmergency, isMentalHealth } = context;
   
-  // Emergency fallback - highest priority
+  // Emergency fallback - highest priority with context-aware responses
   if (isEmergency) {
-    return {
-      response: "I've detected that this may be a medical emergency. I cannot provide adequate guidance for emergency situations.",
-      type: "emergency",
-      disclaimer: SAFETY_DISCLAIMERS.emergency,
-      requiresHumanIntervention: true,
-      recommendedActions: [
-        "Call emergency services immediately",
-        "Seek immediate medical attention",
-        "Do not rely on AI assistance for emergency care"
-      ],
-      fallbackReason: "Emergency situation detected"
-    };
+    return generateContextAwareEmergencyResponse(originalQuery || '', context);
   }
   
   // Mental health crisis fallback

@@ -99,7 +99,14 @@ export function buildExpansionPrompt(originalQuery, userRole, questionType = "ge
         expansionLine = "Provide a detailed medication reference: dosage ranges, side effects, interactions, contraindications, monitoring parameters, and patient counseling points.";
         break;
       case "symptom":
+      case "chest_pain":
         expansionLine = buildSymptomExpansionPrompt();
+        break;
+      case "breathing_difficulty":
+        expansionLine = buildBreathingExpansionPrompt();
+        break;
+      case "emergency":
+        expansionLine = buildEmergencyExpansionPrompt(originalQuery);
         break;
       case "educational":
         expansionLine = "Provide a detailed educational explanation: definitions, causes, risk factors, complications, diagnostic approaches, and management overview.";
@@ -117,6 +124,56 @@ Original Query: "${originalQuery}"
 ${expansionLine}
 Always include: ⚠️ Informational purposes only. Not a substitute for professional medical advice.
   `.trim();
+}
+
+/**
+ * Builds specific expansion prompt for breathing difficulty cases
+ * @returns {string} - Breathing-specific expansion instructions
+ */
+export function buildBreathingExpansionPrompt() {
+  return `Provide detailed medical expansion for breathing difficulties:
+• Common vs serious causes of breathing problems
+• When to seek immediate emergency care vs urgent care
+• Breathing techniques that may help in non-emergency situations
+• Warning signs that require immediate medical attention
+• General monitoring and prevention strategies
+Add appropriate emergency disclaimer emphasizing when to call 911.`;
+}
+
+/**
+ * Builds specific expansion prompt for emergency follow-up questions
+ * @param {string} originalQuery - The original emergency query
+ * @returns {string} - Emergency-specific expansion instructions
+ */
+export function buildEmergencyExpansionPrompt(originalQuery) {
+  const queryLower = originalQuery.toLowerCase();
+  
+  if (queryLower.includes('chest pain') || queryLower.includes('heart pain')) {
+    return `Provide detailed follow-up information for chest pain emergency context:
+• Support resources and cardiac rehabilitation programs
+• Warning signs for future episodes requiring immediate care
+• Prevention strategies for cardiovascular health
+• Treatment options and recovery guidance (general information only)
+• When to follow up with healthcare providers
+CRITICAL: Always emphasize that for any acute symptoms, emergency services should be contacted immediately.`;
+  }
+  
+  if (queryLower.includes('breathing') || queryLower.includes('breathe')) {
+    return `Provide detailed follow-up information for breathing emergency context:
+• Breathing support techniques for non-emergency situations
+• Warning signs that require immediate emergency care
+• Prevention strategies for respiratory health
+• General information about treatment approaches
+• When to seek follow-up care with healthcare providers
+CRITICAL: Always emphasize that for acute breathing difficulties, emergency services should be contacted immediately.`;
+  }
+  
+  return `Provide detailed follow-up information related to the emergency context:
+• General support and recovery information
+• Warning signs requiring immediate medical attention
+• Prevention and monitoring strategies
+• When to seek professional medical follow-up
+CRITICAL: Always emphasize that for any acute emergency symptoms, emergency services should be contacted immediately.`;
 }
 
 /**
