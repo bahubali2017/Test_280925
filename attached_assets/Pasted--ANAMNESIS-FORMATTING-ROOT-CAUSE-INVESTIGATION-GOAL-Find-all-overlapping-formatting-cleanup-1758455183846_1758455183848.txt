@@ -1,0 +1,67 @@
+# ANAMNESIS — FORMATTING ROOT CAUSE INVESTIGATION
+
+GOAL
+Find **all overlapping formatting/cleanup functions** across server + client that are interfering with AI responses. Identify duplication and conflicts that cause:
+- Mashed-together words (spaces removed)
+- Persistent stray markers ("--")
+- Broken markdown (headers/bullets)
+
+FILES TO SCAN
+- server/routes.js
+- server/middleware/*
+- server/utils/*
+- client/src/lib/medical-safety-processor.js
+- client/src/lib/streaming-handler.js
+- client/src/lib/prompt-enhancer.js
+- client/src/components/MessageBubble.jsx
+- client/src/lib/markdown-formatter.js (if exists)
+- client/src/hooks/* (check for sanitize/clean hooks)
+
+TASKS
+
+1. SEARCH FOR CLEANUP FUNCTIONS
+Look for any `.replace()`, `.trim()`, `.normalize()`, or regex functions that modify text:
+- cleanStrayMarkers
+- cleanMarkdownFormatting
+- processAIResponse
+- processFinalResponse
+- any `sanitize*` or `normalize*`
+
+2. SEARCH FOR DUPLICATES
+Check if multiple layers are cleaning the same thing:
+- Server cleanup (routes.js, utils)
+- Client cleanup (medical-safety-processor.js)
+- UI rendering cleanup (MessageBubble.jsx)
+- Markdown rendering overrides
+
+3. TRACE PIPELINE
+Trace one sample response flow:
+AI Response (stream token) →
+Server preprocessing →
+Server cleanup →
+SSE chunk streaming →
+Client streaming handler →
+Client cleanup →
+React rendering →
+Final text on screen
+
+Identify **where multiple cleanups overlap**.
+
+4. REPORT ROOT CAUSES
+Output a report with:
+- File path + function name
+- Regex/patterns applied
+- Whether it trims/strips/rewrites spacing
+- Risk level: 🟥 (destructive), 🟧 (conflicting), 🟩 (safe)
+
+5. MAKE RECOMMENDATION
+Which cleanup should remain?
+- ✅ Keep: End-of-stream cleanup only
+- ❌ Remove: Chunk-level trimming/cleanup
+- ❌ Remove: Duplicate client-side formatters
+
+Deliver an **ordered cleanup plan**:
+- Step 1: Disable chunk-level cleanup
+- Step 2: Centralize formatting in processFinalResponse
+- Step 3: Preserve markdown until ReactMarkdown renders
+- Step 4: Test with “What is IBS?”, “Ibuprofen dosage”, “Chest pain”
