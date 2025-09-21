@@ -446,7 +446,7 @@ export async function sendMessage(message, history = [], options = {}) {
     if (isDebug()) {
       trace('[TRACE] beforeRequestEnvelope', { endpoint, requestBodyKeys: Object.keys(requestBody) });
       trace('[TRACE] requestEnvelope', {
-        questionType, mode, userRole, canExpand: metadata?.canExpand === true
+        questionType, mode, userRole, hasMetadata: !!metadata, canExpand: metadata?.canExpand === true
       });
     }
     
