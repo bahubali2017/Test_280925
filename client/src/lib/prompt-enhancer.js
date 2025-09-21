@@ -1,6 +1,6 @@
 import { selectDisclaimers } from "./disclaimers.js";
 import { AI_FLAGS, CONCISE_SETTINGS, CLASSIFIER_SETTINGS } from "../config/ai-flags.js";
-import { detectExpansionRequest, buildExpansionPrompt, extractOriginalQuery } from "./expansion-handler.js";
+// OLD expansion-handler.js imports removed - using new expansion-state.js system
 
 /** Inline fallbacks if templates cannot be loaded from disk */
 const FALLBACK_TEMPLATES = {
@@ -394,27 +394,7 @@ Always include appropriate medical disclaimers and safety guidance.`;
  * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string }}
  */
 export function enhancePrompt(ctx, userRole = "public", conversationHistory = []) {
-  // Check if this is an expansion request
-  if (detectExpansionRequest(ctx.userInput)) {
-    const originalQuery = extractOriginalQuery(conversationHistory);
-    if (originalQuery) {
-      // Classify the original query to provide context-aware expansion
-      const originalQuestionType = classifyQuestionType(originalQuery);
-      
-      // Build expansion prompt instead of normal triage flow
-      const expansionPrompt = buildExpansionPrompt(originalQuery, userRole, originalQuestionType);
-      
-      // Return expansion-specific response structure
-      return {
-        systemPrompt: `EXPANSION MODE: Provide detailed follow-up information for the original query.`,
-        enhancedPrompt: expansionPrompt,
-        atdNotices: [],
-        disclaimers: ["⚠️ Informational purposes only. Not a substitute for professional medical advice."],
-        suggestions: [],
-        expansionPrompt: ""
-      };
-    }
-  }
+  // OLD expansion detection removed - handled by new expansion-state.js system in llm-api.jsx
   
   // Classify question type for intelligent response mode selection
   const questionType = classifyQuestionType(ctx.userInput);

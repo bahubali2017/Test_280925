@@ -711,10 +711,19 @@ export function MessageBubble({
 
             {/* NEW: Expansion invitation - show only when response can be expanded */}
             {!isUser && isLast && metadata?.canExpand && !isStreaming && 
-             (status === 'delivered' || status === 'completed' || status === 'stopped') && (
+             (status === 'delivered' || status === 'completed' || status === 'stopped') && (() => {
+               console.log('🔘 [MessageBubble] Expansion button conditions:', { 
+                 isUser, isLast, canExpand: metadata?.canExpand, isStreaming, status,
+                 questionType: metadata?.questionType, userRole: metadata?.userRole 
+               });
+               return true;
+             })() && (
               <div className="mt-4 pt-3 border-t border-border dark:border-border/70 animate-fade-in">
                 <button
-                  onClick={() => onFollowUpClick && onFollowUpClick("yes, expand")}
+                  onClick={() => {
+                    console.log('👆 [MessageBubble] Expansion button clicked');
+                    onFollowUpClick && onFollowUpClick("yes, expand");
+                  }}
                   className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 dark:from-cyan-900/30 dark:to-cyan-800/30 dark:hover:from-cyan-800/40 dark:hover:to-cyan-700/40 dark:text-cyan-300 text-sm rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-cyan-200 dark:border-cyan-700/50 hover:border-cyan-300 dark:hover:border-cyan-600/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
                   aria-label="Expand for more detailed information"
                   data-testid="expansion-button"

@@ -10,10 +10,7 @@
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
 import { enhancePrompt, classifyQuestionType, buildPromptsForQuery } from './prompt-enhancer.js';
 import { createLayerContext } from './layer-context.js';
-import { 
-  handleExpansionRequest, 
-  updateLastExpandableQuery
-} from './expansion-handler.js';
+// OLD expansion-handler.js imports removed - using new expansion-state.js system
 import { 
   setLastExpandable, 
   clearLastExpandable, 
@@ -333,11 +330,13 @@ export async function sendMessage(message, history = [], options = {}) {
       // Track emergency context for follow-up expansion if available
       if (fallback?.emergencyContext) {
         const responseId = `emergency_${currentSession}_${Date.now()}`;
-        updateLastExpandableQuery(
-          fallback.emergencyContext.originalQuery || message, 
-          fallback.emergencyContext.symptom || 'emergency', 
-          responseId
-        );
+        // Use new expansion state for emergency context tracking
+        setLastExpandable({
+          messageId: responseId,
+          questionType: 'emergency',
+          query: fallback.emergencyContext.originalQuery || message,
+          role: userRole
+        });
       }
       
       return {
@@ -402,6 +401,8 @@ export async function sendMessage(message, history = [], options = {}) {
       enhancedPrompt = message.trim(); // Simple user prompt for fresh queries
       questionType = promptResult.questionType;
       mode = promptResult.mode;
+      
+      console.log('🎯 [LLM-API] New system routing:', { message, questionType, mode, userRole });
       
       // For concise medication answers, we'll arm expansion after successful completion
     }
@@ -556,11 +557,15 @@ export async function sendMessage(message, history = [], options = {}) {
       metadata.responseMode = mode;
       metadata.questionType = questionType;
       metadata.canExpand = true;
+      
+      console.log('⚡ [LLM-API] Arming expansion:', { responseId, questionType, mode, canExpand: true });
     } else {
       // For non-concise responses, don't arm expansion
       metadata.responseMode = mode;
       metadata.questionType = questionType;
       metadata.canExpand = false;
+      
+      console.log('❌ [LLM-API] Not arming expansion:', { mode, hasContent: !!content, blocked: metadata.medicalSafety.blocked });
     }
 
     return {

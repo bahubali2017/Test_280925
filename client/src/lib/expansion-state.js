@@ -29,6 +29,7 @@ let pendingExpansion = false;
  * @param {string} ctx.role - User role
  */
 export function setLastExpandable(ctx) {
+  console.log('🟢 [EXPANSION-STATE] setLastExpandable called:', ctx);
   lastExpandable = { 
     ...ctx, 
     createdAt: Date.now() 
@@ -39,6 +40,7 @@ export function setLastExpandable(ctx) {
  * Clear the expansion state completely
  */
 export function clearLastExpandable() {
+  console.log('🔴 [EXPANSION-STATE] clearLastExpandable called');
   lastExpandable = null;
   pendingExpansion = false;
 }
@@ -75,9 +77,12 @@ export function isAffirmativeExpansion(text) {
     "yes", "expand", "more", "more details", "details", "tell me more"
   ];
   
-  return expansionTriggers.some(trigger => 
+  const isExpansion = expansionTriggers.some(trigger => 
     t === trigger || t.startsWith(trigger)
   );
+  
+  console.log('🔍 [EXPANSION-STATE] isAffirmativeExpansion check:', { text, normalized: t, isExpansion });
+  return isExpansion;
 }
 
 /**
