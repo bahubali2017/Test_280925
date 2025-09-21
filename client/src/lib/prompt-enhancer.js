@@ -428,8 +428,11 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
 
   const enhancedPrompt = `${header}${contextBlock}\n\nPlease analyze and respond within the policy above.`;
 
-  // Generate context-aware suggestions
-  const suggestions = generateFollowUpSuggestions(ctx);
+  // Generate context-aware suggestions ONLY if expansion is enabled
+  // CRITICAL FIX: Don't generate suggestions when expansion is disabled
+  const suggestions = (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) 
+    ? generateFollowUpSuggestions(ctx) 
+    : [];
   
   // Generate expansion prompt ONLY if expansion is globally enabled
   // CRITICAL: ALL expansion must respect the master flag
