@@ -229,17 +229,35 @@ function buildRolePolicy(userRole, isMedicationQuery) {
 }
 
 /**
- * Apply concise mode formatting with role-specific expansion prompts
+ * Apply concise mode formatting with context-aware expansion prompts
  * @param {string} template - Base template
  * @param {string} [userRole="public"] - User role for role-specific expansion prompts
+ * @param {string} [questionType="general"] - Question type for context-aware prompts
  * @returns {string}
  */
-function applyConciseMode(template, userRole = "public") {
+function applyConciseMode(template, userRole = "public", questionType = "general") {
   if (!AI_FLAGS.ENABLE_CONCISE_MODE) return template;
   
-  const expansionLine = (userRole === "doctor" || userRole === "verified_healthcare")
-    ? "Would you like me to expand with further clinical details (algorithms, monitoring, pearls)?"
-    : "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
+  // Generate context-aware expansion prompts
+  let expansionLine;
+  if (userRole === "doctor" || userRole === "verified_healthcare") {
+    expansionLine = "Would you like me to expand with further clinical details (algorithms, monitoring, pearls)?";
+  } else {
+    // Context-aware expansion prompts for public users
+    switch (questionType) {
+      case "medication":
+        expansionLine = "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
+        break;
+      case "symptom":
+        expansionLine = "Would you like more detailed information about this condition?";
+        break;
+      case "educational":
+      case "general":
+      default:
+        expansionLine = "Would you like more detailed information about this topic?";
+        break;
+    }
+  }
 
   return template + `
 
@@ -387,14 +405,14 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
     
     systemPrompt = educationalPrompt;
   } else if (questionType === "medication") {
-    // Medication questions: Use concise mode with expansion option
-    systemPrompt = applyConciseMode(systemPrompt, userRole);
+    // Medication questions: Use concise mode with medication-specific expansion option
+    systemPrompt = applyConciseMode(systemPrompt, userRole, "medication");
   } else if (questionType === "symptom") {
-    // Symptom questions: Use existing triage templates (already handled above)
-    systemPrompt = applyConciseMode(systemPrompt, userRole);
+    // Symptom questions: Use existing triage templates with symptom-specific expansion
+    systemPrompt = applyConciseMode(systemPrompt, userRole, "symptom");
   } else {
-    // Fallback: Apply concise mode
-    systemPrompt = applyConciseMode(systemPrompt, userRole);
+    // Fallback: Apply concise mode with general expansion
+    systemPrompt = applyConciseMode(systemPrompt, userRole, "general");
   }
 
   // Prefix severe with ATD block

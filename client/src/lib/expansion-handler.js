@@ -24,12 +24,32 @@ export function detectExpansionRequest(userInput) {
  * Builds expansion prompt for detailed follow-up response
  * @param {string} originalQuery - The original medical query
  * @param {string} userRole - User role (doctor/public)
+ * @param {string} [questionType="general"] - Question type for context-aware expansion
  * @returns {string} - Enhanced expansion prompt
  */
-export function buildExpansionPrompt(originalQuery, userRole) {
-  const expansionLine = (userRole === "doctor")
-    ? "Provide a detailed, structured clinical explanation with algorithms, monitoring, contraindications, and references."
-    : "Provide a more detailed, patient-friendly explanation with side effects, interactions, precautions, and references.";
+export function buildExpansionPrompt(originalQuery, userRole, questionType = "general") {
+  let expansionLine;
+  
+  if (userRole === "doctor") {
+    expansionLine = "Provide a detailed, structured clinical explanation with algorithms, monitoring, contraindications, and references.";
+  } else {
+    // Context-aware expansion for public users
+    switch (questionType) {
+      case "medication":
+        expansionLine = "Provide a more detailed, patient-friendly explanation with side effects, interactions, precautions, and references.";
+        break;
+      case "symptom":
+        expansionLine = "Provide a more detailed explanation about this condition, including management approaches and when to seek care.";
+        break;
+      case "educational":
+        expansionLine = "Provide a more comprehensive educational explanation with additional details and clinical context.";
+        break;
+      case "general":
+      default:
+        expansionLine = "Provide a more detailed, comprehensive explanation about this topic.";
+        break;
+    }
+  }
 
   return `
 [Expansion Mode Active]
