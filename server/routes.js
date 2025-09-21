@@ -1156,8 +1156,8 @@ router.get("/app-config.json", async (req, res) => {
 
         // Early exit check - don't process anything if connection was aborted
         if (!closed && !controller.signal.aborted) {
-          // Finalize the streaming response and apply final processing
-          responseText = await processAIResponse(responseText, sessionId);
+          // CLEANUP FIX: Stream raw text only, no server-side processing
+          // Client-side processFinalResponse() handles all cleanup
           const requestDuration = Date.now() - startTime;
           // Only log completion if client is still connected
           if (!closed && !controller.signal.aborted) {
