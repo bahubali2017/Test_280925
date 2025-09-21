@@ -116,13 +116,15 @@ export async function processMedicalSafety(userInput, options = {}) {
  */
 function cleanStrayMarkers(text) {
   return text
-    // remove stray dashes used as separators
-    .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
-    // remove isolated dashes at start of line
+    // remove lines with only dashes
     .replace(/^\s*[-–]{2,}\s*$/gm, "")
-    // normalize multiple newlines
+    // remove bullet + dashes (e.g., "• --" or "- --")
+    .replace(/^\s*[•\-]\s*[-–]{2,}\s*$/gm, "")
+    // remove bullet + space + dash separators inline
+    .replace(/•\s*[-–]{2,}/g, "•")
+    // collapse triple or more newlines into two
     .replace(/\n{3,}/g, "\n\n")
-    // remove trailing or leading whitespace
+    // trim whitespace
     .trim();
 }
 
