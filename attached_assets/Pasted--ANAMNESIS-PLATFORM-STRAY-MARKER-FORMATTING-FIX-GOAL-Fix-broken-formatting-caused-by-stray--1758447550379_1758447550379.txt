@@ -1,0 +1,87 @@
+# ANAMNESIS PLATFORM — STRAY MARKER & FORMATTING FIX
+
+GOAL
+Fix broken formatting caused by stray marker cleanup running during streaming.  
+Consolidate formatting responsibility to the client layer, applied only after the full response is received.
+
+==================================================
+FILES TO UPDATE
+- server/routes.js
+- client/src/lib/medical-safety-processor.js
+- client/src/components/MessageBubble.jsx
+- build cache config (if present)
+
+==================================================
+TASKS
+
+1) SERVER: Stop Streaming Cleanup
+In `server/routes.js`, remove `cleanStrayMarkers` calls inside streaming chunks.  
+Only apply:
+- Safety filters
+- Disclaimer injection
+
+Leave formatting untouched.
+
+2) CLIENT: Final Cleanup After Completion
+In `medical-safety-processor.js`, update `processFinalResponse`:
+
+```js
+export function processFinalResponse(aiOutput) {
+  // run cleanup once at the end of the response
+  return cleanStrayMarkers(aiOutput);
+}
+Ensure this is called after the last SSE event, not per chunk.
+
+CLEANUP FUNCTION (Client Only)
+Keep robust stray marker handling:
+
+js
+Copy code
+function cleanStrayMarkers(text) {
+  return text
+    .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ")      // invisible chars
+    .replace(/^[\s]*[•◦●▣*]+/gm, "-")                 // normalize bullets
+    .replace(/-\s*[-–]{2,}/g, "-")                    // remove "- --"
+    .replace(/^\s*[-–]{2,}\s*$/gm, "")                // remove dash-only lines
+    .replace(/\n{3,}/g, "\n\n")                       // normalize spacing
+    .trim();
+}
+CLIENT: Message Renderer
+In MessageBubble.jsx:
+
+Render cleaned text with markdown parser (ReactMarkdown or similar).
+
+Preserve headers, bullets, disclaimers.
+
+jsx
+Copy code
+<ReactMarkdown>{processFinalResponse(message.text)}</ReactMarkdown>
+CACHE FIX
+Update build cache system to include:
+
+js
+Copy code
+const importantFiles = [
+  'package.json', 'vite.config.ts',
+  'server/routes.js',
+  'client/src/components/MessageBubble.jsx',
+  'client/src/lib/medical-safety-processor.js'
+];
+==================================================
+TEST CASES
+
+Case 1: Educational (IBS)
+Input: "What is IBS?"
+Expected: Full structured markdown with headers, bullets.
+No "• --" or broken walls of text.
+
+Case 2: Medication (Ibuprofen)
+Input: "What is the dosage of ibuprofen for adults?"
+Expected: Concise bullets, disclaimer.
+Expansion: Full detailed answer.
+Formatting intact.
+
+Case 3: Symptom (Chest Pain)
+Input: "I have chest pain"
+Expected: Urgent triage response, formatted bullets + disclaimer.
+No stray markers.

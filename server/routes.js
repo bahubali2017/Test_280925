@@ -1131,17 +1131,13 @@ router.get("/app-config.json", async (req, res) => {
                   const content = data.choices?.[0]?.delta?.content || '';
 
                   if (content) {
-                    // Clean content before sending and accumulating - APPLY ALL CLEANUP TO CHUNKS
-                    let cleanedContent = content.replace(/#/g, '');
-                    // Apply stray marker cleanup to each chunk immediately
-                    cleanedContent = cleanStrayMarkers(cleanedContent);
-
+                    // STREAMING-SAFE: Send chunks as-is, preserve all formatting
                     // Accumulate response text
-                    responseText += cleanedContent;
+                    responseText += content;
 
-                    // Send the cleaned chunk to the client using event-based format for SSE
+                    // Send the raw chunk to the client using event-based format for SSE
                     if (!closed && !res.writableEnded && !controller.signal.aborted) {
-                      res.write(`event: chunk\ndata: ${JSON.stringify({ text: cleanedContent })}\n\n`);
+                      res.write(`event: chunk\ndata: ${JSON.stringify({ text: content })}\n\n`);
                       // Flush to ensure immediate delivery
                       if (res.flush) res.flush();
                     }
