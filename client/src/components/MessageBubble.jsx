@@ -1,5 +1,7 @@
 /* global setTimeout */
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { processFinalResponse } from '../lib/medical-safety-processor';
@@ -25,13 +27,13 @@ import { processFinalResponse } from '../lib/medical-safety-processor';
 
 
 /**
- * Helper to format message content with line breaks and bold formatting
+ * Helper to format message content using ReactMarkdown
  * @param {string} content - The message content
  * @param {boolean} [isStreaming=false] - Whether content is being streamed
  * @param {string} [partialContent=''] - Partial content for streaming display
  * @param _partialContent
  * @param status
- * @returns {JSX.Element|null} Formatted content with line breaks and bold titles
+ * @returns {JSX.Element|null} Formatted content with proper Markdown rendering
  */
 function formatMessageContent(content, isStreaming = false, _partialContent = '', status = 'sent') {
   // For streaming, always show the content as it updates in real-time
@@ -43,60 +45,56 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
   const displayContent = isStreaming 
     ? rawContent // Preserve formatting during streaming
     : processFinalResponse(rawContent, {}, ''); // Apply full cleanup when complete
-  
-
-  // Convert newlines to JSX and handle bold formatting
-  const formattedContent = [];
-  const lines = displayContent.split('\n');
-
-  for (let i = 0; i < lines.length; i++) {
-    const line = lines[i];
-    
-    // Check if line contains bold formatting
-    if (line.includes('**')) {
-      // Split by bold markers and create spans with bold styling
-      const parts = line.split(/\*\*(.*?)\*\*/g);
-      const lineContent = [];
-      
-      for (let j = 0; j < parts.length; j++) {
-        if (j % 2 === 0) {
-          // Regular text
-          if (parts[j]) {
-            lineContent.push(<span key={`part-${j}`}>{parts[j]}</span>);
-          }
-        } else {
-          // Bold text with enhanced styling
-          lineContent.push(
-            <strong key={`bold-${j}`} className="font-bold text-gray-900 dark:text-white" style={{fontWeight: 'bold'}}>
-              {parts[j]}
-            </strong>
-          );
-        }
-      }
-      
-      formattedContent.push(
-        <span key={`line-${i}`}>{lineContent}</span>
-      );
-    } else {
-      // Regular line without bold formatting
-      formattedContent.push(
-        <span key={`line-${i}`}>{line}</span>
-      );
-    }
-
-    // Add line break if not the last line
-    if (i < lines.length - 1) {
-      formattedContent.push(<br key={`br-${i}`} />);
-    }
-  }
 
   // Only show typing indicator if streaming is active and message is not delivered
   const showTypingIndicator = isStreaming && status !== 'delivered';
 
-  // Use a stable, smooth animation instead of potentially flickery one
   return (
     <div className="relative" data-status={status}>
-      {formattedContent}
+      <ReactMarkdown
+        remarkPlugins={[remarkGfm]}
+        components={{
+          h1: ({ node, ...props }) => (
+            <h1 className="text-2xl font-bold my-3 text-gray-900 dark:text-white" {...props} />
+          ),
+          h2: ({ node, ...props }) => (
+            <h2 className="text-xl font-semibold my-2 text-gray-900 dark:text-white" {...props} />
+          ),
+          h3: ({ node, ...props }) => (
+            <h3 className="text-lg font-semibold my-2 text-gray-900 dark:text-white" {...props} />
+          ),
+          p: ({ node, ...props }) => (
+            <p className="my-2 text-foreground dark:text-foreground leading-relaxed" {...props} />
+          ),
+          ul: ({ node, ...props }) => (
+            <ul className="list-disc ml-6 my-2 space-y-1" {...props} />
+          ),
+          ol: ({ node, ...props }) => (
+            <ol className="list-decimal ml-6 my-2 space-y-1" {...props} />
+          ),
+          li: ({ node, ...props }) => (
+            <li className="text-foreground dark:text-foreground leading-relaxed" {...props} />
+          ),
+          strong: ({ node, ...props }) => (
+            <strong className="font-bold text-gray-900 dark:text-white" {...props} />
+          ),
+          em: ({ node, ...props }) => (
+            <em className="italic text-foreground dark:text-foreground" {...props} />
+          ),
+          blockquote: ({ node, ...props }) => (
+            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300 my-2" {...props} />
+          ),
+          code: ({ node, inline, ...props }) => (
+            inline ? (
+              <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono" {...props} />
+            ) : (
+              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto" {...props} />
+            )
+          ),
+        }}
+      >
+        {displayContent}
+      </ReactMarkdown>
       {showTypingIndicator && (
         <span className="typing-indicator ml-1">
           <span className="dot"></span>
