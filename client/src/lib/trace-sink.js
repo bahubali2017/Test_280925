@@ -1,6 +1,11 @@
 // client/src/lib/trace-sink.js
 // Debug Trace Sink: Redirects debug traces to the server
 
+/**
+ *
+ * @param label
+ * @param data
+ */
 export function trace(label, data) {
   try {
     fetch('/debug-trace', {

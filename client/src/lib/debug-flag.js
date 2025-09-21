@@ -9,6 +9,11 @@ export function isDebug() {
 
 import { trace as serverTrace } from './trace-sink.js';
 
+/**
+ *
+ * @param label
+ * @param data
+ */
 export function trace(label, data) {
   if (isDebug()) {
     serverTrace(label, data);
