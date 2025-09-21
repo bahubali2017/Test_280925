@@ -41,10 +41,11 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
 
   if (!rawContent) return null;
 
-  // Use processFinalResponse for complete responses, basic cleanup for streaming
+  // For ReactMarkdown, we don't want aggressive text cleanup that destroys markdown
+  // Only apply basic safety processing without the stray marker cleaning
   const displayContent = isStreaming 
     ? rawContent // Preserve formatting during streaming
-    : processFinalResponse(rawContent, {}, ''); // Apply full cleanup when complete
+    : rawContent; // Let ReactMarkdown handle the formatting - skip processFinalResponse
 
   // Only show typing indicator if streaming is active and message is not delivered
   const showTypingIndicator = isStreaming && status !== 'delivered';
