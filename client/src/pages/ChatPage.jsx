@@ -739,7 +739,7 @@ export default function ChatPage() {
             ? {
                 ...msg,
                 isStreaming: false,
-                content: latestContent + "\n\n*AI response stopped by user.*",
+                content: latestContent, // Clean stop without unwanted text
                 status: 'stopped',
                 isCancelled: true,
                 isError: false,
@@ -771,7 +771,7 @@ export default function ChatPage() {
                 isStreaming: false,
                 status: 'failed',
                 isError: true,
-                content: (msg.content || '') + "\n\n*Failed to stop AI response.*",
+                content: (msg.content || ''), // Clean stop without unwanted text
                 metadata: {
                   ...msg.metadata,
                   isStreaming: false,

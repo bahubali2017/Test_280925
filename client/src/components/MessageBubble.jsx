@@ -665,7 +665,7 @@ export function MessageBubble({
             )}
 
             {/* Show cancelled message notice - this takes priority over regular status display */}
-            {!isUser && (status === 'cancelled' || status === 'stopped' || status === 'timeout' || metadata?.isCancelled) && (
+            {!isUser && (status === 'timeout' || metadata?.isTimeout) && (
               <div className="mt-3 text-sm text-muted-foreground dark:text-muted-foreground/80 flex items-center bg-secondary/20 p-2 rounded-md">
                 <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
                   <rect x="6" y="6" width="12" height="12"></rect>
@@ -673,7 +673,7 @@ export function MessageBubble({
                 <span className="font-medium">
                   {status === 'timeout' || metadata?.isTimeout ? 
                     'Response timed out - may be incomplete' : 
-                    'AI response stopped by user'}
+                    ''} {/* Clean stop without unwanted text */}
                 </span>
                 {timestamp && (
                   <span className="ml-2 text-xs opacity-70">{formatTimestamp(timestamp)}</span>
