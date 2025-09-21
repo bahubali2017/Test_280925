@@ -2,6 +2,7 @@
 import React from 'react';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
+import { processFinalResponse } from '../lib/medical-safety-processor';
 
 /**
  * @typedef {object} MessageMetadata
@@ -86,8 +87,10 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
 
   if (!rawContent) return null;
 
-  // Clean up markdown formatting while preserving bold titles
-  const displayContent = cleanMarkdownFormatting(rawContent);
+  // Use processFinalResponse for complete responses, basic cleanup for streaming
+  const displayContent = isStreaming 
+    ? rawContent // Preserve formatting during streaming
+    : processFinalResponse(rawContent, {}, ''); // Apply full cleanup when complete
   
 
   // Convert newlines to JSX and handle bold formatting

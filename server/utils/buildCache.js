@@ -115,7 +115,11 @@ class BuildCache {
       path.join(__dirname, '../../package.json'),
       path.join(__dirname, '../../vite.config.ts'),
       path.join(__dirname, '../../client/src/main.jsx'),
-      path.join(__dirname, '../index.ts')
+      path.join(__dirname, '../index.ts'),
+      // Include cleanup and formatting files that affect response processing
+      path.join(__dirname, '../routes.js'),
+      path.join(__dirname, '../../client/src/components/MessageBubble.jsx'),
+      path.join(__dirname, '../../client/src/lib/medical-safety-processor.js')
     ];
     
     const currentHash = this.generateFileHash(importantFiles);
@@ -139,7 +143,11 @@ class BuildCache {
         path.join(__dirname, '../../package.json'),
         path.join(__dirname, '../../vite.config.ts'),
         path.join(__dirname, '../../client/src/main.jsx'),
-        path.join(__dirname, '../index.ts')
+        path.join(__dirname, '../index.ts'),
+        // Include cleanup and formatting files that affect response processing
+        path.join(__dirname, '../routes.js'),
+        path.join(__dirname, '../../client/src/components/MessageBubble.jsx'),
+        path.join(__dirname, '../../client/src/lib/medical-safety-processor.js')
       ];
       info.hash = this.generateFileHash(importantFiles);
     }
