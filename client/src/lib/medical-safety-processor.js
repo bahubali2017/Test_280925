@@ -115,6 +115,7 @@ export async function processMedicalSafety(userInput, options = {}) {
  * @returns {string} Cleaned text without stray markers
  */
 function cleanStrayMarkers(text) {
+  // FORCE CACHE INVALIDATION - Updated cleanup function
   return text
     // normalize invisible characters (zero-width, NBSP)
     .replace(/[\u200B-\u200D\uFEFF\u00A0]/g, " ")
