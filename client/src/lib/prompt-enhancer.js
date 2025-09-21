@@ -370,6 +370,8 @@ function generateFollowUpSuggestions(ctx) {
  */
 export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
   const questionType = classifyQuestionType(query);
+  console.log('📊 [CLASSIFIER] Question classified as:', questionType, 'for query:', query);
+  
   let systemPrompt = buildBaseSystemPrompt(userRole);
   let mode = "normal";
 
@@ -377,6 +379,7 @@ export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
     // SPECIALIZED MEDICATION CONCISE PROMPT - NO EXPANSION TEXT
     systemPrompt = buildConciseMedicationPrompt(userRole);
     mode = "concise";
+    console.log('🔵 [PROMPT] Using buildConciseMedicationPrompt → concise');
     console.log('🔵 [PROMPT] Built for medication (concise) - expansion handled by UI only');
   } else if (questionType === "educational") {
     // Detailed path: do not inject concise or expansion text

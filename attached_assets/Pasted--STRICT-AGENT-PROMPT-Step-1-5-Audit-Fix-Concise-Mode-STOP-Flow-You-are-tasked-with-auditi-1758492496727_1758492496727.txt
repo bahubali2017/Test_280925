@@ -1,0 +1,114 @@
+🟦 STRICT AGENT PROMPT — Step 1.5 Audit & Fix (Concise Mode + STOP Flow)
+
+You are tasked with auditing and fixing the Anamnesis Medical AI Platform codebase.
+Do not introduce any conflicting logic. Do not add redundant expansion layers.
+Follow these steps exactly:
+
+🎯 Scope
+
+Audit and fix the following areas only:
+
+Concise vs Expansion Mode (medication queries)
+
+STOP AI flow (disclaimer injection + stopped message)
+
+Markdown rendering for concise responses
+
+Do not modify unrelated systems (triage, educational, symptom flows).
+
+🛠️ Required Actions
+1. Medication Concise Mode Audit & Fix
+
+In client/src/lib/llm-api.jsx, confirm that:
+
+if (questionType === "medication") {
+    systemPrompt = buildConciseMedicationPrompt(query, userRole);
+    metadata.responseMode = "concise";
+    metadata.canExpand = true;
+}
+
+
+Ensure buildConciseMedicationPrompt() exists and:
+
+Returns 3–5 sentence max concise dosage answers.
+
+Uses markdown formatting (bold for key terms, bullet points for dosages).
+
+Explicitly instructs: “Do NOT expand, explain, or include side effects in this response.”
+
+Remove any fallback that routes medication queries into expansion or educational modes.
+
+2. Markdown Rendering Verification
+
+Check processFinalResponse() (server) and MessageBubble.jsx (client) to ensure no markdown stripping.
+
+Confirm ReactMarkdown mappings for bold and lists are applied to concise responses.
+
+3. STOP AI Flow Fix
+
+In client/src/pages/ChatPage.jsx, adjust stop logic:
+
+When user clicks STOP:
+
+Freeze latestContent exactly as streamed.
+
+Set status: "stopped".
+
+Do NOT inject disclaimers after stop.
+
+Clear metadata.disclaimers for stopped messages.
+
+In MessageBubble.jsx, ensure disclaimers only render when:
+
+status !== "stopped"
+
+
+Restore “AI stopped by user” indicator for stopped messages.
+
+4. Debug Logging (Mandatory)
+
+Add logs to confirm runtime behavior:
+
+[CLASSIFIER] Question classified as: medication
+
+[PROMPT] Using buildConciseMedicationPrompt → concise
+
+[LLM-API] Expansion armed: true (but NOT injected into system prompt)
+
+[STOP] AI stopped by user → disclaimers cleared
+
+5. Deployment Cleanup
+
+Delete any unused/legacy files:
+
+client/src/lib/expansion-handler.js (if still present)
+
+Force rebuild:
+
+rm -rf dist node_modules/.cache
+npm run build
+
+
+Confirm new bundle hash and service worker update.
+
+✅ Acceptance Criteria
+
+After this task:
+
+Query "aspirin dosage" produces:
+
+Concise 3–5 sentence markdown response
+
+No expansion text inside AI output
+
+UI-only expansion button below
+
+STOP AI button:
+
+Freezes current output
+
+Shows “AI stopped by user”
+
+No disclaimers injected after stop
+
+Markdown formatting works (bold + bullet points intact).

@@ -559,6 +559,7 @@ export async function sendMessage(message, history = [], options = {}) {
       metadata.canExpand = true;
       
       console.log('⚡ [LLM-API] Arming expansion:', { responseId, questionType, mode, canExpand: true });
+      console.log('🔵 [LLM-API] Expansion armed: true (but NOT injected into system prompt)');
       console.log('🔵 [LLM-API] Final metadata for UI:', { responseMode: mode, questionType, canExpand: true });
     } else {
       // For non-concise responses, don't arm expansion
