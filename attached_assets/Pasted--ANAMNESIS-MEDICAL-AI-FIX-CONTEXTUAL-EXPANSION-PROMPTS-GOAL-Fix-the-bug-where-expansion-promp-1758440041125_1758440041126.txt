@@ -1,0 +1,111 @@
+# ANAMNESIS MEDICAL AI FIX — CONTEXTUAL EXPANSION PROMPTS
+
+GOAL
+Fix the bug where expansion prompts always say 
+"side effects, interactions, precautions" even for non-medication questions.
+
+==================================================
+FILES TO UPDATE
+- client/src/lib/prompt-enhancer.js
+- client/src/lib/expansion-handler.js
+
+==================================================
+TASKS
+
+1) Update Concise Mode Expansion Invite
+In `prompt-enhancer.js`, modify `applyConciseMode()` to take the 
+question type (educational / medication / symptom) into account.
+
+```js
+import { classifyQuestionType } from "./prompt-enhancer.js"; // or utils
+
+function applyConciseMode(prompt, userRole, userInput) {
+  const type = classifyQuestionType(userInput);
+
+  let expansionLine = "";
+  if (type === "educational") {
+    expansionLine = "Would you like more detailed information about this topic (causes, complications, management)?";
+  } else if (type === "medication") {
+    expansionLine = "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
+  } else if (type === "symptom") {
+    expansionLine = "Would you like more detailed information about this condition and when to seek medical care?";
+  } else {
+    expansionLine = "Would you like more detailed information on this topic?";
+  }
+
+  return `
+    ${prompt}
+    [Concise Mode Active]
+    - Answer concisely (≤5 bullets or ≤3 sentences).
+    - At the end of EVERY answer, add:
+      "${expansionLine}"
+  `;
+}
+Update Expansion Handler
+In expansion-handler.js, also generate role- and type-specific detailed prompts
+when expansion is actually requested:
+
+js
+Copy code
+import { classifyQuestionType } from "./prompt-enhancer.js";
+
+export function buildExpansionPrompt(originalQuery, userRole) {
+  const type = classifyQuestionType(originalQuery);
+
+  if (type === "educational") {
+    return `
+      Provide a detailed educational explanation:
+      - Definitions, causes, risk factors, complications, and management overview.
+      Audience: ${userRole}.
+      ⚠️ Informational purposes only. Not a substitute for professional medical advice.
+    `;
+  }
+
+  if (type === "medication") {
+    return `
+      Provide a detailed medication reference:
+      - Dosage ranges, side effects, interactions, contraindications, monitoring.
+      Audience: ${userRole}.
+      ⚠️ Informational purposes only. Not a substitute for professional medical advice.
+    `;
+  }
+
+  if (type === "symptom") {
+    return `
+      Provide a detailed explanation of possible causes, red flags, and when to seek care.
+      Audience: ${userRole}.
+      ⚠️ Informational purposes only. Not a substitute for professional medical advice.
+    `;
+  }
+
+  return `
+    Provide a more detailed explanation suitable for ${userRole}.
+    ⚠️ Informational purposes only. Not a substitute for professional medical advice.
+  `;
+}
+==================================================
+TEST CASES
+
+Case 1: Educational Query
+Q: "What is IBS?"
+→ Output: detailed educational answer (not concise).
+→ Expansion invite: "Would you like more detailed information about this topic (causes, complications, management)?"
+
+Case 2: Medication Query
+Q: "What is the dosage of ibuprofen for adults?"
+→ Output: concise answer with dosage + disclaimer.
+→ Expansion invite: "Would you like me to provide further detailed information (side effects, interactions, precautions)?"
+
+Case 3: Symptom Query
+Q: "I have chest pain"
+→ Output: triage-based urgent template.
+→ Expansion invite: "Would you like more detailed information about this condition and when to seek medical care?"
+
+==================================================
+DELIVERABLES
+
+Expansion invites are now question-type aware.
+
+No more “side effects, interactions, precautions” for non-medication questions.
+
+Consistent role- and type-specific expansion behavior.

@@ -36,17 +36,17 @@ export function buildExpansionPrompt(originalQuery, userRole, questionType = "ge
     // Context-aware expansion for public users
     switch (questionType) {
       case "medication":
-        expansionLine = "Provide a more detailed, patient-friendly explanation with side effects, interactions, precautions, and references.";
+        expansionLine = "Provide a detailed medication reference: dosage ranges, side effects, interactions, contraindications, monitoring.";
         break;
       case "symptom":
-        expansionLine = "Provide a more detailed explanation about this condition, including management approaches and when to seek care.";
+        expansionLine = "Provide a detailed explanation of possible causes, red flags, and when to seek care.";
         break;
       case "educational":
-        expansionLine = "Provide a more comprehensive educational explanation with additional details and clinical context.";
+        expansionLine = "Provide a detailed educational explanation: definitions, causes, risk factors, complications, and management overview.";
         break;
       case "general":
       default:
-        expansionLine = "Provide a more detailed, comprehensive explanation about this topic.";
+        expansionLine = "Provide a more detailed explanation suitable for general understanding.";
         break;
     }
   }

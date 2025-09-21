@@ -137,25 +137,26 @@ export function classifyQuestionType(query) {
 
   const normalizedQuery = normalizeQueryText(query);
   
-  // Educational patterns using regex for phrase matching - CHECK FIRST for pure educational queries
+  // Educational patterns - prioritize these for clear informational queries
   const educationalPatterns = [
     /\bwhat\s+(?:is|are)\b/,           // "what is", "what are"
     /\bexplain\b/,                     // "explain"
     /\bhow\s+does\b/,                  // "how does"
     /\bwhy\s+(?:is|are|does|do)?\b/,   // "why", "why is", "why does"
-    /\bdefine\b/                       // "define"
+    /\bdefine\b/,                      // "define"
+    /\btell\s+me\s+about\b/            // "tell me about"
   ];
   
   const isEducational = educationalPatterns.some(pattern => pattern.test(normalizedQuery));
   
-  // For pure educational questions like "What is IBS?", return educational immediately
+  // Check for specific medical terms
+  const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
+  const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
+  
+  // For educational patterns like "What is IBS?", check if it's mixed with specific medication/dosage questions
   if (isEducational) {
-    // Check for medication terms to detect mixed queries
-    const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
-    const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
-    
-    // Only override educational if it's explicitly about medication/symptoms AND medication terms
-    if (hasMedicationTerms && (normalizedQuery.includes("dosage") || normalizedQuery.includes("side effect") || normalizedQuery.includes("interaction"))) {
+    // Only override to medication if asking specifically about medication details
+    if (hasMedicationTerms && (normalizedQuery.includes("dosage") || normalizedQuery.includes("dose") || normalizedQuery.includes("mg") || normalizedQuery.includes("side effect"))) {
       return "medication";
     }
     
@@ -163,16 +164,11 @@ export function classifyQuestionType(query) {
     return "educational";
   }
 
-  // Check for medication terms for non-educational queries
-  const hasMedicationTerms = CLASSIFIER_SETTINGS.CATEGORIES.MEDICATION.some(k => normalizedQuery.includes(k));
-  const hasSymptomTerms = CLASSIFIER_SETTINGS.CATEGORIES.SYMPTOM.some(k => normalizedQuery.includes(k));
-
-  // Medication / treatment questions (concise first, expand on request)
+  // Non-educational queries: check for medication/symptom classification
   if (hasMedicationTerms) {
     return "medication";
   }
 
-  // Symptom / risk assessment (triage workflow)
   if (hasSymptomTerms) {
     return "symptom";
   }
@@ -249,12 +245,14 @@ function applyConciseMode(template, userRole = "public", questionType = "general
         expansionLine = "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
         break;
       case "symptom":
-        expansionLine = "Would you like more detailed information about this condition?";
+        expansionLine = "Would you like more detailed information about this condition and when to seek medical care?";
         break;
       case "educational":
+        expansionLine = "Would you like more detailed information about this topic (causes, complications, management)?";
+        break;
       case "general":
       default:
-        expansionLine = "Would you like more detailed information about this topic?";
+        expansionLine = "Would you like more detailed information on this topic?";
         break;
     }
   }
