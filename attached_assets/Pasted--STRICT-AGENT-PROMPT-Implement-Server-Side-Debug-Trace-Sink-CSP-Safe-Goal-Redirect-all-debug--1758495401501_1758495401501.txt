@@ -1,0 +1,101 @@
+🚀 STRICT AGENT PROMPT: Implement Server-Side Debug Trace Sink (CSP-Safe)
+
+Goal: Redirect all debug traces from the Medical AI Platform into server logs instead of console.log in the browser, to bypass CSP restrictions. This must be done in a non-conflicting, isolated way that does not interfere with production workflows.
+
+1. Create client/src/lib/trace-sink.js
+// client/src/lib/trace-sink.js
+// Debug Trace Sink: Redirects debug traces to the server
+
+export function trace(label, data) {
+  try {
+    fetch('/debug-trace', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        label,
+        data,
+        ts: Date.now(),
+        source: 'client',
+      }),
+    });
+  } catch (err) {
+    // Fail silently — never break runtime if logging fails
+  }
+}
+
+2. Update client/src/lib/debug-flag.js
+// Always enable debug mode in dev/testing
+export function isDebug() {
+  return true; // Forced debug ON
+}
+
+import { trace as serverTrace } from './trace-sink.js';
+
+export function trace(label, data) {
+  if (isDebug()) {
+    serverTrace(label, data);
+  }
+}
+
+3. Add Server-Side Collector in server/routes.js
+
+Append before your module.exports:
+
+// Debug Trace Collector (Dev Only)
+router.post('/debug-trace', (req, res) => {
+  const { label, data, ts, source } = req.body || {};
+  console.log('[DEBUG-TRACE]', new Date(ts).toISOString(), `[${source}]`, label, data);
+  res.sendStatus(200);
+});
+
+4. Replace All Existing Debug Logs
+
+Find all places where debug logging is used in:
+
+client/src/lib/prompt-enhancer.js
+
+client/src/lib/llm-api.jsx
+
+client/src/components/MessageBubble.jsx
+
+client/src/lib/expansion-state.js
+
+client/src/lib/expansion-prompts.js
+
+Replace lines like:
+
+console.log('[TRACE]', ...)
+
+
+with:
+
+trace('[TRACE] classifyQuestionType', { ... })
+
+5. Verification
+
+Rebuild the app (rm -rf dist && npm run build).
+
+Run the platform normally.
+
+Ask: "what is the dosage of aspirin?"
+
+Check server logs in Replit → you should see output like:
+
+[DEBUG-TRACE] 2025-09-22T22:01:12.123Z [client] [TRACE] classifyQuestionType { questionType: "medication", query: "what is the dosage of aspirin?" }
+[DEBUG-TRACE] 2025-09-22T22:01:12.456Z [client] [TRACE] buildPromptsForQuery { mode: "concise", questionType: "medication" }
+[DEBUG-TRACE] 2025-09-22T22:01:12.789Z [client] [TRACE] requestEnvelope { questionType: "medication", mode: "concise", userRole: "public", canExpand: true }
+
+
+Confirm concise mode → 3–5 sentence aspirin dosage answer + expansion button.
+
+6. Strict Rules
+
+Do not weaken CSP (unsafe-eval)
+
+Do not override production safety features
+
+Do not remove or disable STOP AI flow or disclaimer system
+
+Keep all debug logs isolated inside trace() wrapper
+
+Ensure no regressions in current workflows
