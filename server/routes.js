@@ -1000,6 +1000,26 @@ router.get("/app-config.json", async (req, res) => {
         }
       });
 
+      // TRACE: Server envelope before forwarding to LLM (non-intrusive)
+      if (req.query.debug === '1' || (req.headers['x-debug-ai'] === '1')) {
+        const payload = {
+          model: config.model || "deepseek-chat",
+          messages: promptMessages,
+          temperature: 0.2,
+          max_tokens: 4096,
+          top_p: 0.95,
+          frequency_penalty: 0.1,
+          presence_penalty: 0.1,
+          stream: true
+        };
+        console.log('[TRACE] serverEnvelope', {
+          ts: Date.now(),
+          model: payload?.model,
+          sysLen: (payload?.messages?.find(m=>m.role==='system')?.content || '').length,
+          usrLen: (payload?.messages?.find(m=>m.role==='user')?.content || '').length,
+        });
+      }
+
       // 3) Pass the combined signal to the upstream provider call
       const upstreamFetch = () => fetch(deepSeekUrl, {
         method: "POST",
