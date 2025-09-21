@@ -278,24 +278,36 @@ export function extractOriginalQuery(conversationHistory, currentUserInput = '')
  * @returns {boolean} - True if it's an emergency medication expansion
  */
 function detectEmergencyMedicationExpansion(loweredInput) {
-  // Check if we have a recent emergency context
+  // CRITICAL: Only treat as expansion if we have VALID emergency context
   if (!isLastExpandableQueryRecent()) {
     return false;
   }
   
   const lastQuery = getLastExpandableQuery();
-  if (!lastQuery || !['chest_pain', 'emergency', 'breathing_difficulty'].includes(lastQuery.type)) {
+  // Must have emergency or chest pain context AND a valid query
+  if (!lastQuery || 
+      !lastQuery.query || 
+      !['chest_pain', 'emergency', 'breathing_difficulty'].includes(lastQuery.type)) {
     return false;
   }
   
-  // Emergency medication patterns
+  // Only specific emergency-context medication patterns
   const emergencyMedicationPatterns = [
-    'aspirin dosage', 'aspirin dose', 'how much aspirin', 'aspirin amount',
-    'nitroglycerin', 'heart medication', 'emergency medication',
-    'what medication', 'dosage', 'dose', 'how to take'
+    'aspirin', 'nitroglycerin', 'heart medication', 'emergency medication'
   ];
   
-  return emergencyMedicationPatterns.some(pattern => loweredInput.includes(pattern));
+  // Must mention emergency medication AND have context
+  const hasEmergencyMedication = emergencyMedicationPatterns.some(pattern => 
+    loweredInput.includes(pattern)
+  );
+  
+  const hasDosageQuestion = loweredInput.includes('dosage') || 
+                           loweredInput.includes('dose') || 
+                           loweredInput.includes('how much') ||
+                           loweredInput.includes('how to take');
+  
+  // Only return true if BOTH medication AND dosage question AND emergency context exists
+  return hasEmergencyMedication && hasDosageQuestion;
 }
 
 /**
