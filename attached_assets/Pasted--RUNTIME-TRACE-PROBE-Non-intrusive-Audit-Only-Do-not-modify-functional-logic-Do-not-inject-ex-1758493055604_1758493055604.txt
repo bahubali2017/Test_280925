@@ -1,0 +1,176 @@
+🔵 RUNTIME TRACE PROBE — Non-intrusive, Audit-Only
+
+Do not modify functional logic.
+Do not inject expansion/concise instructions.
+Add tracing only, behind a debug switch.
+
+Scope
+
+client/src/lib/prompt-enhancer.js
+
+client/src/lib/llm-api.jsx
+
+client/src/components/MessageBubble.jsx
+
+server/routes.js (request envelope only)
+
+1) Add Debug Switch (no prod impact)
+
+Implement debug mode enabled by either:
+
+localStorage.DEBUG_AI === "1" or
+
+URL ?debug=1
+
+Create helper client/src/lib/debug-flag.js:
+
+export function isDebug() {
+  try {
+    if (new URLSearchParams(window.location.search).get("debug") === "1") return true;
+    return localStorage.getItem("DEBUG_AI") === "1";
+  } catch { return false; }
+}
+
+2) Client Tracing (classification ➝ prompt ➝ metadata)
+
+In prompt-enhancer.js (no logic changes):
+
+After classification: log
+
+[TRACE] classifyQuestionType -> { questionType, query }
+
+
+After building prompts: log (mask secrets)
+
+[TRACE] buildPromptsForQuery -> { mode, questionType }
+[TRACE] systemPrompt(head) -> first 400 chars
+
+
+Additionally, compute and log booleans:
+
+hasSideEffects = /side effects|interactions|contraindications/i.test(systemPromptHead)
+hasExpandWords = /expand|more details/i.test(systemPromptHead)
+[TRACE] promptAudit -> { hasSideEffects, hasExpandWords }
+
+
+Wrap all logs in:
+
+if (isDebug()) console.log(/* … */)
+
+
+In llm-api.jsx before streaming:
+
+if (isDebug()) console.log('[TRACE] requestEnvelope', {
+  questionType, mode, userRole, canExpand: metadata?.canExpand === true
+});
+
+
+After first chunk received:
+
+if (isDebug()) console.log('[TRACE] streamStart', { messageId, ts: Date.now() });
+
+
+After completion:
+
+if (isDebug()) console.log('[TRACE] streamComplete', {
+  messageId, responseMode: metadata?.responseMode, length: finalText?.length
+});
+
+
+In MessageBubble.jsx (no UI changes for users):
+
+if (isDebug()) console.log('[TRACE] renderBubble', {
+  status, canExpand: metadata?.canExpand, questionType: metadata?.questionType, responseMode: metadata?.responseMode
+});
+
+3) Server Envelope Trace (no LLM content logs)
+
+In server/routes.js, just before forwarding to LLM:
+
+if (req.query.debug === '1' || (req.headers['x-debug-ai'] === '1')) {
+  console.log('[TRACE] serverEnvelope', {
+    ts: Date.now(),
+    model: payload?.model,
+    sysLen: (payload?.messages?.find(m=>m.role==='system')?.content || '').length,
+    usrLen: (payload?.messages?.find(m=>m.role==='user')?.content || '').length,
+  });
+}
+
+
+Do not log full prompts on server.
+
+4) On-screen mini badge (debug only)
+
+At bottom of each assistant bubble (debug mode only), render tiny badge:
+
+[questionType: medication | educational | symptom] [mode: concise | detailed | triage] [canExpand: true|false]
+
+
+Use small, muted text; hidden when not debug.
+
+5) Hard safety: No functional changes
+
+No edits to classify logic, prompts, STOP flow, disclaimers, formatting, expansion state.
+
+Only tracing guarded by isDebug().
+
+6) Verification Script (you run)
+
+Open app with ?debug=1 (or set localStorage.DEBUG_AI = "1" and reload).
+
+Ask: what is the dosage of aspirin?
+
+Collect console lines in order:
+
+[TRACE] classifyQuestionType -> …
+
+[TRACE] buildPromptsForQuery -> { mode: "concise", questionType: "medication" }
+
+[TRACE] systemPrompt(head) -> …
+
+[TRACE] promptAudit -> { hasSideEffects, hasExpandWords }
+
+[TRACE] requestEnvelope -> …
+
+[TRACE] renderBubble -> …
+
+If the answer is expanded, check:
+
+Does promptAudit.hasSideEffects === true or hasExpandWords === true?
+
+If yes, expansion text is leaking into the systemPrompt. We’ll grep for the injection source.
+
+If no, the model is verbose despite concise prompt → we’ll tighten concise prompt constraints.
+
+Click STOP AI during another answer; console must show:
+
+[STOP] AI stopped by user → disclaimers cleared
+
+Bubble badge shows status: "stopped" and no disclaimer rendered.
+
+7) If prompt contains expansion keywords
+
+Run read-only grep (no edits) and report exact file/line:
+
+Search for /side effects|interactions|contraindications|expand|more details/i across:
+
+client/src/lib/*
+
+server/*.js
+
+any remaining expansion*.js
+Return a short list:
+
+[file]:[line] → “…snippet…”
+
+Deliverables
+
+The console trace for the aspirin query (copy/paste).
+
+The promptAudit booleans.
+
+The grep hits (if any).
+
+Screenshot of the debug badge under the aspirin response bubble.
+
+Do not proceed to any code change based on findings; return the report first.
