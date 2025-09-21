@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { getExpansionInvitationText } from '../lib/expansion-prompts.js';
+import { isDebug } from '../lib/debug-flag.js';
 
 /**
  * @typedef {object} MessageMetadata
@@ -355,6 +356,13 @@ export function MessageBubble({
   const bubbleStatus = isStreaming && status !== 'delivered'
     ? 'streaming'
     : status;
+
+  // TRACE: Render bubble (non-intrusive)
+  if (isDebug()) {
+    console.log('[TRACE] renderBubble', {
+      status, canExpand: metadata?.canExpand, questionType: metadata?.questionType, responseMode: metadata?.responseMode
+    });
+  }
 
   return (
     <div 
@@ -860,6 +868,13 @@ export function MessageBubble({
                     </div>
                   )}
                 </div>
+              </div>
+            )}
+
+            {/* Debug badge - only shown in debug mode for assistant messages */}
+            {isDebug() && !isUser && metadata && (
+              <div className="mt-2 text-[10px] text-muted-foreground/60 dark:text-muted-foreground/50 font-mono border border-border/30 rounded px-1.5 py-0.5 bg-muted/20 text-left">
+                [questionType: {metadata?.questionType || 'unknown'}] [mode: {metadata?.responseMode || 'unknown'}] [canExpand: {metadata?.canExpand ? 'true' : 'false'}]
               </div>
             )}
           </div>
