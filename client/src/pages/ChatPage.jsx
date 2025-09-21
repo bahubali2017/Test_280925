@@ -684,6 +684,7 @@ export default function ChatPage() {
     }
 
     setIsStoppingAI(true);
+    console.log('[STOP] AI stopped by user → disclaimers cleared');
 
     try {
       // Store the current streaming message ID to prevent race conditions
@@ -747,7 +748,13 @@ export default function ChatPage() {
                   cancelledByUser: true,
                   manuallyAborted: true,
                   partialContentLength: latestContent.length,
-                  stoppedAt: new Date().toISOString()
+                  stoppedAt: new Date().toISOString(),
+                  // Clear disclaimers for stopped messages as required
+                  queryIntent: {
+                    ...msg.metadata?.queryIntent,
+                    disclaimers: [],
+                    atd: null
+                  }
                 }
               }
             : msg

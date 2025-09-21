@@ -477,8 +477,8 @@ export function MessageBubble({
                   </div>
                 )}
 
-                {/* Display specific disclaimers from layer processing */}
-                {metadata?.queryIntent?.disclaimers && metadata.queryIntent.disclaimers.length > 0 && !showHighRiskAlert && (
+                {/* Display specific disclaimers from layer processing - NOT for stopped messages */}
+                {metadata?.queryIntent?.disclaimers && metadata.queryIntent.disclaimers.length > 0 && !showHighRiskAlert && status !== "stopped" && (
                   <div className="mb-2 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/50">
                     <div className="flex items-start">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
@@ -498,8 +498,8 @@ export function MessageBubble({
                   </div>
                 )}
 
-                {/* ATD (Advice to Doctor) notice for urgent/emergency cases */}
-                {metadata?.queryIntent?.atd && (
+                {/* ATD (Advice to Doctor) notice for urgent/emergency cases - NOT for stopped messages */}
+                {metadata?.queryIntent?.atd && status !== "stopped" && (
                   <div className="mb-3 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-sm dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50 animate-fade-in">
                     <div className="flex items-start">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
@@ -631,6 +631,21 @@ export function MessageBubble({
                 </span>
                 {metadata.attemptCount > 1 && (
                   <span className="ml-1 opacity-80">(after {metadata.attemptCount} attempts)</span>
+                )}
+              </div>
+            )}
+
+            {/* AI stopped by user indicator */}
+            {status === 'stopped' && metadata?.cancelledByUser && (
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground/80 mt-2 flex items-center gap-1.5">
+                <span className="flex items-center text-orange-600 dark:text-orange-400">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
+                    <rect x="6" y="6" width="12" height="12"/>
+                  </svg>
+                  AI stopped by user
+                </span>
+                {metadata.stoppedAt && (
+                  <span className="ml-2 opacity-70">{formatTimestamp(new Date(metadata.stoppedAt))}</span>
                 )}
               </div>
             )}
