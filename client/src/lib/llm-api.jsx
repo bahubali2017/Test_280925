@@ -19,7 +19,7 @@ import {
 } from './expansion-state.js';
 import { buildExpansionPrompt } from './expansion-prompts.js';
 import { AI_FLAGS } from '../config/ai-flags.js';
-import { isDebug } from './debug-flag.js';
+import { isDebug, trace } from './debug-flag.js';
 
 /**
  * @typedef {object} Message
@@ -205,7 +205,7 @@ async function processStream(stream, onUpdate, abortSignal) {
         if (data.done) {
           // TRACE: Stream completion (non-intrusive)
           if (isDebug()) {
-            console.log('[TRACE] streamComplete', {
+            trace('[TRACE] streamComplete', {
               messageId, responseMode: 'streaming', length: fullContent?.length
             });
           }
@@ -217,7 +217,7 @@ async function processStream(stream, onUpdate, abortSignal) {
         if (chunkContent) {
           // TRACE: First chunk received (stream start, non-intrusive)
           if (!firstChunkReceived && isDebug()) {
-            console.log('[TRACE] streamStart', { messageId, ts: Date.now() });
+            trace('[TRACE] streamStart', { messageId, ts: Date.now() });
             firstChunkReceived = true;
           }
           
@@ -444,7 +444,7 @@ export async function sendMessage(message, history = [], options = {}) {
     
     // TRACE: Request envelope before streaming (non-intrusive)
     if (isDebug()) {
-      console.log('[TRACE] requestEnvelope', {
+      trace('[TRACE] requestEnvelope', {
         questionType, mode, userRole, canExpand: metadata?.canExpand === true
       });
     }

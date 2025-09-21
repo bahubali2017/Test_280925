@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { getExpansionInvitationText } from '../lib/expansion-prompts.js';
-import { isDebug } from '../lib/debug-flag.js';
+import { isDebug, trace } from '../lib/debug-flag.js';
 
 /**
  * @typedef {object} MessageMetadata
@@ -359,7 +359,7 @@ export function MessageBubble({
 
   // TRACE: Render bubble (non-intrusive)
   if (isDebug()) {
-    console.log('[TRACE] renderBubble', {
+    trace('[TRACE] renderBubble', {
       status, canExpand: metadata?.canExpand, questionType: metadata?.questionType, responseMode: metadata?.responseMode
     });
   }

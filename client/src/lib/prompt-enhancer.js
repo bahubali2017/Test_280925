@@ -1,6 +1,6 @@
 import { selectDisclaimers } from "./disclaimers.js";
 import { AI_FLAGS, CONCISE_SETTINGS, CLASSIFIER_SETTINGS } from "../config/ai-flags.js";
-import { isDebug } from "./debug-flag.js";
+import { isDebug, trace } from "./debug-flag.js";
 // OLD expansion-handler.js imports removed - using new expansion-state.js system
 
 /** Inline fallbacks if templates cannot be loaded from disk */
@@ -354,7 +354,7 @@ export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
   
   // TRACE: Classification result (non-intrusive)
   if (isDebug()) {
-    console.log('[TRACE] classifyQuestionType ->', { questionType, query });
+    trace('[TRACE] classifyQuestionType', { questionType, query });
   }
   
   let systemPrompt = buildBaseSystemPrompt(userRole);
@@ -376,15 +376,15 @@ export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
 
   // TRACE: Prompt building result (non-intrusive)
   if (isDebug()) {
-    console.log('[TRACE] buildPromptsForQuery ->', { mode, questionType });
+    trace('[TRACE] buildPromptsForQuery', { mode, questionType });
     
     const systemPromptHead = systemPrompt.substring(0, 400);
-    console.log('[TRACE] systemPrompt(head) ->', systemPromptHead);
+    trace('[TRACE] systemPrompt(head)', systemPromptHead);
     
     // Audit for expansion keywords leaking into prompt
     const hasSideEffects = /side effects|interactions|contraindications/i.test(systemPromptHead);
     const hasExpandWords = /expand|more details/i.test(systemPromptHead);
-    console.log('[TRACE] promptAudit ->', { hasSideEffects, hasExpandWords });
+    trace('[TRACE] promptAudit', { hasSideEffects, hasExpandWords });
   }
 
   console.log('🎯 [PROMPT] buildPromptsForQuery result:', { questionType, mode, userRole });
