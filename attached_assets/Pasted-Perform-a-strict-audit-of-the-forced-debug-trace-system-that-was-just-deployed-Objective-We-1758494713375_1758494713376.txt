@@ -1,0 +1,50 @@
+Perform a strict audit of the forced debug trace system that was just deployed.
+
+🎯 Objective:
+We must confirm why "aspirin dosage" is still producing a long expanded response instead of the short 3–5 sentence concise response.
+
+✅ Required Actions:
+1. Debug Trace Verification
+   - Capture all [TRACE] console logs during a "what is the dosage of aspirin?" request.
+   - Confirm the following sequence is firing:
+     [TRACE] classifyQuestionType -> { questionType: "medication" }
+     [TRACE] buildPromptsForQuery -> { mode: "concise" }
+     [TRACE] systemPrompt(head) -> preview text (should show concise-only instructions)
+   - Report whether systemPrompt contains forbidden words: "side effects", "interactions", "expand".
+
+2. Medication Concise Prompt Enforcement
+   - Open buildConciseMedicationPrompt() in prompt-enhancer.js.
+   - Ensure the following rules are strictly enforced:
+     • Max 3–5 sentences only
+     • Only dosage units and frequency (81 mg daily, 325 mg as needed)
+     • Explicit line: "Do NOT expand, explain, or include side effects"
+     • Return concise string without fallback to expansion-prompts.js
+   - Confirm this specialized prompt is being routed in buildPromptsForQuery().
+
+3. Expansion Contamination Check
+   - Search the entire client/src/lib directory for any occurrence of:
+     “expand”, “side effects”, “precaution”, “interaction”
+   - Verify none of these appear in the systemPrompt for medication queries.
+   - If found, remove or quarantine them in UI-only expansion-prompts.js.
+
+4. STOP AI Flow Audit
+   - Confirm that on stop:
+     • Disclaimers are NOT re-injected
+     • “AI stopped by user” message appears in MessageBubble.jsx
+   - Add debug log [STOP] confirming disclaimers cleared.
+
+5. Deployment
+   - Rebuild clean: rm -rf dist && npm run build
+   - Report:
+     • New bundle hash
+     • Build timestamp
+     • Console log sequence for “aspirin dosage”
+
+📋 Deliverable:
+A technical report with:
+- Debug log sequence for aspirin dosage
+- Extract of systemPrompt (first 400 chars)
+- Confirmation whether concise mode rules are applied
+- Confirmation STOP AI flow works cleanly
+- Confirmation no duplicate disclaimers
+- Final bundle hash + timestamp
