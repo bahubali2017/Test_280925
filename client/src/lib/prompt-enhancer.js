@@ -374,8 +374,11 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   }
   
   // Apply intelligent classification logic for response mode
+  console.log('[DEBUG] Question type classification:', questionType, 'for query:', ctx.userInput.substring(0, 50));
+  
   if (questionType === "educational" || questionType === "general") {
     // Educational/general questions: Skip concise mode, provide detailed response immediately
+    console.log('[DEBUG] Using educational mode - skipping concise mode');
     const educationalPrompt = `You are MAIA (Medical AI Assistant). Provide a detailed, structured explanation suitable for ${userRole === "doctor" ? "healthcare professionals" : "general public"}.
 
 - Cover definitions, key features, and management overview
@@ -410,9 +413,13 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
   // Generate expansion prompt based on question type (not for educational questions)
   let expansionPrompt = "";
   if (questionType === "medication") {
+    console.log('[DEBUG] Adding medication expansion prompt');
     expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
   } else if (questionType === "symptom") {
+    console.log('[DEBUG] Adding symptom expansion prompt');
     expansionPrompt = generateExpansionPrompt(userRole, false); // false for non-medication
+  } else {
+    console.log('[DEBUG] No expansion prompt for question type:', questionType);
   }
   // Educational and general questions get no expansion prompt (detailed immediately)
 
