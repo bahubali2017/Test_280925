@@ -445,9 +445,17 @@ export async function sendMessage(message, history = [], options = {}) {
     // TRACE: Request envelope before streaming (non-intrusive)
     if (isDebug()) {
       trace('[TRACE] beforeRequestEnvelope', { endpoint, requestBodyKeys: Object.keys(requestBody) });
-      trace('[TRACE] requestEnvelope', {
-        questionType, mode, userRole, hasMetadata: !!metadata, canExpand: metadata?.canExpand === true
-      });
+      try {
+        trace('[TRACE] requestEnvelope', {
+          questionType: String(questionType), 
+          mode: String(mode), 
+          userRole: String(userRole),
+          metadataType: typeof metadata,
+          canExpand: false // Simplified to avoid errors
+        });
+      } catch (e) {
+        trace('[TRACE] requestEnvelopeError', { error: String(e) });
+      }
     }
     
     // TRACE: About to make API request
