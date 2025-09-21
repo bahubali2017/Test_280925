@@ -68,8 +68,7 @@ async function processAIResponse(response, sessionId) {
   // Remove all # symbols and markdown formatting
   let cleaned = response.replace(/#/g, '').replace(/\*\*/g, '');
 
-  // Clean stray markers (-- separators, etc.)
-  cleaned = cleanStrayMarkers(cleaned);
+  // Note: Stray marker cleanup moved to client-side for complete responses
 
   // Check if response seems incomplete (ends abruptly in middle of sentence/list)
   const trimmed = cleaned.trim();
