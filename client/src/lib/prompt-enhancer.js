@@ -432,11 +432,14 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
   const suggestions = generateFollowUpSuggestions(ctx);
   
   // Generate expansion prompt based on question type (not for educational questions)
+  // BUT ONLY if expansion prompts are enabled globally
   let expansionPrompt = "";
-  if (questionType === "medication") {
-    expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
-  } else if (questionType === "symptom") {
-    expansionPrompt = generateExpansionPrompt(userRole, false); // false for non-medication
+  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT) {
+    if (questionType === "medication") {
+      expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
+    } else if (questionType === "symptom") {
+      expansionPrompt = generateExpansionPrompt(userRole, false); // false for non-medication
+    }
   }
   // Educational and general questions get no expansion prompt (detailed immediately)
 
