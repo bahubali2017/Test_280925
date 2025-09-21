@@ -23,54 +23,6 @@ import { processFinalResponse } from '../lib/medical-safety-processor';
  * @property {boolean} [isStreaming] - Streaming status
  */
 
-/**
- * Clean up markdown formatting while preserving bold titles for better readability
- * @param {string} text - Text with markdown formatting
- * @returns {string} Clean text with bolded titles and proper formatting
- */
-function cleanMarkdownFormatting(text) {
-  if (!text) return text;
-  
-  // First, let's ensure we're getting bold formatting from AI
-  // Add bold formatting to common medical headings if they're not already bold
-  let processedText = text
-    // Convert ### headers to bold titles
-    .replace(/###\s*\*\*(.+?)\*\*/g, '**$1**')
-    .replace(/###\s*(.+)/g, '**$1**')
-    // Auto-bold ALL section headers that end with colons (catch all approach)
-    .replace(/^([A-Z][A-Za-z\s]+):\s*/gm, '**$1:**\n')
-    // Also handle specific medical terms without colons
-    .replace(/^(Simple Explanation|Common Symptoms?|When to Seek Care|General Management|Prevention|Causes?|Symptoms?|Treatment|Overview|Diagnosis|Management|Risk Factors?|Your reading)(\s*$)/gmi, '**$1**$2')
-    // Fix single asterisk formatting to double asterisk for bold
-    .replace(/\*([^*\n]+)\*/g, '**$1**')
-    // Keep ** bold markers for titles and important text
-    // Remove __ bold/italic markers but convert to ** for consistency
-    .replace(/__(.+?)__/g, '**$1**')
-    // Remove * italic markers (but be careful not to remove bullet points)
-    .replace(/(?<!\s)\*([^*\n]+?)\*/g, '$1')
-    // Clean up bullet points - make them consistent and keep bold titles
-    .replace(/^\s*-\s*\*\*(.+?)\*\*/gm, '• **$1**')
-    .replace(/^\s*-\s*/gm, '• ')
-    // Fix numbered lists - ensure they start on new lines and preserve bold
-    .replace(/(\d+\.\s+\*\*(.+?)\*\*)/g, '\n$1')
-    .replace(/(\d+\.\s+)/g, '\n$1')
-    // Fix bullet points - ensure they start on new lines  
-    .replace(/(•\s+)/g, '\n$1')
-    // Clean up checkmark symbols and ensure new lines
-    .replace(/✓\s+/g, '\n✓ ')
-    // Remove excessive asterisks but not list markers or bold formatting
-    .replace(/^\s*\*{3,}\s*/gm, '')
-    .replace(/\*{3,}/g, '')
-    // Clean up multiple spaces but preserve single spaces
-    .replace(/[ \t]{2,}/g, ' ')
-    // Clean up excessive line breaks (more than 2)
-    .replace(/\n{3,}/g, '\n\n')
-    // Clean up leading/trailing whitespace but preserve structure
-    .replace(/^\s+/gm, '')
-    .trim();
-    
-  return processedText;
-}
 
 /**
  * Helper to format message content with line breaks and bold formatting
