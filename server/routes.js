@@ -612,7 +612,7 @@ router.get("/app-config.json", async (req, res) => {
                  typeof entry.role === 'string' &&
                  entry.role.trim().length > 0;
         });
-        console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
+
       }
 
       // Validate request
@@ -628,14 +628,7 @@ router.get("/app-config.json", async (req, res) => {
 
       const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
       
-      // Debug logging for enhanced prompts
-      console.log('[DEBUG] Server received enhanced prompts:', {
-        hasSystemPrompt: !!systemPrompt,
-        hasEnhancedPrompt: !!enhancedPrompt,
-        userRole,
-        systemPromptLength: systemPrompt?.length || 0,
-        enhancedPromptLength: enhancedPrompt?.length || 0
-      });
+
       const config = getDeepSeekConfig();
 
       // Enhanced API key validation
@@ -892,7 +885,7 @@ router.get("/app-config.json", async (req, res) => {
                  typeof entry.role === 'string' &&
                  entry.role.trim().length > 0;
         });
-        console.debug(`[${sessionId}] Sanitized conversation history: ${req.body.conversationHistory.length} valid entries`);
+
       }
 
       // Validate request body against schema
@@ -909,14 +902,7 @@ router.get("/app-config.json", async (req, res) => {
 
       const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
       
-      // Debug logging for enhanced prompts
-      console.log('[DEBUG] Server received enhanced prompts:', {
-        hasSystemPrompt: !!systemPrompt,
-        hasEnhancedPrompt: !!enhancedPrompt,
-        userRole,
-        systemPromptLength: systemPrompt?.length || 0,
-        enhancedPromptLength: enhancedPrompt?.length || 0
-      });
+
       const config = getDeepSeekConfig();
 
       // Enhanced API key validation

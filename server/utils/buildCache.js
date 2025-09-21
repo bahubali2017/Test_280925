@@ -52,9 +52,7 @@ class BuildCache {
    * @returns {boolean} True if rebuild is required, false otherwise
    */
   static shouldRebuild(currentHash) {
-    // TEMPORARY HOTFIX: Force rebuild to deploy cleanup functions
-    console.log('[BUILD-CACHE] HOTFIX: Forcing rebuild to deploy new cleanup functions');
-    return true;
+    // Restore normal cache logic
     
     const cached = this.getBuildInfo();
     if (!cached) {
