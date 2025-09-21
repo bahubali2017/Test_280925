@@ -936,7 +936,7 @@ export default function ChatPage() {
           aria-atomic="false"
           aria-relevant="additions"
         >
-          <div className="space-y-4" role="list" aria-label="Chat messages">
+          <div className="space-y-1" role="list" aria-label="Chat messages">
             {isFetchingHistory ? (
               <div className="text-center py-10 text-muted-foreground">
                 <div className="inline-flex items-center justify-center space-x-2 mb-2">

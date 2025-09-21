@@ -53,29 +53,29 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
   return (
     <div className="relative" data-status={status}>
       <ReactMarkdown
-        className="markdown-compact"
+        className="ai-markdown"
         remarkPlugins={[remarkGfm]}
         components={{
           h1: ({ node, ...props }) => (
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white !mt-1 !mb-1" {...props} />
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white" {...props} />
           ),
           h2: ({ node, ...props }) => (
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white !mt-1 !mb-1" {...props} />
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white" {...props} />
           ),
           h3: ({ node, ...props }) => (
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white !mt-1 !mb-1" {...props} />
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white" {...props} />
           ),
           p: ({ node, ...props }) => (
-            <p className="text-foreground dark:text-foreground !mt-1 !mb-1" {...props} />
+            <p className="text-foreground dark:text-foreground" {...props} />
           ),
           ul: ({ node, ...props }) => (
-            <ul className="list-disc ml-6 !mt-1 !mb-1" {...props} />
+            <ul className="list-disc ml-6" {...props} />
           ),
           ol: ({ node, ...props }) => (
-            <ol className="list-decimal ml-6 !mt-1 !mb-1" {...props} />
+            <ol className="list-decimal ml-6" {...props} />
           ),
           li: ({ node, ...props }) => (
-            <li className="text-foreground dark:text-foreground !mb-0.5" {...props} />
+            <li className="text-foreground dark:text-foreground" {...props} />
           ),
           strong: ({ node, ...props }) => (
             <strong className="font-bold text-gray-900 dark:text-white" {...props} />
@@ -84,13 +84,13 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
             <em className="italic text-foreground dark:text-foreground" {...props} />
           ),
           blockquote: ({ node, ...props }) => (
-            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300 !mt-1 !mb-1" {...props} />
+            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300" {...props} />
           ),
           code: ({ node, inline, ...props }) => (
             inline ? (
               <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono" {...props} />
             ) : (
-              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto !mt-1 !mb-1" {...props} />
+              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto" {...props} />
             )
           ),
         }}

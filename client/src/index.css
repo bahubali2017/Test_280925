@@ -70,44 +70,57 @@
   animation: slide-up 0.3s ease-out;
 }
 
-/* ULTRA-COMPACT MARKDOWN STYLING - VERSION 2.0.2 - FORCE REFRESH! */
-/* Cache Bust: 2025-09-21-18:22 - DEPLOYMENT FIX */
-.markdown-compact h1,
-.markdown-compact h2,
-.markdown-compact h3,
-.markdown-compact h4,
-.markdown-compact h5,
-.markdown-compact h6,
-.markdown-compact p,
-.markdown-compact ul,
-.markdown-compact ol,
-.markdown-compact li {
-  margin-top: 0.25rem !important;
-  margin-bottom: 0.25rem !important;
-  line-height: 1.3 !important;
-}
+/* ULTRA-COMPACT AI MARKDOWN - VERSION 3.0.0 - TAILWIND TYPOGRAPHY OVERRIDE */
+/* Cache Bust: 2025-09-21-18:25 - FINAL FIX FOR PROSE CONFLICTS */
 
-/* Remove paragraph gaps inside list items */
-.markdown-compact li p {
-  margin: 0 !important;
-  display: inline !important;  /* prevents double-line spacing */
-}
+@layer utilities {
+  /* AI Markdown - Override Tailwind Typography completely */
+  .ai-markdown p,
+  .ai-markdown li {
+    margin: 0 !important;
+    line-height: 1.3 !important;
+  }
+  
+  .ai-markdown ul,
+  .ai-markdown ol {
+    margin: 0 !important;
+    padding-left: 1rem !important;
+  }
+  
+  .ai-markdown li p {
+    display: inline !important;
+    margin: 0 !important;
+  }
+  
+  .ai-markdown h1,
+  .ai-markdown h2,
+  .ai-markdown h3,
+  .ai-markdown h4,
+  .ai-markdown h5,
+  .ai-markdown h6 {
+    margin: 0.25rem 0 !important;
+    line-height: 1.25 !important;
+  }
+  
+  .ai-markdown p + p,
+  .ai-markdown li + li {
+    margin-top: 0.125rem !important;
+  }
+  
+  .ai-markdown strong {
+    font-weight: 600 !important;
+  }
 
-/* Tighten nested lists */
-.markdown-compact ul ul,
-.markdown-compact ol ol {
-  margin-top: 0.15rem !important;
-  margin-bottom: 0.15rem !important;
-}
-
-/* Optional: Reduce horizontal list indentation */
-.markdown-compact ul,
-.markdown-compact ol {
-  padding-left: 1rem !important;
-}
-
-.markdown-compact strong {
-  font-weight: 600 !important;
+  /* Eliminate any Tailwind Typography spacing */
+  .ai-markdown :where(p):not(:where([class~="not-prose"] *)) {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
+  
+  .ai-markdown :where(li):not(:where([class~="not-prose"] *)) {
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+  }
 }
 
 @layer base {
