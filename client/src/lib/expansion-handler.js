@@ -37,31 +37,6 @@ export function detectExpansionRequest(userInput) {
   return hasExpansionKeywords || isEmergencyMedicationQuery;
 }
 
-/**
- * Detects if a medication question is related to an emergency context
- * @param {string} loweredInput - Lowercased user input
- * @returns {boolean} - True if it's an emergency medication expansion
- */
-function detectEmergencyMedicationExpansion(loweredInput) {
-  // Check if we have a recent emergency context
-  if (!isLastExpandableQueryRecent()) {
-    return false;
-  }
-  
-  const lastQuery = getLastExpandableQuery();
-  if (!lastQuery || !['chest_pain', 'emergency', 'breathing_difficulty'].includes(lastQuery.type)) {
-    return false;
-  }
-  
-  // Emergency medication patterns
-  const emergencyMedicationPatterns = [
-    'aspirin dosage', 'aspirin dose', 'how much aspirin', 'aspirin amount',
-    'nitroglycerin', 'heart medication', 'emergency medication',
-    'what medication', 'dosage', 'dose', 'how to take'
-  ];
-  
-  return emergencyMedicationPatterns.some(pattern => loweredInput.includes(pattern));
-}
 
 /**
  * Updates the conversation state with the last expandable query

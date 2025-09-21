@@ -174,7 +174,7 @@ export function generateFallbackResponse(context) {
     return {
       response: "I understand you may be going through a difficult time. Mental health concerns require specialized care that I cannot provide.",
       type: "mental_health",
-      disclaimer: SAFETY_DISCLAIMERS.mental_health,
+      disclaimer: null, // Let medical safety processor handle disclaimers to avoid duplication
       requiresHumanIntervention: true,
       recommendedActions: [
         "Reach out to a mental health professional",
@@ -191,7 +191,7 @@ export function generateFallbackResponse(context) {
     return {
       response: "Your symptoms suggest you may need urgent medical attention. I cannot provide adequate guidance for potentially serious conditions.",
       type: "general",
-      disclaimer: SAFETY_DISCLAIMERS.general,
+      disclaimer: null, // Let medical safety processor handle disclaimers to avoid duplication
       requiresHumanIntervention: true,
       recommendedActions: [
         "Contact your healthcare provider immediately",
@@ -225,7 +225,7 @@ export function generateFallbackResponse(context) {
     return {
       response: "I cannot provide appropriate guidance for this medical situation due to safety considerations.",
       type: "general",
-      disclaimer: SAFETY_DISCLAIMERS.general,
+      disclaimer: null, // Let medical safety processor handle disclaimers to avoid duplication
       requiresHumanIntervention: true,
       recommendedActions: [
         "Consult with a healthcare professional",
@@ -241,7 +241,7 @@ export function generateFallbackResponse(context) {
   return {
     response: "I wasn't able to understand your medical question clearly enough to provide safe guidance.",
     type: "general",
-    disclaimer: SAFETY_DISCLAIMERS.general,
+    disclaimer: null, // Let medical safety processor handle disclaimers to avoid duplication
     requiresHumanIntervention: false,
     recommendedActions: [
       "Try rephrasing your question with more specific symptoms",
