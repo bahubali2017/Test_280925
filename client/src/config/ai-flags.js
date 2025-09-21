@@ -45,7 +45,7 @@ export const CONCISE_SETTINGS = {
   MAX_SENTENCES: 3,
   MAX_TOKENS: 200,
   EXAM_STYLE: true,
-  ALWAYS_ADD_EXPANSION: true
+  ALWAYS_ADD_EXPANSION: false  // Fixed: Don't force expansion when it's disabled
 };
 
 /**
@@ -53,7 +53,7 @@ export const CONCISE_SETTINGS = {
  * Controls automatic expansion from concise to detailed responses
  */
 export const EXPANSION_SETTINGS = {
-  ENABLE_AUTO_EXPANSION: true,   // master toggle
+  ENABLE_AUTO_EXPANSION: false,   // Fixed: Respect the main expansion flag
   EXPANSION_KEYWORDS: ["yes", "expand", "more", "details"], // triggers for text input
 };
 
