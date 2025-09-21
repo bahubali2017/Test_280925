@@ -1149,8 +1149,10 @@ router.get("/app-config.json", async (req, res) => {
                   const content = data.choices?.[0]?.delta?.content || '';
 
                   if (content) {
-                    // Clean content before sending and accumulating
-                    const cleanedContent = content.replace(/#/g, '');
+                    // Clean content before sending and accumulating - APPLY ALL CLEANUP TO CHUNKS
+                    let cleanedContent = content.replace(/#/g, '');
+                    // Apply stray marker cleanup to each chunk immediately
+                    cleanedContent = cleanStrayMarkers(cleanedContent);
 
                     // Accumulate response text
                     responseText += cleanedContent;
