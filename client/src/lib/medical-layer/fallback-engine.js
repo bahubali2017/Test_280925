@@ -145,9 +145,10 @@ function generateBreathingEmergencyResponse() {
  * @typedef {object} FallbackResponse
  * @property {string} response - Fallback response text
  * @property {'general'|'emergency'|'mental_health'|'medication'|'technical_error'} type - Fallback type
- * @property {string} disclaimer - Safety disclaimer text
+ * @property {string|null} disclaimer - Safety disclaimer text (null to avoid duplication)
  * @property {boolean} requiresHumanIntervention - Whether human assistance is needed
  * @property {string[]} recommendedActions - Suggested next steps for user
+ * @property {string[]} [followUpQuestions] - Optional follow-up questions
  * @property {string} fallbackReason - Reason for fallback activation
  */
 
