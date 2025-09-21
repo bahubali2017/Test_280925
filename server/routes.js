@@ -291,7 +291,7 @@ router.get("/app-config.json", async (req, res) => {
     const config = {
       version: versionHash,
       timestamp: timestamp,
-      mustRefresh: true, // TEMPORARY: Force hard refresh to clear client caches and deploy new cleanup code
+      mustRefresh: false, // Can be set to true if forced refresh needed
       swKillSwitch: false, // Emergency kill switch for problematic service workers
       buildInfo: {
         nodeEnv: process.env.NODE_ENV || 'development',
