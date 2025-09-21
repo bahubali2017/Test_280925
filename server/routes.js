@@ -39,22 +39,6 @@ const circuitBreakerMiddleware = (req, res, next) => {
   next();
 };
 
-/**
- * Clean stray markers from AI response
- * @param {string} text - Text to clean
- * @returns {string} Cleaned text without stray markers
- */
-function cleanStrayMarkers(text) {
-  // STREAMING-SAFE cleanup: Only remove specific stray markers, preserve formatting
-  const cleaned = text
-    // ONLY remove the problematic "• --" patterns
-    .replace(/•\s*--+/g, "")
-    .replace(/•\s*-\s*-/g, "")
-    // Remove standalone "--" on its own line
-    .replace(/^\s*--+\s*$/gm, "");
-  
-  return cleaned;
-}
 
 /**
  * Process AI response to ensure completeness and clean formatting
@@ -626,7 +610,7 @@ router.get("/app-config.json", async (req, res) => {
         });
       }
 
-      const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
+      const { message, conversationHistory, isHighRisk } = validation.data;
       
 
       const config = getDeepSeekConfig();
@@ -900,7 +884,7 @@ router.get("/app-config.json", async (req, res) => {
         });
       }
 
-      const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
+      const { message, conversationHistory, isHighRisk } = validation.data;
       
 
       const config = getDeepSeekConfig();
@@ -957,33 +941,24 @@ router.get("/app-config.json", async (req, res) => {
       // Prepare messages for the LLM
       let promptMessages = [];
 
-      // Check if enhanced prompts are provided by the client (for concise mode, etc.)
-      if (systemPrompt && typeof systemPrompt === 'string') {
-        // Use enhanced system prompt from client
-        promptMessages.push({
-          role: "system",
-          content: systemPrompt
-        });
-      } else {
-        // Fallback to default system message with safety instructions and role information
-        promptMessages.push({
-          role: "system",
-          content: `You are MAIA (Medical AI Assistant) from Anamnesis. Provide complete medical information in plain text format.
-          ${isHighRisk ? 'IMPORTANT: The user may describe an urgent medical situation. Emphasize the importance of seeking immediate professional medical attention for emergencies.' : ''}
+      // Use default system message with safety instructions and role information
+      promptMessages.push({
+        role: "system",
+        content: `You are MAIA (Medical AI Assistant) from Anamnesis. Provide complete medical information in plain text format.
+        ${isHighRisk ? 'IMPORTANT: The user may describe an urgent medical situation. Emphasize the importance of seeking immediate professional medical attention for emergencies.' : ''}
 
-          USER TYPE: ${roleAnalysis.role} (confidence: ${roleAnalysis.confidence}%)
-          ${responseInstructions}
+        USER TYPE: ${roleAnalysis.role} (confidence: ${roleAnalysis.confidence}%)
+        ${responseInstructions}
 
-          CRITICAL RULES:
-          1. NO # symbols or markdown
-          2. Complete ALL responses - finish every thought and section
-          3. Use simple headers with colons
-          4. Educational information only
-          5. If response is getting long, prioritize the most important information first
+        CRITICAL RULES:
+        1. NO # symbols or markdown
+        2. Complete ALL responses - finish every thought and section
+        3. Use simple headers with colons
+        4. Educational information only
+        5. If response is getting long, prioritize the most important information first
 
-          CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`
-        });
-      }
+        CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`
+      });
 
       // Add conversation history for context
       if (Array.isArray(conversationHistory) && conversationHistory.length > 0) {
@@ -992,20 +967,11 @@ router.get("/app-config.json", async (req, res) => {
         promptMessages = [...promptMessages, ...recentHistory];
       }
 
-      // Add the current user message (use enhanced prompt if available)
-      if (enhancedPrompt && typeof enhancedPrompt === 'string') {
-        // Use enhanced user prompt from client
-        promptMessages.push({
-          role: "user",
-          content: enhancedPrompt
-        });
-      } else {
-        // Fallback to basic user message
-        promptMessages.push({
-          role: "user",
-          content: message
-        });
-      }
+      // Add the current user message
+      promptMessages.push({
+        role: "user",
+        content: message
+      });
 
       // Send the request to DeepSeek API with streaming enabled
       const deepSeekUrl = "https://api.deepseek.com/v1/chat/completions";
@@ -1045,7 +1011,7 @@ router.get("/app-config.json", async (req, res) => {
           model: config.model || "deepseek-chat",
           messages: promptMessages,
           temperature: 0.2,
-          max_tokens: systemPrompt && systemPrompt.includes('CONCISE MODE ACTIVE') ? 200 : 4096,
+          max_tokens: 4096,
           top_p: 0.95,
           frequency_penalty: 0.1,
           presence_penalty: 0.1,
@@ -1225,7 +1191,7 @@ router.get("/app-config.json", async (req, res) => {
               sessionTracker.endSession(sessionId, 'error');
 
               res.end();
-            } catch (writeError) {
+            } catch {
               // Error sending SSE error event - connection likely closed
             }
           } else if (err.message === 'aborted') {

@@ -226,7 +226,6 @@ class AdminWebSocketServer {
   handleMessage(ws, data) {
     try {
       const message = JSON.parse(data.toString());
-      const clientInfo = this.clientInfo.get(ws);
       
       // Admin websocket message processed
       
@@ -301,13 +300,11 @@ class AdminWebSocketServer {
    */
   broadcast(message) {
     const messageStr = JSON.stringify(message);
-    let successCount = 0;
     
     for (const ws of this.connectedClients) {
       try {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(messageStr);
-          successCount++;
         }
       } catch (error) {
         console.error('[ADMIN-WS] Failed to broadcast to client:', error);
