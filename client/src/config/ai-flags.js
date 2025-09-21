@@ -5,8 +5,7 @@
  * Version: 1.1 - Concise mode enabled
  */
 
-// Debug logging to verify flags are loaded
-console.log('[AI-FLAGS] Loading AI flags with concise mode:', { ENABLE_CONCISE_MODE: true });
+// AI feature flags configuration loaded
 
 /**
  *

@@ -316,14 +316,6 @@ export async function sendMessage(message, history = [], options = {}) {
       expansionPrompt
     } = enhancePrompt(layerContext, userRole, conversationHistory);
     
-    // Debug logging
-    console.log('[DEBUG] Enhanced prompts generated:', {
-      userRole,
-      hasSystemPrompt: !!systemPrompt,
-      hasEnhancedPrompt: !!enhancedPrompt,
-      systemPromptLength: systemPrompt?.length || 0,
-      enhancedPromptLength: enhancedPrompt?.length || 0
-    });
     
     // Prepare request body with enhanced prompts
     const requestBody = {

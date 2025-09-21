@@ -17,7 +17,6 @@ import './index.css';
  * @returns {JSX.Element} The rendered application component.
  */
 export default function App() {
-  console.log('[App] Rendering main application');
   
   return (
     <GlobalErrorBoundary>

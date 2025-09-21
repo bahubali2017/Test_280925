@@ -135,7 +135,6 @@ export default function LoginPage() {
         const result = await login(email, password);
         const { success, error } = result;
         if (success) {
-          console.log('[LoginPage] Login successful, user authenticated');
           toast({
             title: "Login successful",
             description: "Welcome back to Anamnesis!",
@@ -143,10 +142,8 @@ export default function LoginPage() {
           });
           
           // Ensure auth state is ready before redirect
-          console.log('[LoginPage] Redirecting to chat page');
           setLocation('/chat');
         } else {
-          console.log('[LoginPage] Login failed:', error);
           setError(error || 'Invalid credentials');
         }
       }

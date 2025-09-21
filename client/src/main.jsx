@@ -14,8 +14,6 @@ if (!rootElement) {
 }
 
 // Initialize version checking system before rendering the app
-// This ensures we catch version mismatches as early as possible
-console.log('[App] Initializing version checking system...');
 initializeVersionChecking();
 
 ReactDOM.createRoot(rootElement).render(

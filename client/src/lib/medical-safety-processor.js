@@ -348,5 +348,5 @@ export function logSafetyProcessing(processingResult, sessionId) {
     (/** @type {any} */ (window)).medicalAnalytics.logSafetyEvent(logData);
   }
   
-  console.log('Medical safety processing completed:', logData);
+  // Analytics logged to medical tracking system
 }
