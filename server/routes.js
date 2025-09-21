@@ -40,6 +40,23 @@ const circuitBreakerMiddleware = (req, res, next) => {
 };
 
 /**
+ * Clean stray markers from AI response
+ * @param {string} text - Text to clean
+ * @returns {string} Cleaned text without stray markers
+ */
+function cleanStrayMarkers(text) {
+  return text
+    // remove stray dashes used as separators
+    .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
+    // remove isolated dashes at start of line
+    .replace(/^\s*[-–]{2,}\s*$/gm, "")
+    // normalize multiple newlines
+    .replace(/\n{3,}/g, "\n\n")
+    // remove trailing or leading whitespace
+    .trim();
+}
+
+/**
  * Process AI response to ensure completeness and clean formatting
  * @param {string} response - Raw AI response
  * @param {string} sessionId - Session ID for logging
@@ -50,6 +67,9 @@ async function processAIResponse(response, sessionId) {
 
   // Remove all # symbols and markdown formatting
   let cleaned = response.replace(/#/g, '').replace(/\*\*/g, '');
+
+  // Clean stray markers (-- separators, etc.)
+  cleaned = cleanStrayMarkers(cleaned);
 
   // Check if response seems incomplete (ends abruptly in middle of sentence/list)
   const trimmed = cleaned.trim();

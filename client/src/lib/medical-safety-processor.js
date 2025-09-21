@@ -110,6 +110,38 @@ export async function processMedicalSafety(userInput, options = {}) {
 }
 
 /**
+ * Clean stray markers from AI response
+ * @param {string} text - Text to clean
+ * @returns {string} Cleaned text without stray markers
+ */
+function cleanStrayMarkers(text) {
+  return text
+    // remove stray dashes used as separators
+    .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
+    // remove isolated dashes at start of line
+    .replace(/^\s*[-–]{2,}\s*$/gm, "")
+    // normalize multiple newlines
+    .replace(/\n{3,}/g, "\n\n")
+    // remove trailing or leading whitespace
+    .trim();
+}
+
+/**
+ * Process final response with cleanup and safety processing
+ * @param {string} aiOutput - AI response output
+ * @param {object} safetyContext - Safety context from processMedicalSafety
+ * @param {string} [systemPrompt] - System prompt to check for existing disclaimers
+ * @returns {string} Final processed response
+ */
+export function processFinalResponse(aiOutput, safetyContext, systemPrompt = "") {
+  // Apply safety processing first
+  let safeOutput = postProcessAIResponse(aiOutput, safetyContext, systemPrompt);
+  // Clean stray markers
+  safeOutput = cleanStrayMarkers(safeOutput);
+  return safeOutput;
+}
+
+/**
  * Post-process AI response through safety filters
  * @param {string} aiResponse - Original AI response
  * @param {object} safetyContext - Safety context from processMedicalSafety

@@ -1,0 +1,92 @@
+🔹 REPLIT AGENT PROMPT — STEP 2.6 (Remove Stray Markers)
+# ANAMNESIS MEDICAL AI ENHANCEMENT — STEP 2.6 (Remove Stray Markers)
+
+GOAL
+Clean AI responses by removing stray markers ("--", "---", "…") 
+that occasionally appear between sections when Concise Mode or token limiting is active.
+
+==================================================
+FILES TO UPDATE
+- client/src/lib/medical-safety-processor.js
+
+==================================================
+TASKS
+
+1) Add Cleanup Utility
+In `medical-safety-processor.js`, add a cleanup function before final response delivery:
+
+```js
+function cleanStrayMarkers(text) {
+  return text
+    // remove stray dashes used as separators
+    .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
+    // remove isolated dashes at start of line
+    .replace(/^\s*[-–]{2,}\s*$/gm, "")
+    // normalize multiple newlines
+    .replace(/\n{3,}/g, "\n\n")
+    // remove trailing or leading whitespace
+    .trim();
+}
+
+
+Apply Cleanup Before Returning Response
+In the final response processing step:
+
+export function processFinalResponse(aiOutput) {
+  let safeOutput = injectDisclaimer(aiOutput); // existing disclaimer logic
+  safeOutput = cleanStrayMarkers(safeOutput);  // new cleanup step
+  return safeOutput;
+}
+
+
+Optional: Prevent Markers at Source
+Update prompt templates (concise + detailed modes) to include:
+
+Do not use "--" or "…" as separators. Use clear section headers or bullet points only.
+
+
+==================================================
+TEST CASES
+
+Case 1: Educational Query
+Input: "What is IBS?"
+Output:
+
+Definition
+
+IBS is a functional GI disorder.
+
+Key Features
+
+Abdominal pain or cramping
+
+Bloating
+
+Diarrhea or constipation
+
+(no stray -- lines remain)
+
+Case 2: Medication Query
+Input: "What is the dosage of ibuprofen for adults?"
+Output:
+
+Analgesia: 200–400 mg every 4–6 hours
+
+Max: 3200 mg/day
+⚠️ Informational purposes only. Not a substitute for professional medical advice.
+Would you like me to provide further detailed information (side effects, interactions, precautions)?
+
+(no stray --)
+
+Case 3: Symptom Query
+Input: "I have chest pain"
+Output: Existing triage template (no -- markers).
+
+==================================================
+DELIVERABLES
+
+Clean, professional answers with section headers preserved.
+
+Stray --, ---, and … markers removed automatically in post-processing.
+
+No duplication or loss of medical information.
