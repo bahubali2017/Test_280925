@@ -1,0 +1,95 @@
+🔹 REPLIT AGENT PROMPT — AUTO CACHE CLEAR + REBUILD
+# ANAMNESIS PLATFORM — DEPLOYMENT PIPELINE ENHANCEMENT
+
+GOAL
+Automate build cache clearing and force a fresh rebuild after every code change.  
+This ensures fixes like stray marker cleanup are deployed immediately, without serving stale cached builds.
+
+==================================================
+FILES TO UPDATE / CREATE
+- package.json (scripts section)
+- replit.nix or .replit.workflow (depending on your current setup)
+
+==================================================
+TASKS
+
+1) Add Clean Build Script
+In `package.json`, add a script to clear dist/cache before build:
+
+```json
+"scripts": {
+  "clean": "rm -rf dist .cache build",
+  "build:clean": "npm run clean && vite build --force",
+  "start:clean": "npm run build:clean && NODE_ENV=production node dist/index.js"
+}
+
+
+Update Deployment Workflow
+If using .replit.workflow, modify the build/start pipeline:
+
+run:
+  steps:
+    - name: Clean previous build
+      run: rm -rf dist .cache build
+    - name: Build project
+      run: vite build --force
+    - name: Start server
+      run: NODE_ENV=production node dist/index.js
+
+
+If using .replit file
+Add cache-busting before running:
+
+run = "npm run start:clean"
+
+
+Service Worker Auto-Bump
+To ensure browsers don’t reuse old SW, add a build hash generator:
+
+Create scripts/bump-version.js:
+
+import fs from "fs";
+
+const version = Date.now().toString();
+const configPath = "public/app-config.json";
+
+let config = JSON.parse(fs.readFileSync(configPath, "utf8"));
+config.version = version;
+config.mustRefresh = true;
+
+fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
+console.log("🔄 Build version bumped:", version);
+
+
+Add to build pipeline in package.json:
+
+"build:clean": "npm run clean && vite build --force && node scripts/bump-version.js"
+
+
+==================================================
+TEST PLAN
+
+Case 1: Make a code change (e.g., edit medical-safety-processor.js)
+→ Run npm run start:clean
+Expected:
+
+Old dist/.cache folders deleted
+
+Vite forces a fresh build
+
+New build hash in public/app-config.json
+
+Service Worker invalidates old version
+
+Case 2: Deploy to production
+→ App auto-rebuilds, no "cache valid, skipping build" log
+→ Fresh build hash visible in logs
+
+==================================================
+DELIVERABLES
+
+Fully automated clean build + cache clear after each code change.
+
+No more stale builds blocking new fixes.
+
+Build hash auto-updated for Service Worker cache busting.
