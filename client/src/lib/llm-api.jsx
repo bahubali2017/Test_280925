@@ -8,12 +8,21 @@
 /* global TextDecoder, AbortController, setTimeout */
 
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
-import { enhancePrompt, classifyQuestionType } from './prompt-enhancer.js';
+import { enhancePrompt, classifyQuestionType, buildPromptsForQuery } from './prompt-enhancer.js';
 import { createLayerContext } from './layer-context.js';
 import { 
   handleExpansionRequest, 
   updateLastExpandableQuery
 } from './expansion-handler.js';
+import { 
+  setLastExpandable, 
+  clearLastExpandable, 
+  markPendingExpansion, 
+  getExpansionState, 
+  isAffirmativeExpansion 
+} from './expansion-state.js';
+import { buildExpansionPrompt } from './expansion-prompts.js';
+import { AI_FLAGS } from '../config/ai-flags.js';
 
 /**
  * @typedef {object} Message
@@ -356,31 +365,45 @@ export async function sendMessage(message, history = [], options = {}) {
       };
     }
 
-    // Only proceed with expansion handling if safety checks pass
-    const expansionResult = handleExpansionRequest(message, conversationHistory, userRole);
+    // NEW EXPANSION STATE MACHINE LOGIC
+    const { lastExpandable, pendingExpansion } = getExpansionState();
     
-    let systemPrompt, enhancedPrompt;
+    let systemPrompt, enhancedPrompt, questionType, mode;
+    let responseId = `response_${currentSession}_${Date.now()}`;
     
-    if (expansionResult.isExpansion) {
-      // Handle expansion request with the tracked context
-      enhancedPrompt = expansionResult.prompt;
-      systemPrompt = "You are providing a detailed expansion based on the user's previous query.";
+    // 1) Handle pure expansion replies like "yes", "more", "expand"
+    if (isAffirmativeExpansion(message) && lastExpandable) {
+      // Build detailed expansion using the lastExpandable context
+      const expPrompt = buildExpansionPrompt({
+        questionType: lastExpandable.questionType,
+        query: lastExpandable.query,
+        role: lastExpandable.role || userRole
+      });
+      
+      systemPrompt = expPrompt.systemPrompt;
+      enhancedPrompt = expPrompt.userPrompt;
+      questionType = lastExpandable.questionType;
+      mode = "expansion";
+      
+      // Consume expansion state
+      clearLastExpandable();
     } else {
-      // Regular query processing
-      // Create layer context for prompt enhancement
-      const layerContext = createLayerContext(message.trim());
+      // 2) Fresh question: clear previous expansion state
+      clearLastExpandable();
       
-      // Generate enhanced prompts using the prompt enhancer
-      const enhancementResult = enhancePrompt(layerContext, userRole, conversationHistory);
-      systemPrompt = enhancementResult.systemPrompt;
-      enhancedPrompt = enhancementResult.enhancedPrompt;
+      // 3) Classify and build prompts using new routing system
+      const promptResult = buildPromptsForQuery({ 
+        query: message, 
+        userRole, 
+        flags: AI_FLAGS 
+      });
       
-      // Classify and track this query for potential future expansion
-      const questionType = classifyQuestionType(message);
-      const responseId = `response_${currentSession}_${Date.now()}`;
+      systemPrompt = promptResult.systemPrompt;
+      enhancedPrompt = message.trim(); // Simple user prompt for fresh queries
+      questionType = promptResult.questionType;
+      mode = promptResult.mode;
       
-      // Update conversation state for expansion tracking
-      updateLastExpandableQuery(message, questionType, responseId);
+      // For concise medication answers, we'll arm expansion after successful completion
     }
     
     
@@ -393,6 +416,9 @@ export async function sendMessage(message, history = [], options = {}) {
       systemPrompt,
       enhancedPrompt,
       userRole,
+      // Add mode information for downstream processing
+      mode,
+      questionType,
       ...(sessionId && { sessionId })
     };
 
@@ -515,6 +541,27 @@ export async function sendMessage(message, history = [], options = {}) {
     }
 
     metadata.requestTime = Date.now() - startTime;
+
+    // 5) If concise medication answer completed successfully → arm expansion
+    if (mode === "concise" && content && content.trim() && !metadata.medicalSafety.blocked) {
+      setLastExpandable({
+        messageId: responseId,
+        questionType,
+        query: message.trim(),
+        role: userRole
+      });
+      markPendingExpansion(true);
+      
+      // Add mode information to metadata for UI handling
+      metadata.responseMode = mode;
+      metadata.questionType = questionType;
+      metadata.canExpand = true;
+    } else {
+      // For non-concise responses, don't arm expansion
+      metadata.responseMode = mode;
+      metadata.questionType = questionType;
+      metadata.canExpand = false;
+    }
 
     return {
       content: content || '',
