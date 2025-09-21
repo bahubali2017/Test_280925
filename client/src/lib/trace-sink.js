@@ -18,7 +18,7 @@ export function trace(label, data) {
         source: 'client',
       }),
     });
-  } catch (err) {
+  } catch {
     // Fail silently — never break runtime if logging fails
   }
 }
