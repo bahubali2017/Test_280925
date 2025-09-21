@@ -262,13 +262,25 @@ function applyConciseMode(template, userRole = "public", questionType = "general
     }
   }
 
-  // CRITICAL FIX: Never inject auto-expansion instructions in system prompt
-  // This prevents expansion bleed into other flows and maintains clean separation
+  // CRITICAL FIX: Never inject any expansion instructions in system prompt
+  // This prevents expansion bleed and maintains clean separation between concise and expansion modes
   let expansionInstruction = "";
   
   if (questionType === "medication") {
-    // For medication queries, enforce strict concise format without auto-expansion
-    expansionInstruction = `\n- For medication dosage queries: provide ONLY essential dosing information. Do NOT add follow-up questions or expansion prompts.`;
+    // For medication queries, enforce strict concise format with NO expansion instructions
+    expansionInstruction = `\n- For medication dosage queries: provide ONLY essential dosing information. Do NOT add follow-up questions or expansion prompts. Keep responses to 3-5 sentences maximum.`;
+  }
+
+  // For medication queries, skip all expansion-related template additions
+  if (questionType === "medication") {
+    return template + `
+
+CONCISE MEDICATION MODE ACTIVE:
+- Keep answers <= 3-5 sentences maximum
+- Provide ONLY essential dosing information
+- Use direct, actionable format
+- No side effects, interactions, or expansion prompts
+- Include appropriate medical disclaimer only${expansionInstruction}`;
   }
 
   return template + `
@@ -362,8 +374,10 @@ export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
   let mode = "normal";
 
   if (questionType === "medication" && flags.ENABLE_CONCISE_MODE) {
-    systemPrompt = applyConciseMode(systemPrompt, userRole, "medication");
+    // SPECIALIZED MEDICATION CONCISE PROMPT - NO EXPANSION TEXT
+    systemPrompt = buildConciseMedicationPrompt(userRole);
     mode = "concise";
+    console.log('🔵 [PROMPT] Built for medication (concise) - expansion handled by UI only');
   } else if (questionType === "educational") {
     // Detailed path: do not inject concise or expansion text
     mode = "detailed";
@@ -372,6 +386,7 @@ export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
     mode = "triage";
   }
 
+  console.log('🎯 [PROMPT] buildPromptsForQuery result:', { questionType, mode, userRole });
   return { systemPrompt, questionType, mode };
 }
 
@@ -384,6 +399,40 @@ function buildBaseSystemPrompt(userRole = 'public') {
   return `You are a medical AI assistant providing helpful, accurate medical information.
 ${userRole === 'doctor' ? 'Assume healthcare professional audience.' : 'Assume general public audience.'}
 Always include appropriate medical disclaimers and safety guidance.`;
+}
+
+/**
+ * Build specialized concise medication prompt without expansion text
+ * @param {string} [userRole='public'] - User role
+ * @returns {string} Concise medication system prompt
+ */
+function buildConciseMedicationPrompt(userRole = 'public') {
+  const baseDisclaimer = userRole === 'doctor' 
+    ? "⚠️ Professional reference only. Verify with official prescribing information."
+    : "⚠️ Informational purposes only. Not a substitute for professional medical advice.";
+
+  const prompt = `You are a medical AI assistant providing concise medication dosage information.
+
+STRICT CONCISE MODE FOR MEDICATION QUERIES:
+- Response length: maximum 3-5 sentences only
+- Provide ONLY key dosage types and units (e.g., "81 mg daily", "325 mg as needed")
+- Include typical adult dosing ranges in simple format
+- Do NOT expand, explain, or include side effects, interactions, or precautions
+- Do NOT add follow-up questions or expansion prompts
+- Do NOT include phrases like "Would you like more details" or similar
+- Wait for explicit user expansion request before providing additional details
+
+${userRole === 'doctor' 
+  ? "Use clinical terminology with typical dosing ranges and adjustment criteria."
+  : "Use patient-friendly language with simple dosage explanations."
+}
+
+Always end with: ${baseDisclaimer}
+
+CRITICAL: Keep response strictly to dosage information only. Expansion invitations are handled separately by UI.`;
+
+  console.log('📋 [PROMPT] Final medication system prompt (should contain NO expansion text):', prompt);
+  return prompt;
 }
 
 /**
