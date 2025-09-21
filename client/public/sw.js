@@ -1,6 +1,6 @@
 /* global self, caches */
 // Cache names for different types of resources  
-const CACHE_NAME = 'anamnesis-disabled-cache';
+const CACHE_NAME = 'anamnesis-hard-reload-' + Date.now();
 // Critical assets to cache - DISABLED to prevent cache conflicts
 const CRITICAL_ASSETS = [];
 // Install event
