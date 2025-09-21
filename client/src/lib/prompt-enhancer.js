@@ -262,13 +262,13 @@ function applyConciseMode(template, userRole = "public", questionType = "general
     }
   }
 
-  // Only add expansion line if expansion is enabled
+  // CRITICAL FIX: Never inject auto-expansion instructions in system prompt
+  // This prevents expansion bleed into other flows and maintains clean separation
   let expansionInstruction = "";
-  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) {
-    expansionInstruction = `\n- At the end of EVERY answer, add: "${expansionLine}"`;
-  } else if (questionType === "medication") {
-    // For medication queries when expansion is disabled, enforce strict dosage-only format
-    expansionInstruction = `\n- For medication dosage queries: provide ONLY dosing information. Do NOT add follow-up questions or expansion prompts.`;
+  
+  if (questionType === "medication") {
+    // For medication queries, enforce strict concise format without auto-expansion
+    expansionInstruction = `\n- For medication dosage queries: provide ONLY essential dosing information. Do NOT add follow-up questions or expansion prompts.`;
   }
 
   return template + `
@@ -346,6 +346,44 @@ function generateFollowUpSuggestions(ctx) {
   }
 
   return suggestions.slice(0, 3); // Limit to 3 suggestions
+}
+
+/**
+ * Build prompts for a query with proper classification routing
+ * @param {object} params - Parameters
+ * @param {string} params.query - User query
+ * @param {string} [params.userRole='public'] - User role
+ * @param {object} params.flags - AI flags configuration
+ * @returns {object} Prompt configuration with mode information
+ */
+export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
+  const questionType = classifyQuestionType(query);
+  let systemPrompt = buildBaseSystemPrompt(userRole);
+  let mode = "normal";
+
+  if (questionType === "medication" && flags.ENABLE_CONCISE_MODE) {
+    systemPrompt = applyConciseMode(systemPrompt, userRole, "medication");
+    mode = "concise";
+  } else if (questionType === "educational") {
+    // Detailed path: do not inject concise or expansion text
+    mode = "detailed";
+  } else if (questionType === "symptom") {
+    // Triage template path
+    mode = "triage";
+  }
+
+  return { systemPrompt, questionType, mode };
+}
+
+/**
+ * Build base system prompt for a user role
+ * @param {string} [userRole='public'] - User role
+ * @returns {string} Base system prompt
+ */
+function buildBaseSystemPrompt(userRole = 'public') {
+  return `You are a medical AI assistant providing helpful, accurate medical information.
+${userRole === 'doctor' ? 'Assume healthcare professional audience.' : 'Assume general public audience.'}
+Always include appropriate medical disclaimers and safety guidance.`;
 }
 
 /**
