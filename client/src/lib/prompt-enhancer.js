@@ -349,8 +349,11 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   if (detectExpansionRequest(ctx.userInput)) {
     const originalQuery = extractOriginalQuery(conversationHistory);
     if (originalQuery) {
+      // Classify the original query to provide context-aware expansion
+      const originalQuestionType = classifyQuestionType(originalQuery);
+      
       // Build expansion prompt instead of normal triage flow
-      const expansionPrompt = buildExpansionPrompt(originalQuery, userRole);
+      const expansionPrompt = buildExpansionPrompt(originalQuery, userRole, originalQuestionType);
       
       // Return expansion-specific response structure
       return {
@@ -366,6 +369,12 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   
   // Classify question type for intelligent response mode selection
   const questionType = classifyQuestionType(ctx.userInput);
+  
+  // Temporary debugging
+  console.log(`🐛 DEBUG: Query "${ctx.userInput}" classified as "${questionType}"`);
+  console.log(`🐛 DEBUG: Normalized query: "${normalizeQueryText(ctx.userInput)}"`);
+  console.log(`🐛 DEBUG: Educational patterns match:`, /\bwhat\s+(?:is|are)\b/.test(normalizeQueryText(ctx.userInput)));
+  console.log(`🐛 DEBUG: CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER:`, CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER);
   
   
   const triageLevel = ctx.triage?.level || "NON_URGENT";
@@ -394,6 +403,7 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   // Apply intelligent classification logic for response mode
   if (questionType === "educational" || questionType === "general") {
     // Educational/general questions: Skip concise mode, provide detailed response immediately
+    console.log(`🐛 DEBUG: APPLYING EDUCATIONAL MODE for questionType: ${questionType}`);
     const educationalPrompt = `You are MAIA (Medical AI Assistant). Provide a detailed, structured explanation suitable for ${userRole === "doctor" ? "healthcare professionals" : "general public"}.
 
 - Cover definitions, key features, and management overview
@@ -403,6 +413,7 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
 
 EDUCATIONAL MODE: Provide comprehensive information immediately.`;
     
+    console.log(`🐛 DEBUG: Educational prompt length: ${educationalPrompt.length}`);
     systemPrompt = educationalPrompt;
   } else if (questionType === "medication") {
     // Medication questions: Use concise mode with medication-specific expansion option
