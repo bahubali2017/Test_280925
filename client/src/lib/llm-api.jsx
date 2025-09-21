@@ -8,8 +8,7 @@
 /* global TextDecoder, AbortController, setTimeout */
 
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
-import { enhancePrompt, classifyQuestionType, buildPromptsForQuery } from './prompt-enhancer.js';
-import { createLayerContext } from './layer-context.js';
+import { buildPromptsForQuery } from './prompt-enhancer.js';
 // OLD expansion-handler.js imports removed - using new expansion-state.js system
 import { 
   setLastExpandable, 
@@ -382,7 +381,7 @@ export async function sendMessage(message, history = [], options = {}) {
     }
 
     // NEW EXPANSION STATE MACHINE LOGIC
-    const { lastExpandable, pendingExpansion } = getExpansionState();
+    const { lastExpandable } = getExpansionState();
     
     let systemPrompt, enhancedPrompt, questionType, mode;
     let responseId = `response_${currentSession}_${Date.now()}`;

@@ -8,10 +8,10 @@ import { SAFETY_DISCLAIMERS, filterOverconfidentLanguage } from '../config/safet
 /**
  * Generate context-aware emergency response based on symptoms
  * @param {string} originalQuery - User's original query
- * @param {object} context - Emergency context
+ * @param {object} _context - Emergency context (unused)
  * @returns {FallbackResponse} Context-specific emergency response
  */
-function generateContextAwareEmergencyResponse(originalQuery, context) {
+function generateContextAwareEmergencyResponse(originalQuery, _context) {
   const queryLower = originalQuery.toLowerCase();
   
   // Chest pain specific emergency response

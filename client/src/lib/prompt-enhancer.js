@@ -233,35 +233,14 @@ function buildRolePolicy(userRole, isMedicationQuery) {
 /**
  * Apply concise mode formatting with context-aware expansion prompts
  * @param {string} template - Base template
- * @param {string} [userRole="public"] - User role for role-specific expansion prompts
+ * @param {string} [_userRole="public"] - User role for role-specific expansion prompts (unused)
  * @param {string} [questionType="general"] - Question type for context-aware prompts
  * @returns {string}
  */
-function applyConciseMode(template, userRole = "public", questionType = "general") {
+function applyConciseMode(template, _userRole = "public", questionType = "general") {
   if (!AI_FLAGS.ENABLE_CONCISE_MODE) return template;
   
-  // Generate context-aware expansion prompts
-  let expansionLine;
-  if (userRole === "doctor" || userRole === "verified_healthcare") {
-    expansionLine = "Would you like me to expand with further clinical details (algorithms, monitoring, pearls)?";
-  } else {
-    // Context-aware expansion prompts for public users
-    switch (questionType) {
-      case "medication":
-        expansionLine = "Would you like me to provide further detailed information (side effects, interactions, precautions)?";
-        break;
-      case "symptom":
-        expansionLine = "Would you like more detailed information about this condition and when to seek medical care?";
-        break;
-      case "educational":
-        expansionLine = "Would you like more detailed information about this topic (causes, complications, management)?";
-        break;
-      case "general":
-      default:
-        expansionLine = "Would you like more detailed information on this topic?";
-        break;
-    }
-  }
+  // Context-aware expansion prompts removed - handled by new expansion-state.js system
 
   // CRITICAL FIX: Never inject any expansion instructions in system prompt
   // This prevents expansion bleed and maintains clean separation between concise and expansion modes
@@ -461,10 +440,10 @@ CRITICAL: Keep response strictly to dosage information only. Expansion invitatio
  * Main enhancer: selects template, injects context, and prefixes disclaimers/ATD for high risk.
  * @param {import("./layer-context.js").LayerContext} ctx
  * @param {string} [userRole="public"] - User role for role-based responses
- * @param {Array} [conversationHistory=[]] - Previous conversation messages
+ * @param {Array} [_conversationHistory=[]] - Previous conversation messages (unused)
  * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string }}
  */
-export function enhancePrompt(ctx, userRole = "public", conversationHistory = []) {
+export function enhancePrompt(ctx, userRole = "public", _conversationHistory = []) {
   // OLD expansion detection removed - handled by new expansion-state.js system in llm-api.jsx
   
   // Classify question type for intelligent response mode selection
@@ -527,14 +506,14 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
 
   // Generate context-aware suggestions ONLY if expansion is enabled
   // CRITICAL FIX: Don't generate suggestions when expansion is disabled
-  const suggestions = (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) 
+  const suggestions = AI_FLAGS.ENABLE_EXPANSION_PROMPT
     ? generateFollowUpSuggestions(ctx) 
     : [];
   
   // Generate expansion prompt ONLY if expansion is globally enabled
   // CRITICAL: ALL expansion must respect the master flag
   let expansionPrompt = "";
-  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) {
+  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT) {
     if (questionType === "medication") {
       expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
     } else if (questionType === "symptom") {

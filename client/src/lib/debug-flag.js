@@ -1,6 +1,9 @@
+/* global URLSearchParams */
+
 /**
  * Debug flag helper for runtime tracing
  * Checks URL param ?debug=1 or localStorage.DEBUG_AI === "1"
+ * @returns {boolean}
  */
 export function isDebug() {
   try {
