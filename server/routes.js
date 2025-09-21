@@ -45,21 +45,34 @@ const circuitBreakerMiddleware = (req, res, next) => {
  * @returns {string} Cleaned text without stray markers
  */
 function cleanStrayMarkers(text) {
-  return text
-    // remove stray dashes used as separators (anywhere in line)
-    .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
-    // remove isolated dashes at start of line
-    .replace(/^\s*[-–]{2,}\s*$/gm, "")
-    // remove bullet points followed by dashes (• --, • ---, etc.) - more comprehensive
-    .replace(/^\s*•\s*[-–]{2,}.*$/gm, "")
-    // remove lines that are just bullet + space + dashes
-    .replace(/^•\s*[-–]{1,}.*$/gm, "")
-    // remove standalone dash lines (catch any missed patterns)
-    .replace(/^[-–\s]{2,}$/gm, "")
-    // normalize multiple newlines
-    .replace(/\n{3,}/g, "\n\n")
-    // remove trailing or leading whitespace
+  if (!text) return text;
+  
+  // Step 1: Normalize invisible spacing characters
+  let cleaned = text.replace(/[\u200B\u200C\u200D\u2060\u00A0]/g, ' ');
+  
+  // Step 2: Define broader character classes
+  const BULLET = /[\u2022\u25E6\u2023\u25CF\*\-]/; // •, ◦, ‣, ●, *, -
+  const DASH = /[\-–—]/; // regular dash, en-dash, em-dash
+  const SP = /[\s\u00A0\u200B\u200C\u200D\u2060]/; // whitespace + invisible chars
+  
+  // Step 3: Apply comprehensive cleanup rules
+  cleaned = cleaned
+    // Remove dash-only lines
+    .replace(new RegExp(`^${SP.source}*${DASH.source}{2,}${SP.source}*$`, 'gm'), '')
+    // Remove bullet+dash-only lines (• --, ◦ ---, etc.)
+    .replace(new RegExp(`^${SP.source}*${BULLET.source}${SP.source}*${DASH.source}{2,}${SP.source}*$`, 'gm'), '')
+    // Normalize inline bullet+dash to clean bullet
+    .replace(new RegExp(`${BULLET.source}${SP.source}*${DASH.source}{2,}${SP.source}*(?=\S)`, 'g'), '• ')
+    // Remove remaining isolated bullet+dash patterns
+    .replace(new RegExp(`^${SP.source}*${BULLET.source}${SP.source}*${DASH.source}+.*$`, 'gm'), '')
+    // Collapse multiple newlines
+    .replace(/\n{3,}/g, '\n\n')
+    // Clean up extra whitespace
+    .replace(/[ \t]+$/gm, '') // trailing spaces
+    .replace(/^[ \t]+/gm, '') // leading spaces on continuation lines
     .trim();
+    
+  return cleaned;
 }
 
 /**
