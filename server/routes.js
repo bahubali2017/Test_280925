@@ -1536,6 +1536,13 @@ router.get('/api/legal/license', (req, res) => {
   }
 });
 
+// Debug Trace Collector (Dev Only)
+router.post('/debug-trace', (req, res) => {
+  const { label, data, ts, source } = req.body || {};
+  console.log('[DEBUG-TRACE]', new Date(ts).toISOString(), `[${source}]`, label, data);
+  res.sendStatus(200);
+});
+
 /**
  *
  */
