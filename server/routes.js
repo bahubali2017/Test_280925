@@ -50,6 +50,8 @@ function cleanStrayMarkers(text) {
     .replace(/(\n\s*[-–]{2,}\s*\n)/g, "\n")
     // remove isolated dashes at start of line
     .replace(/^\s*[-–]{2,}\s*$/gm, "")
+    // remove bullet points followed by dashes (• --, • ---, etc.)
+    .replace(/^\s*•\s*[-–]{2,}\s*$/gm, "")
     // normalize multiple newlines
     .replace(/\n{3,}/g, "\n\n")
     // remove trailing or leading whitespace
