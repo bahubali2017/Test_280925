@@ -317,8 +317,13 @@ export async function sendMessage(message, history = [], options = {}) {
 
     // If medical safety determines AI should be blocked (emergency/high-risk), return fallback immediately
     if (safetyResult.shouldBlockAI && safetyResult.fallbackResponse) {
+      // Extract content as string from fallback response
+      const fallback = safetyResult.fallbackResponse;
+      const content = typeof fallback === 'string' ? fallback : 
+                     (fallback?.response ?? 'Please seek emergency medical care immediately. Call your local emergency services.');
+      
       return {
-        content: safetyResult.fallbackResponse,
+        content,
         metadata: {
           requestTime: Date.now() - startTime,
           modelName: 'medical-safety-fallback',
