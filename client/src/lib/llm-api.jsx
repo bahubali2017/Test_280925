@@ -8,8 +8,13 @@
 /* global TextDecoder, AbortController, setTimeout */
 
 import { processMedicalSafety, postProcessAIResponse, validateSafetyProcessing } from './medical-safety-processor.js';
-import { enhancePrompt } from './prompt-enhancer.js';
+import { enhancePrompt, classifyQuestionType } from './prompt-enhancer.js';
 import { createLayerContext } from './layer-context.js';
+import { 
+  handleExpansionRequest, 
+  updateLastExpandableQuery, 
+  validateExpansionContext 
+} from './expansion-handler.js';
 
 /**
  * @typedef {object} Message
@@ -291,14 +296,10 @@ export async function sendMessage(message, history = [], options = {}) {
   // AbortController is created automatically in makeAPIRequest
 
   try {
-    // Create layer context for prompt enhancement
-    const layerContext = createLayerContext(message.trim());
-    
     // Get user role from demographics or default to public
     const userRole = demographics.role || "public";
     
-    // Generate enhanced prompts using the prompt enhancer
-    // Pass conversation history for expansion detection
+    // Filter and validate conversation history
     const conversationHistory = Array.isArray(history) ? history.filter(msg => 
       msg && 
       typeof msg === 'object' && 
@@ -306,11 +307,33 @@ export async function sendMessage(message, history = [], options = {}) {
       typeof msg.content === 'string' &&
       msg.content.trim()
     ) : [];
+
+    // Check for expansion requests first
+    const expansionResult = handleExpansionRequest(message, conversationHistory, userRole);
     
-    const {
-      systemPrompt,
-      enhancedPrompt
-    } = enhancePrompt(layerContext, userRole, conversationHistory);
+    let systemPrompt, enhancedPrompt;
+    
+    if (expansionResult.isExpansion) {
+      // Handle expansion request with the tracked context
+      enhancedPrompt = expansionResult.prompt;
+      systemPrompt = "You are providing a detailed expansion based on the user's previous query.";
+    } else {
+      // Regular query processing
+      // Create layer context for prompt enhancement
+      const layerContext = createLayerContext(message.trim());
+      
+      // Generate enhanced prompts using the prompt enhancer
+      const enhancementResult = enhancePrompt(layerContext, userRole, conversationHistory);
+      systemPrompt = enhancementResult.systemPrompt;
+      enhancedPrompt = enhancementResult.enhancedPrompt;
+      
+      // Classify and track this query for potential future expansion
+      const questionType = classifyQuestionType(message);
+      const responseId = `response_${currentSession}_${Date.now()}`;
+      
+      // Update conversation state for expansion tracking
+      updateLastExpandableQuery(message, questionType, responseId);
+    }
     
     
     // Prepare request body with enhanced prompts
