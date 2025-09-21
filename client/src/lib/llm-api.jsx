@@ -20,6 +20,7 @@ import {
 } from './expansion-state.js';
 import { buildExpansionPrompt } from './expansion-prompts.js';
 import { AI_FLAGS } from '../config/ai-flags.js';
+import { isDebug } from './debug-flag.js';
 
 /**
  * @typedef {object} Message
@@ -169,6 +170,8 @@ async function processStream(stream, onUpdate, abortSignal) {
   const reader = stream.getReader();
   const decoder = new TextDecoder();
   let fullContent = '';
+  let firstChunkReceived = false;
+  const messageId = `msg_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
   
   try {
     while (true) {
@@ -200,11 +203,25 @@ async function processStream(stream, onUpdate, abortSignal) {
         const data = parseSSEData(line);
         if (!data) continue;
         
-        if (data.done) return fullContent;
+        if (data.done) {
+          // TRACE: Stream completion (non-intrusive)
+          if (isDebug()) {
+            console.log('[TRACE] streamComplete', {
+              messageId, responseMode: 'streaming', length: fullContent?.length
+            });
+          }
+          return fullContent;
+        }
         
         // Handle both 'content' and 'text' properties for compatibility
         const chunkContent = data.content || data.text || '';
         if (chunkContent) {
+          // TRACE: First chunk received (stream start, non-intrusive)
+          if (!firstChunkReceived && isDebug()) {
+            console.log('[TRACE] streamStart', { messageId, ts: Date.now() });
+            firstChunkReceived = true;
+          }
+          
           fullContent += chunkContent;
           onUpdate(chunkContent, { streaming: true, fullContent });
         }
@@ -425,6 +442,13 @@ export async function sendMessage(message, history = [], options = {}) {
 
     // Choose endpoint based on streaming requirement
     const endpoint = isStreaming ? '/api/chat/stream' : '/api/chat';
+    
+    // TRACE: Request envelope before streaming (non-intrusive)
+    if (isDebug()) {
+      console.log('[TRACE] requestEnvelope', {
+        questionType, mode, userRole, canExpand: metadata?.canExpand === true
+      });
+    }
     
     // Make API request using the global controller with session ID
     const response = await makeAPIRequest(endpoint, requestBody, currentSession);
