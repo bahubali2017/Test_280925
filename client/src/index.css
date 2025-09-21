@@ -70,57 +70,73 @@
   animation: slide-up 0.3s ease-out;
 }
 
-/* ULTRA-COMPACT AI MARKDOWN - VERSION 3.0.0 - TAILWIND TYPOGRAPHY OVERRIDE */
-/* Cache Bust: 2025-09-21-18:25 - FINAL FIX FOR PROSE CONFLICTS */
+/* ULTRA-COMPACT AI MARKDOWN - VERSION 4.0.0 - MAXIMUM SPECIFICITY OVERRIDE */
+/* Cache Bust: 2025-09-21-18:33 - FORCEFUL FIX */
 
-@layer utilities {
-  /* AI Markdown - Override Tailwind Typography completely */
-  .ai-markdown p,
-  .ai-markdown li {
-    margin: 0 !important;
-    line-height: 1.3 !important;
-  }
-  
-  .ai-markdown ul,
-  .ai-markdown ol {
-    margin: 0 !important;
-    padding-left: 1rem !important;
-  }
-  
-  .ai-markdown li p {
-    display: inline !important;
-    margin: 0 !important;
-  }
-  
-  .ai-markdown h1,
-  .ai-markdown h2,
-  .ai-markdown h3,
-  .ai-markdown h4,
-  .ai-markdown h5,
-  .ai-markdown h6 {
-    margin: 0.25rem 0 !important;
-    line-height: 1.25 !important;
-  }
-  
-  .ai-markdown p + p,
-  .ai-markdown li + li {
-    margin-top: 0.125rem !important;
-  }
-  
-  .ai-markdown strong {
-    font-weight: 600 !important;
-  }
+/* Maximum specificity override - outside @layer to ensure priority */
+div.relative .ai-markdown * {
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+  line-height: 1.3 !important;
+}
 
-  /* Eliminate any Tailwind Typography spacing */
-  .ai-markdown :where(p):not(:where([class~="not-prose"] *)) {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-  }
-  
-  .ai-markdown :where(li):not(:where([class~="not-prose"] *)) {
-    margin-top: 0 !important;
-    margin-bottom: 0 !important;
-  }
+div.relative .ai-markdown p {
+  margin: 0 !important;
+  padding: 0 !important;
+  line-height: 1.3 !important;
+}
+
+div.relative .ai-markdown li {
+  margin: 0 !important;
+  padding: 0 !important;
+  margin-bottom: 0.125rem !important;
+}
+
+div.relative .ai-markdown ul,
+div.relative .ai-markdown ol {
+  margin: 0 !important;
+  padding-left: 1rem !important;
+  margin-bottom: 0.25rem !important;
+}
+
+div.relative .ai-markdown li p {
+  display: inline !important;
+  margin: 0 !important;
+  padding: 0 !important;
+}
+
+div.relative .ai-markdown h1,
+div.relative .ai-markdown h2,
+div.relative .ai-markdown h3 {
+  margin: 0.25rem 0 !important;
+  line-height: 1.25 !important;
+}
+
+div.relative .ai-markdown p + p {
+  margin-top: 0.125rem !important;
+}
+
+/* Nuclear option - override everything */
+.ai-markdown p,
+.ai-markdown li,
+.ai-markdown ul,
+.ai-markdown ol,
+.ai-markdown h1,
+.ai-markdown h2,
+.ai-markdown h3 {
+  margin: 0 !important;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+}
+
+.ai-markdown li p {
+  display: inline !important;
+}
+
+.ai-markdown ul,
+.ai-markdown ol {
+  padding-left: 1rem !important;
+  margin-bottom: 0.25rem !important;
 }
 
 @layer base {
