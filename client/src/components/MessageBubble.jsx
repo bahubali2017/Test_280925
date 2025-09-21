@@ -4,7 +4,6 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
-import { processFinalResponse } from '../lib/medical-safety-processor';
 
 /**
  * @typedef {object} MessageMetadata
@@ -56,37 +55,37 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
         className="ai-markdown"
         remarkPlugins={[remarkGfm]}
         components={{
-          h1: ({ node, ...props }) => (
+          h1: ({ ...props }) => (
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white" {...props} />
           ),
-          h2: ({ node, ...props }) => (
+          h2: ({ ...props }) => (
             <h2 className="text-xl font-semibold text-gray-900 dark:text-white" {...props} />
           ),
-          h3: ({ node, ...props }) => (
+          h3: ({ ...props }) => (
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white" {...props} />
           ),
-          p: ({ node, ...props }) => (
+          p: ({ ...props }) => (
             <p className="text-foreground dark:text-foreground" {...props} />
           ),
-          ul: ({ node, ...props }) => (
+          ul: ({ ...props }) => (
             <ul className="list-disc ml-6" {...props} />
           ),
-          ol: ({ node, ...props }) => (
+          ol: ({ ...props }) => (
             <ol className="list-decimal ml-6" {...props} />
           ),
-          li: ({ node, ...props }) => (
+          li: ({ ...props }) => (
             <li className="text-foreground dark:text-foreground" {...props} />
           ),
-          strong: ({ node, ...props }) => (
+          strong: ({ ...props }) => (
             <strong className="font-bold text-gray-900 dark:text-white" {...props} />
           ),
-          em: ({ node, ...props }) => (
+          em: ({ ...props }) => (
             <em className="italic text-foreground dark:text-foreground" {...props} />
           ),
-          blockquote: ({ node, ...props }) => (
+          blockquote: ({ ...props }) => (
             <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300" {...props} />
           ),
-          code: ({ node, inline, ...props }) => (
+          code: ({ inline, ...props }) => (
             inline ? (
               <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono" {...props} />
             ) : (

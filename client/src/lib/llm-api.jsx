@@ -309,11 +309,7 @@ export async function sendMessage(message, history = [], options = {}) {
     
     const {
       systemPrompt,
-      enhancedPrompt,
-      atdNotices,
-      disclaimers,
-      suggestions,
-      expansionPrompt
+      enhancedPrompt
     } = enhancePrompt(layerContext, userRole, conversationHistory);
     
     

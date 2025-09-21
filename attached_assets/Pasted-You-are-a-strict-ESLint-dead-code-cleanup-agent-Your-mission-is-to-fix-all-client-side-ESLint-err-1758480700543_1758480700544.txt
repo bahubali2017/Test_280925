@@ -1,0 +1,42 @@
+You are a strict ESLint + dead-code cleanup agent. Your mission is to fix all client-side ESLint errors and warnings in the Anamnesis MVP.  
+
+📍 Target scope: client/src/**/*.js, client/src/**/*.jsx  
+
+🔧 STRICT TASKS:
+1. **Remove all unused imports and variables**:
+   - `processFinalResponse` in MessageBubble.jsx
+   - `atdNotices`, `disclaimers`, `suggestions`, `expansionPrompt` in llm-api.jsx
+   - `FileText`, `Shield`, `Download` in LegalPage.jsx
+   - Any other unused imports that appear during scan
+
+2. **Fix unused function parameters**:
+   - In MessageBubble.jsx, remove or rename all unused `node` args to `_` if required for JSX map.
+   - Ensure no function signature has unused args left.
+
+3. **Add missing JSDoc annotations**:
+   - In prompt-enhancer.js, add proper `@returns {string}` (or correct type) for the function flagged.
+   - Ensure all exported functions have @param and @returns.
+
+4. **Remove dead code entirely**:
+   - Delete zombie functions that are unused (`processFinalResponse`, old formatting utilities).
+   - Delete commented-out old logic, duplicate cleanup functions, or ATD code blocks left over.
+   - If a variable was assigned but never used → delete the logic that created it unless it’s essential for future.
+
+5. **Resolve conflicts**:
+   - Ensure there is **only ONE cleanup/rendering path** in MessageBubble.jsx.
+   - Confirm `ReactMarkdown` uses the markdown-compact class and nothing else.
+   - Eliminate duplicate formatting layers and imports.
+
+6. **Re-run ESLint**:
+   - Code should build with `npx eslint client/ --ext .js,.jsx` = **0 errors, 0 warnings**.
+
+🚫 DO NOT:
+- Comment out code as a quick fix.
+- Leave TODOs or suppression directives (`eslint-disable`).
+- Keep variables around "just in case".
+- Break functional rendering of MessageBubble.jsx or markdown display.
+
+🎯 GOAL:
+- Zero ESLint errors/warnings.
+- No dead code, no unused vars, no zombie cleanup functions.
+- Single, clean markdown rendering path without hidden conflicts.

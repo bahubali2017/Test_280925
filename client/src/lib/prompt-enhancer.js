@@ -133,8 +133,9 @@ function normalizeQueryText(text) {
 }
 
 /**
- *
- * @param query
+ * Classify question type for intelligent response mode selection
+ * @param {string} query - User input text
+ * @returns {"educational"|"medication"|"symptom"|"general"} Question type classification
  */
 export function classifyQuestionType(query) {
   if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
