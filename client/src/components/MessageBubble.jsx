@@ -4,6 +4,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
+import { getExpansionInvitationText } from '../lib/expansion-prompts.js';
 
 /**
  * @typedef {object} MessageMetadata
@@ -708,8 +709,25 @@ export function MessageBubble({
               </div>
             )}
 
-            {/* Follow-up suggestions - show when response is finished (delivered, completed, or stopped) */}
-            {!isUser && isLast && showFollowUps && !isStreaming && (status === 'delivered' || status === 'completed' || status === 'stopped' || status === 'cancelled') && (
+            {/* NEW: Expansion invitation - show only when response can be expanded */}
+            {!isUser && isLast && metadata?.canExpand && !isStreaming && 
+             (status === 'delivered' || status === 'completed' || status === 'stopped') && (
+              <div className="mt-4 pt-3 border-t border-border dark:border-border/70 animate-fade-in">
+                <button
+                  onClick={() => onFollowUpClick && onFollowUpClick("yes, expand")}
+                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 dark:from-cyan-900/30 dark:to-cyan-800/30 dark:hover:from-cyan-800/40 dark:hover:to-cyan-700/40 dark:text-cyan-300 text-sm rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-cyan-200 dark:border-cyan-700/50 hover:border-cyan-300 dark:hover:border-cyan-600/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
+                  aria-label="Expand for more detailed information"
+                  data-testid="expansion-button"
+                >
+                  <span className="mr-2">⚡</span>
+                  {getExpansionInvitationText(metadata.questionType, metadata.userRole)}
+                </button>
+              </div>
+            )}
+
+            {/* Legacy Follow-up suggestions - show only when expansion is NOT available */}
+            {!isUser && isLast && showFollowUps && !metadata?.canExpand && !isStreaming && 
+             (status === 'delivered' || status === 'completed' || status === 'stopped' || status === 'cancelled') && (
               <div className="mt-4 pt-3 border-t border-border dark:border-border/70 animate-fade-in">
                 <p className="text-xs font-medium text-foreground/70 dark:text-foreground/60 mb-2.5 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
