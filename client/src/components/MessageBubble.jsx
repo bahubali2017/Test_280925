@@ -5,6 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { processFinalResponse } from '../lib/medical-safety-processor';
+import { FeedbackButtons } from './FeedbackButtons';
 
 /**
  * @typedef {object} MessageMetadata
@@ -663,6 +664,17 @@ export function MessageBubble({
                   </span>
                 )}
               </div>
+            )}
+
+            {/* Feedback buttons for AI responses */}
+            {!isUser && !isError && !isStreaming && (status === 'delivered' || status === 'completed') && (
+              <FeedbackButtons
+                messageId={id || 'unknown'}
+                sessionId={metadata?.sessionId || 'unknown'}
+                userQuery={metadata?.userQuery || ''}
+                aiResponse={message}
+                className="mt-2"
+              />
             )}
 
             {/* Show cancelled message notice - this takes priority over regular status display */}
