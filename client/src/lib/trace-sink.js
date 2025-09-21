@@ -8,7 +8,7 @@
  */
 export function trace(label, data) {
   try {
-    fetch('/debug-trace', {
+    fetch('/api/debug-trace', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
