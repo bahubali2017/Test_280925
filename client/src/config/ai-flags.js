@@ -32,6 +32,7 @@ export const AI_FLAGS = {
   /**
    * Enable expansion prompts for additional detail opt-ins
    * Adds "Want more details?" style prompts at end of responses
+   * MASTER EXPANSION TOGGLE - MUST BE FALSE TO DISABLE ALL EXPANSION
    */
   ENABLE_EXPANSION_PROMPT: false,
 };
@@ -45,7 +46,7 @@ export const CONCISE_SETTINGS = {
   MAX_SENTENCES: 3,
   MAX_TOKENS: 200,
   EXAM_STYLE: true,
-  ALWAYS_ADD_EXPANSION: false  // Fixed: Don't force expansion when it's disabled
+  ALWAYS_ADD_EXPANSION: false  // CRITICAL: Must be false when expansion disabled
 };
 
 /**

@@ -431,10 +431,10 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
   // Generate context-aware suggestions
   const suggestions = generateFollowUpSuggestions(ctx);
   
-  // Generate expansion prompt based on question type (not for educational questions)
-  // BUT ONLY if expansion prompts are enabled globally
+  // Generate expansion prompt ONLY if expansion is globally enabled
+  // CRITICAL: ALL expansion must respect the master flag
   let expansionPrompt = "";
-  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT) {
+  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) {
     if (questionType === "medication") {
       expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
     } else if (questionType === "symptom") {

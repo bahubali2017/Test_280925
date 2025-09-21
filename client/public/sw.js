@@ -1,8 +1,8 @@
 /* global self, caches */
 // Cache names for different types of resources  
-const CACHE_NAME = 'anamnesis-v2.3.0-cleanup-fix';
-// Critical assets to cache
-const CRITICAL_ASSETS = ["/", "/index.html"];
+const CACHE_NAME = 'anamnesis-disabled-cache';
+// Critical assets to cache - DISABLED to prevent cache conflicts
+const CRITICAL_ASSETS = [];
 // Install event
 self.addEventListener('install', (event) => {
   console.log('🔧 Service Worker installing...');

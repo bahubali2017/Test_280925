@@ -52,14 +52,10 @@ const generateUUID = () => {
  * @property {string} [details] - Error details
  */
 
-// Cache for llm-api module to avoid repeated dynamic imports
-/** @type {Promise<typeof import('../lib/llm-api')> | null} */
-let llmApiModule = null;
+// Direct import to prevent caching issues during development
 const getLLMApi = async () => {
-  if (!llmApiModule) {
-    llmApiModule = import('../lib/llm-api');
-  }
-  return llmApiModule;
+  // Always fresh import to prevent module cache conflicts
+  return import('../lib/llm-api');
 };
 
 // APIErrorResponse type defined above
