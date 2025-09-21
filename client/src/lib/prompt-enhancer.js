@@ -262,6 +262,15 @@ function applyConciseMode(template, userRole = "public", questionType = "general
     }
   }
 
+  // Only add expansion line if expansion is enabled
+  let expansionInstruction = "";
+  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT && EXPANSION_SETTINGS.ENABLE_AUTO_EXPANSION) {
+    expansionInstruction = `\n- At the end of EVERY answer, add: "${expansionLine}"`;
+  } else if (questionType === "medication") {
+    // For medication queries when expansion is disabled, enforce strict dosage-only format
+    expansionInstruction = `\n- For medication dosage queries: provide ONLY dosing information. Do NOT add follow-up questions or expansion prompts.`;
+  }
+
   return template + `
 
 CONCISE MODE ACTIVE:
@@ -269,9 +278,8 @@ CONCISE MODE ACTIVE:
 - Stay under ${CONCISE_SETTINGS.MAX_TOKENS} tokens
 - Use exam-style, high-yield formatting
 - Prioritize highest-yield information first
-- Be direct and actionable
-- At the end of EVERY answer, add: "${expansionLine}"
-- Ensure disclaimers appear BEFORE the expansion question`;
+- Be direct and actionable${expansionInstruction}
+- Ensure disclaimers appear BEFORE any expansion question`;
 }
 
 /**
