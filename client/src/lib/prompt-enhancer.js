@@ -119,12 +119,12 @@ function normalizeQueryText(text) {
   return text
     .toLowerCase()
     .trim()
-    // Expand contractions
-    .replace(/what's/g, 'what is')
-    .replace(/whats/g, 'what is')
-    .replace(/how's/g, 'how is')
-    .replace(/why's/g, 'why is')
-    .replace(/where's/g, 'where is')
+    // Expand contractions (handle various punctuation)
+    .replace(/what['';,]?s\b/g, 'what is')
+    .replace(/\bwhats\b/g, 'what is')
+    .replace(/how['';,]?s\b/g, 'how is')
+    .replace(/why['';,]?s\b/g, 'why is')
+    .replace(/where['';,]?s\b/g, 'where is')
     // Remove punctuation but preserve spaces
     .replace(/[^\w\s]/g, ' ')
     // Normalize whitespace
@@ -374,11 +374,8 @@ export function enhancePrompt(ctx, userRole = "public", conversationHistory = []
   }
   
   // Apply intelligent classification logic for response mode
-  console.log('[DEBUG] Question type classification:', questionType, 'for query:', ctx.userInput.substring(0, 50));
-  
   if (questionType === "educational" || questionType === "general") {
     // Educational/general questions: Skip concise mode, provide detailed response immediately
-    console.log('[DEBUG] Using educational mode - skipping concise mode');
     const educationalPrompt = `You are MAIA (Medical AI Assistant). Provide a detailed, structured explanation suitable for ${userRole === "doctor" ? "healthcare professionals" : "general public"}.
 
 - Cover definitions, key features, and management overview
@@ -413,13 +410,9 @@ EDUCATIONAL MODE: Provide comprehensive information immediately.`;
   // Generate expansion prompt based on question type (not for educational questions)
   let expansionPrompt = "";
   if (questionType === "medication") {
-    console.log('[DEBUG] Adding medication expansion prompt');
     expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
   } else if (questionType === "symptom") {
-    console.log('[DEBUG] Adding symptom expansion prompt');
     expansionPrompt = generateExpansionPrompt(userRole, false); // false for non-medication
-  } else {
-    console.log('[DEBUG] No expansion prompt for question type:', questionType);
   }
   // Educational and general questions get no expansion prompt (detailed immediately)
 
