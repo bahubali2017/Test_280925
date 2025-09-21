@@ -1,6 +1,6 @@
 /* global self, caches */
 // Cache names for different types of resources  
-const CACHE_NAME = 'anamnesis-v2.2.0';
+const CACHE_NAME = 'anamnesis-v2.3.0-cleanup-fix';
 // Critical assets to cache
 const CRITICAL_ASSETS = ["/", "/index.html"];
 // Install event
@@ -19,8 +19,8 @@ self.addEventListener('install', (event) => {
         console.warn('⚠️ Failed to cache some assets:', error);
       }
 
-      // Don't skip waiting to prevent rapid updates
-      // self.skipWaiting();
+      // Force immediate activation for cache fix
+      self.skipWaiting();
     })()
   );
 });

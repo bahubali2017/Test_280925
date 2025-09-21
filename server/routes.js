@@ -245,7 +245,7 @@ async function generateAppVersionHash() {
     const packageJson = JSON.parse(fs.readFileSync(packagePath, 'utf8'));
 
     // Use fixed server start time as build identifier
-    const buildTimestamp = process.env.BUILD_TIMESTAMP || serverStartTime;
+    const buildTimestamp = "1758456247879"; // Force new hash: 2025-09-21T12:04:07.877Z
     const version = packageJson.version || '1.0.0';
     const replId = process.env.REPL_ID || 'local-dev';
 

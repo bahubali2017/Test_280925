@@ -132,6 +132,10 @@ function normalizeQueryText(text) {
     .trim();
 }
 
+/**
+ *
+ * @param query
+ */
 export function classifyQuestionType(query) {
   if (!CLASSIFIER_SETTINGS.ENABLE_INTELLIGENT_CLASSIFIER) return "general";
 

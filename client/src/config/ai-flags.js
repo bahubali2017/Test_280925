@@ -8,6 +8,9 @@
 // Debug logging to verify flags are loaded
 console.log('[AI-FLAGS] Loading AI flags with concise mode:', { ENABLE_CONCISE_MODE: true });
 
+/**
+ *
+ */
 export const AI_FLAGS = {
   /**
    * Enable medication query classification and high-yield med responses
