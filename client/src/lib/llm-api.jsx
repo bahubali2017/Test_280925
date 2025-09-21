@@ -12,8 +12,7 @@ import { enhancePrompt, classifyQuestionType } from './prompt-enhancer.js';
 import { createLayerContext } from './layer-context.js';
 import { 
   handleExpansionRequest, 
-  updateLastExpandableQuery, 
-  validateExpansionContext 
+  updateLastExpandableQuery
 } from './expansion-handler.js';
 
 /**
