@@ -444,13 +444,24 @@ export async function sendMessage(message, history = [], options = {}) {
     
     // TRACE: Request envelope before streaming (non-intrusive)
     if (isDebug()) {
+      trace('[TRACE] beforeRequestEnvelope', { endpoint, requestBodyKeys: Object.keys(requestBody) });
       trace('[TRACE] requestEnvelope', {
         questionType, mode, userRole, canExpand: metadata?.canExpand === true
       });
     }
     
+    // TRACE: About to make API request
+    if (isDebug()) {
+      trace('[TRACE] aboutToMakeRequest', { endpoint, currentSession });
+    }
+    
     // Make API request using the global controller with session ID
     const response = await makeAPIRequest(endpoint, requestBody, currentSession);
+    
+    // TRACE: API request completed
+    if (isDebug()) {
+      trace('[TRACE] apiRequestComplete', { status: response.status, ok: response.ok });
+    }
     
     // Check if aborted immediately after fetch
     if (activeAbortController?.signal.aborted) {
