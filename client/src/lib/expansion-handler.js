@@ -25,9 +25,42 @@ export function detectExpansionRequest(userInput) {
   if (!AI_FLAGS.ENABLE_EXPANSION_PROMPT) return false;
   
   const lowered = userInput.toLowerCase().trim();
-  return EXPANSION_SETTINGS.EXPANSION_KEYWORDS.some(keyword => 
+  
+  // Check for explicit expansion keywords
+  const hasExpansionKeywords = EXPANSION_SETTINGS.EXPANSION_KEYWORDS.some(keyword => 
     lowered.includes(keyword)
   );
+  
+  // Check for emergency-related medication questions that should be treated as expansions
+  const isEmergencyMedicationQuery = detectEmergencyMedicationExpansion(lowered);
+  
+  return hasExpansionKeywords || isEmergencyMedicationQuery;
+}
+
+/**
+ * Detects if a medication question is related to an emergency context
+ * @param {string} loweredInput - Lowercased user input
+ * @returns {boolean} - True if it's an emergency medication expansion
+ */
+function detectEmergencyMedicationExpansion(loweredInput) {
+  // Check if we have a recent emergency context
+  if (!isLastExpandableQueryRecent()) {
+    return false;
+  }
+  
+  const lastQuery = getLastExpandableQuery();
+  if (!lastQuery || !['chest_pain', 'emergency', 'breathing_difficulty'].includes(lastQuery.type)) {
+    return false;
+  }
+  
+  // Emergency medication patterns
+  const emergencyMedicationPatterns = [
+    'aspirin dosage', 'aspirin dose', 'how much aspirin', 'aspirin amount',
+    'nitroglycerin', 'heart medication', 'emergency medication',
+    'what medication', 'dosage', 'dose', 'how to take'
+  ];
+  
+  return emergencyMedicationPatterns.some(pattern => loweredInput.includes(pattern));
 }
 
 /**
@@ -204,6 +237,16 @@ export function extractOriginalQuery(conversationHistory, currentUserInput = '')
   // First priority: Check if we have a recent expandable query in state
   if (isLastExpandableQueryRecent()) {
     const lastQuery = getLastExpandableQuery();
+    
+    // For emergency medication questions, maintain emergency context but update the query type
+    if (detectEmergencyMedicationExpansion(currentUserInput.toLowerCase())) {
+      return {
+        query: lastQuery.query, // Keep original emergency query
+        type: lastQuery.type === 'chest_pain' ? 'chest_pain' : 'emergency', // Maintain emergency type
+        medicationContext: currentUserInput // Add medication context
+      };
+    }
+    
     return {
       query: lastQuery.query,
       type: lastQuery.type
@@ -227,6 +270,32 @@ export function extractOriginalQuery(conversationHistory, currentUserInput = '')
   
   // Fallback: No expansion context found
   return null;
+}
+
+/**
+ * Detects if a medication question is related to an emergency context
+ * @param {string} loweredInput - Lowercased user input
+ * @returns {boolean} - True if it's an emergency medication expansion
+ */
+function detectEmergencyMedicationExpansion(loweredInput) {
+  // Check if we have a recent emergency context
+  if (!isLastExpandableQueryRecent()) {
+    return false;
+  }
+  
+  const lastQuery = getLastExpandableQuery();
+  if (!lastQuery || !['chest_pain', 'emergency', 'breathing_difficulty'].includes(lastQuery.type)) {
+    return false;
+  }
+  
+  // Emergency medication patterns
+  const emergencyMedicationPatterns = [
+    'aspirin dosage', 'aspirin dose', 'how much aspirin', 'aspirin amount',
+    'nitroglycerin', 'heart medication', 'emergency medication',
+    'what medication', 'dosage', 'dose', 'how to take'
+  ];
+  
+  return emergencyMedicationPatterns.some(pattern => loweredInput.includes(pattern));
 }
 
 /**

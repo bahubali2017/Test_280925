@@ -28,10 +28,10 @@ function generateContextAwareEmergencyResponse(originalQuery, context) {
         "Monitor for worsening symptoms"
       ],
       followUpQuestions: [
-        "Are there support groups for this?",
-        "What symptoms should I watch for?", 
-        "How can I prevent this?",
-        "What treatment options are available?"
+        "What are the warning signs for future chest pain episodes?",
+        "When should I call 911 again?",
+        "How do I properly take aspirin for chest pain emergencies?",
+        "What heart attack prevention steps should I know?"
       ],
       emergencyContext: {
         symptom: 'chest_pain',
