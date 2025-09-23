@@ -104,3 +104,20 @@ export function selectDisclaimers(level, symptomNames = []) {
 export function dedupeDisclaimers(disclaimers) {
   return [...new Set(disclaimers.map(d => d.trim()))];
 }
+
+/**
+ * Clear disclaimers from metadata in an idempotent way
+ * @param {object} metadata - Message metadata object
+ * @returns {object} Metadata with disclaimers cleared
+ */
+export function clearDisclaimers(metadata) {
+  return {
+    ...metadata,
+    queryIntent: {
+      ...metadata?.queryIntent,
+      disclaimers: [],
+      atd: null,
+    },
+    forceShowDisclaimers: false,
+  };
+}
