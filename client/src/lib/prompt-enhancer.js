@@ -202,217 +202,187 @@ function classifyMedicationQuery(input) {
   return medKeywords.some(keyword => lowered.includes(keyword));
 }
 
+// REMOVED: buildRolePolicy function - violates PHASE 3 MODE ISOLATION
+// Role-specific policies are now handled within each isolated builder
+
+// REMOVED: applyConciseMode function - violates PHASE 3 MODE ISOLATION
+// All mode-specific formatting is now handled by isolated builders
+
 /**
- * Build role-based medical policy
- * @param {"doctor"|"public"|string} userRole - User role
- * @param {boolean} isMedicationQuery - Whether this is a medication query
- * @returns {string}
+ * Build isolated educational prompt - PHASE 3 MODE ISOLATION
+ * @param {import("./layer-context.js").LayerContext} ctx - Layer context
+ * @param {object} opts - Options object
+ * @param {string} [opts.userRole='public'] - User role
+ * @returns {object} Educational prompt configuration
  */
-function buildRolePolicy(userRole, isMedicationQuery) {
-  if (!AI_FLAGS.ENABLE_ROLE_MODE || !isMedicationQuery) return "";
+export function buildEducationalPrompt(ctx, opts = {}) {
+  const { userRole = 'public' } = opts;
   
-  if (userRole === "doctor" || userRole === "verified_healthcare") {
-    return `ROLE POLICY (Healthcare Professional):
-- Provide concise bullets including dosages, algorithms, and clinical pearls
-- Include typical dosing ranges, adjustment criteria, and monitoring parameters  
-- Use clinical terminology and structured format
-- Add disclaimer: "⚠️ Professional reference only. Verify with official prescribing information."
+  const systemPrompt = `You are MAIA (Medical AI Assistant). Provide detailed, structured educational information.
 
-`;
-  } else {
-    return `ROLE POLICY (Public):
-- Provide concise bullets including typical dosage ranges in simple format
-- Focus on practical takeaways and key safety information
-- Use patient-friendly language and clear explanations
-- Add disclaimer: "⚠️ Informational purposes only. Not a substitute for professional medical advice."
+EDUCATIONAL MODE:
+- Cover definitions, key features, and management overview
+- Use clear formatting with bullets or short sections
+- Include relevant clinical details ${userRole === 'doctor' ? 'with medical terminology' : 'in patient-friendly language'}
+- Provide comprehensive information immediately
+- End with appropriate disclaimer
 
-`;
-  }
+Context: ${buildContextBlock(ctx)}
+
+Analyze and provide educational information about the user's query.`;
+
+  // Get disclaimers using centralized system
+  const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['educational']);
+  
+  console.log('📋 [PROMPT] buildEducationalPrompt completed (isolated)');
+  
+  return {
+    systemPrompt,
+    disclaimers,
+    atdNotices,
+    responseMode: 'educational',
+    questionType: 'educational'
+  };
 }
 
 /**
- * Apply concise mode formatting with context-aware expansion prompts
- * @param {string} template - Base template
- * @param {string} [_userRole="public"] - User role for role-specific expansion prompts (unused)
- * @param {string} [questionType="general"] - Question type for context-aware prompts
- * @returns {string}
+ * Build isolated symptom prompt - PHASE 3 MODE ISOLATION
+ * @param {import("./layer-context.js").LayerContext} ctx - Layer context
+ * @param {object} opts - Options object
+ * @param {string} [opts.userRole='public'] - User role
+ * @returns {object} Symptom prompt configuration
  */
-function applyConciseMode(template, _userRole = "public", questionType = "general") {
-  if (!AI_FLAGS.ENABLE_CONCISE_MODE) return template;
+export function buildSymptomPrompt(ctx, opts = {}) {
+  const { userRole = 'public' } = opts;
   
-  // Context-aware expansion prompts removed - handled by new expansion-state.js system
-
-  // CRITICAL FIX: Never inject any expansion instructions in system prompt
-  // This prevents expansion bleed and maintains clean separation between concise and expansion modes
-  let expansionInstruction = "";
-  
-  if (questionType === "medication") {
-    // For medication queries, enforce strict concise format with NO expansion instructions
-    expansionInstruction = `\n- For medication dosage queries: provide ONLY essential dosing information. Do NOT add follow-up questions or expansion prompts. Keep responses to 3-5 sentences maximum.`;
-  }
-
-  // For medication queries, skip all expansion-related template additions
-  if (questionType === "medication") {
-    return template + `
-
-CONCISE MEDICATION MODE ACTIVE:
-- Keep answers <= 3-5 sentences maximum
-- Provide ONLY essential dosing information
-- Use direct, actionable format
-- No side effects, interactions, or expansion prompts
-- Include appropriate medical disclaimer only${expansionInstruction}`;
-  }
-
-  return template + `
-
-CONCISE MODE ACTIVE:
-- Keep answers <= ${CONCISE_SETTINGS.MAX_BULLETS} bullets OR ${CONCISE_SETTINGS.MAX_SENTENCES} sentences
-- Stay under ${CONCISE_SETTINGS.MAX_TOKENS} tokens
-- Use exam-style, high-yield formatting
-- Prioritize highest-yield information first
-- Be direct and actionable${expansionInstruction}
-- Ensure disclaimers appear BEFORE any expansion question`;
-}
-
-/**
- * Generate expansion prompt based on role and context
- * @param {"doctor"|"public"|string} userRole - User role
- * @param {boolean} isMedicationQuery - Whether this is a medication query
- * @returns {string}
- */
-function generateExpansionPrompt(userRole, isMedicationQuery) {
-  // If concise mode is active, expansion prompts are already included
-  if (AI_FLAGS.ENABLE_CONCISE_MODE && CONCISE_SETTINGS.ALWAYS_ADD_EXPANSION) {
-    return "";
-  }
-  
-  if (!AI_FLAGS.ENABLE_EXPANSION_PROMPT) return "";
-  
-  if (!isMedicationQuery) {
-    return "\n\nWould you like more detailed information about this topic?";
-  }
-  
-  if (userRole === "doctor" || userRole === "verified_healthcare") {
-    return "\n\nExpand with algorithms / monitoring protocols / clinical pearls?";
-  } else {
-    return "\n\nWould you like side effects / interactions / precautions?";
-  }
-}
-
-/**
- * Generate context-aware follow-up suggestions
- * @param {import("./layer-context.js").LayerContext} ctx
- * @returns {string[]}
- */
-function generateFollowUpSuggestions(ctx) {
-  const suggestions = [];
   const triageLevel = ctx.triage?.level || "NON_URGENT";
+  const templateKey = chooseTemplateKey(triageLevel, ctx.symptoms || []);
+  const contextBlock = buildContextBlock(ctx);
   
-  if (triageLevel === "EMERGENCY") {
-    return [
-      "If symptoms worsen or you feel unsafe, call emergency services immediately.",
-      "Consider having someone stay with you or transport you to emergency care."
-    ];
-  }
+  const systemPrompt = renderTemplate(templateKey, contextBlock);
   
-  if (triageLevel === "URGENT") {
-    return [
-      "Schedule urgent medical evaluation within 24 hours if possible.",
-      "Monitor symptoms closely and seek emergency care if they worsen."
-    ];
-  }
-
-  // Generate dynamic suggestions based on symptoms
-  if (ctx.symptoms?.length) {
-    const hasLocation = ctx.symptoms.some(s => s.location);
-    const hasDuration = ctx.symptoms.some(s => s.duration?.raw || s.duration?.value);
-    
-    if (!hasLocation) suggestions.push("Where exactly are you experiencing these symptoms?");
-    if (!hasDuration) suggestions.push("How long have you been experiencing these symptoms?");
-    
-    suggestions.push("Have these symptoms gotten better, worse, or stayed the same?");
-    suggestions.push("Are there any activities that make the symptoms better or worse?");
-  } else {
-    suggestions.push("Can you describe your main symptoms in more detail?");
-    suggestions.push("When did you first notice these symptoms?");
-  }
-
-  return suggestions.slice(0, 3); // Limit to 3 suggestions
+  // Get disclaimers using centralized system
+  const disclaimerLevel = triageLevel.toLowerCase().replace("_", "_");
+  const symptomNames = (ctx.symptoms || []).map(s => s.name?.toLowerCase()).filter(Boolean);
+  const { disclaimers, atdNotices } = selectDisclaimers(
+    /** @type {"emergency"|"urgent"|"non_urgent"} */ (disclaimerLevel),
+    symptomNames
+  );
+  
+  console.log('📋 [PROMPT] buildSymptomPrompt completed (isolated)');
+  
+  return {
+    systemPrompt,
+    disclaimers,
+    atdNotices,
+    responseMode: 'symptom',
+    questionType: 'symptom'
+  };
 }
 
 /**
- * Build prompts for a query with proper classification routing
+ * Build isolated general prompt - PHASE 3 MODE ISOLATION
+ * @param {import("./layer-context.js").LayerContext} ctx - Layer context
+ * @param {object} opts - Options object
+ * @param {string} [opts.userRole='public'] - User role
+ * @returns {object} General prompt configuration
+ */
+export function buildGeneralPrompt(ctx, opts = {}) {
+  const { userRole = 'public' } = opts;
+  
+  const systemPrompt = `You are a medical AI assistant providing helpful, accurate medical information.
+${userRole === 'doctor' ? 'Assume healthcare professional audience.' : 'Assume general public audience.'}
+Always include appropriate medical disclaimers and safety guidance.
+
+Context: ${buildContextBlock(ctx)}
+
+Provide balanced, brief guidance for the user's query.`;
+
+  // Get disclaimers using centralized system
+  const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['general']);
+  
+  console.log('📋 [PROMPT] buildGeneralPrompt completed (isolated)');
+  
+  return {
+    systemPrompt,
+    disclaimers,
+    atdNotices,
+    responseMode: 'general',
+    questionType: 'general'
+  };
+}
+
+// REMOVED: generateFollowUpSuggestions function - violates PHASE 3 MODE ISOLATION
+// Follow-up suggestions are now handled by UI layer only
+
+/**
+ * Build prompts for a query with strict mode isolation routing - PHASE 3
  * @param {object} params - Parameters
  * @param {string} params.query - User query
  * @param {string} [params.userRole='public'] - User role
- * @param {object} params.flags - AI flags configuration
+ * @param {object} params.flags - AI flags configuration (unused in isolated mode)
+ * @param {import("./layer-context.js").LayerContext} [params.ctx] - Layer context for builders
  * @returns {object} Prompt configuration with mode information
  */
-export function buildPromptsForQuery({ query, userRole = 'public', flags }) {
+export function buildPromptsForQuery({ query, userRole = 'public', flags, ctx = null }) {
   const questionType = classifyQuestionType(query);
-  console.log('📊 [CLASSIFIER] Question classified as:', questionType, 'for query:', query);
   
-  // TRACE: Classification result (non-intrusive)
-  if (isDebug()) {
-    trace('[TRACE] classifyQuestionType', { questionType, query });
-  }
+  // REQUIRED TRACE: Classification result
+  console.log('[TRACE] classifyQuestionType →', { questionType });
   
-  let systemPrompt = buildBaseSystemPrompt(userRole);
-  let mode = "normal";
-
-  if (questionType === "medication" && flags.ENABLE_CONCISE_MODE) {
-    // SPECIALIZED MEDICATION CONCISE PROMPT - NO EXPANSION TEXT
-    systemPrompt = buildConciseMedicationPrompt(userRole);
-    mode = "concise";
-    console.log('🔵 [PROMPT] Using buildConciseMedicationPrompt → concise');
-    console.log('🔵 [PROMPT] Built for medication (concise) - expansion handled by UI only');
+  // STRICT ROUTING - PHASE 3 MODE ISOLATION
+  let builderResult;
+  let builderName;
+  
+  if (questionType === "medication") {
+    builderName = "buildConciseMedicationPrompt";
+    builderResult = buildConciseMedicationPrompt(ctx || { userInput: query }, { userRole });
   } else if (questionType === "educational") {
-    // Detailed path: do not inject concise or expansion text
-    mode = "detailed";
+    builderName = "buildEducationalPrompt";
+    builderResult = buildEducationalPrompt(ctx || { userInput: query }, { userRole });
   } else if (questionType === "symptom") {
-    // Triage template path
-    mode = "triage";
+    builderName = "buildSymptomPrompt";
+    builderResult = buildSymptomPrompt(ctx || { userInput: query }, { userRole });
+  } else {
+    builderName = "buildGeneralPrompt";
+    builderResult = buildGeneralPrompt(ctx || { userInput: query }, { userRole });
   }
-
-  // TRACE: Prompt building result (non-intrusive)
-  if (isDebug()) {
-    trace('[TRACE] buildPromptsForQuery', { mode, questionType });
-    
-    const systemPromptHead = systemPrompt.substring(0, 400);
-    trace('[TRACE] systemPrompt(head)', systemPromptHead);
-    
-    // Audit for expansion keywords leaking into prompt
-    const hasSideEffects = /side effects|interactions|contraindications/i.test(systemPromptHead);
-    const hasExpandWords = /expand|more details/i.test(systemPromptHead);
-    trace('[TRACE] promptAudit', { hasSideEffects, hasExpandWords });
-  }
-
-  console.log('🎯 [PROMPT] buildPromptsForQuery result:', { questionType, mode, userRole });
-  return { systemPrompt, questionType, mode };
+  
+  // REQUIRED TRACE: Mode routing
+  console.log('[MODE]', questionType, '→', builderName);
+  
+  // REQUIRED TRACE: System prompt head
+  const systemPromptHead = builderResult.systemPrompt.substring(0, 300);
+  console.log('[TRACE] systemPrompt(head) →', systemPromptHead);
+  
+  return {
+    systemPrompt: builderResult.systemPrompt,
+    questionType: builderResult.questionType,
+    mode: builderResult.responseMode,
+    disclaimers: builderResult.disclaimers,
+    atdNotices: builderResult.atdNotices,
+    responseMode: builderResult.responseMode
+  };
 }
 
-/**
- * Build base system prompt for a user role
- * @param {string} [userRole='public'] - User role
- * @returns {string} Base system prompt
- */
-function buildBaseSystemPrompt(userRole = 'public') {
-  return `You are a medical AI assistant providing helpful, accurate medical information.
-${userRole === 'doctor' ? 'Assume healthcare professional audience.' : 'Assume general public audience.'}
-Always include appropriate medical disclaimers and safety guidance.`;
-}
+// REMOVED: buildBaseSystemPrompt function - violates PHASE 3 MODE ISOLATION
+// Base prompts are now handled within each isolated builder
 
 /**
- * Build specialized concise medication prompt without expansion text
- * @param {string} [userRole='public'] - User role
- * @returns {string} Concise medication system prompt
+ * Build isolated concise medication prompt - PHASE 3 MODE ISOLATION
+ * @param {import("./layer-context.js").LayerContext} ctx - Layer context
+ * @param {object} opts - Options object
+ * @param {string} [opts.userRole='public'] - User role
+ * @returns {object} Medication prompt configuration
  */
-function buildConciseMedicationPrompt(userRole = 'public') {
+export function buildConciseMedicationPrompt(ctx, opts = {}) {
+  const { userRole = 'public' } = opts;
+  
   const baseDisclaimer = userRole === 'doctor' 
     ? "⚠️ Professional reference only. Verify with official prescribing information."
     : "⚠️ Informational purposes only. Not a substitute for professional medical advice.";
 
-  const prompt = `You are a medical AI assistant providing concise medication dosage information.
+  const systemPrompt = `You are a medical AI assistant providing concise medication dosage information.
 
 STRICT CONCISE MODE FOR MEDICATION QUERIES:
 - STRICT RULE: You MUST keep the response to a maximum of 5 sentences.
@@ -435,102 +405,58 @@ CRITICAL: Keep response strictly to dosage information only. Expansion invitatio
 
 [STRICT RULE: Limit output to 3-5 sentences only. Do NOT expand, explain, or include side effects/interactions.]`;
 
-  console.log('📋 [PROMPT] Final medication system prompt (should contain NO expansion text):', prompt);
-  return prompt;
+  // Get disclaimers using centralized system
+  const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['medication']);
+  
+  console.log('📋 [PROMPT] buildConciseMedicationPrompt completed (isolated)');
+  
+  return {
+    systemPrompt,
+    disclaimers,
+    atdNotices,
+    responseMode: 'concise_medication',
+    questionType: 'medication'
+  };
 }
 
 /**
- * Main enhancer: selects template, injects context, and prefixes disclaimers/ATD for high risk.
+ * PHASE 3 MODE ISOLATION: Enhanced main enhancer using isolated builders
  * @param {import("./layer-context.js").LayerContext} ctx
  * @param {string} [userRole="public"] - User role for role-based responses
  * @param {Array} [_conversationHistory=[]] - Previous conversation messages (unused)
- * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string }}
+ * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string, responseMode: string }}
  */
 export function enhancePrompt(ctx, userRole = "public", _conversationHistory = []) {
-  // OLD expansion detection removed - handled by new expansion-state.js system in llm-api.jsx
-  
-  // Classify question type for intelligent response mode selection
-  const questionType = classifyQuestionType(ctx.userInput);
-  
+  // Use buildPromptsForQuery with isolated builders
+  const result = buildPromptsForQuery({
+    query: ctx.userInput,
+    userRole,
+    flags: AI_FLAGS,
+    ctx
+  });
   
   const triageLevel = ctx.triage?.level || "NON_URGENT";
-  // Convert to lowercase for disclaimer system compatibility  
-  const disclaimerLevel = triageLevel.toLowerCase().replace("_", "_");
-  const templateKey = chooseTemplateKey(triageLevel, ctx.symptoms || []);
-  const contextBlock = buildContextBlock(ctx);
-
-  // Check if this is a medication query
-  const isMedicationQuery = classifyMedicationQuery(ctx.userInput);
-
-  const { disclaimers, atdNotices } = selectDisclaimers(
-    /** @type {"emergency"|"urgent"|"non_urgent"} */ (disclaimerLevel),
-    (ctx.triage && "symptomNames" in ctx.triage) ? /** @type {any} */(ctx.triage).symptomNames : (ctx.symptoms || []).map(s => s.name?.toLowerCase()).filter(Boolean)
-  );
-
-  // Get base template and apply enhancements
-  let systemPrompt = renderTemplate(templateKey, contextBlock);
   
-  // Add role-based policy for medication queries
-  const rolePolicy = buildRolePolicy(userRole, isMedicationQuery);
-  if (rolePolicy) {
-    systemPrompt = rolePolicy + systemPrompt;
-  }
-  
-  // Apply intelligent classification logic for response mode
-  if (questionType === "educational" || questionType === "general") {
-    // Educational/general questions: Skip concise mode, provide detailed response immediately
-    const educationalPrompt = `You are MAIA (Medical AI Assistant). Provide a detailed, structured explanation suitable for ${userRole === "doctor" ? "healthcare professionals" : "general public"}.
-
-- Cover definitions, key features, and management overview
-- Use clear formatting with bullets or short sections
-- Include relevant clinical details ${userRole === "doctor" ? "with medical terminology" : "in patient-friendly language"}
-- End with appropriate disclaimer
-
-EDUCATIONAL MODE: Provide comprehensive information immediately.`;
-    
-    systemPrompt = educationalPrompt;
-  } else if (questionType === "medication") {
-    // Medication questions: Use concise mode with medication-specific expansion option
-    systemPrompt = applyConciseMode(systemPrompt, userRole, "medication");
-  } else if (questionType === "symptom") {
-    // Symptom questions: Use existing triage templates with symptom-specific expansion
-    systemPrompt = applyConciseMode(systemPrompt, userRole, "symptom");
-  } else {
-    // Fallback: Apply concise mode with general expansion
-    systemPrompt = applyConciseMode(systemPrompt, userRole, "general");
-  }
-
-  // Prefix severe with ATD block
+  // Build enhanced prompt with ATD prefix for emergencies
   const header = (triageLevel === "EMERGENCY" || triageLevel === "URGENT")
-    ? `IMPORTANT:\n${atdNotices.join("\n")}\n\n`
+    ? `IMPORTANT:\n${result.atdNotices.join("\n")}\n\n`
     : "";
 
+  const contextBlock = buildContextBlock(ctx);
   const enhancedPrompt = `${header}${contextBlock}\n\nPlease analyze and respond within the policy above.`;
 
-  // Generate context-aware suggestions ONLY if expansion is enabled
-  // CRITICAL FIX: Don't generate suggestions when expansion is disabled
-  const suggestions = AI_FLAGS.ENABLE_EXPANSION_PROMPT
-    ? generateFollowUpSuggestions(ctx) 
-    : [];
-  
-  // Generate expansion prompt ONLY if expansion is globally enabled
-  // CRITICAL: ALL expansion must respect the master flag
-  let expansionPrompt = "";
-  if (AI_FLAGS.ENABLE_EXPANSION_PROMPT) {
-    if (questionType === "medication") {
-      expansionPrompt = generateExpansionPrompt(userRole, true); // true for medication
-    } else if (questionType === "symptom") {
-      expansionPrompt = generateExpansionPrompt(userRole, false); // false for non-medication
-    }
-  }
-  // Educational and general questions get no expansion prompt (detailed immediately)
+  // PHASE 3: No expansion prompts or suggestions in system prompts
+  // All expansion is handled by UI layer only
+  const suggestions = [];
+  const expansionPrompt = "";
 
   return { 
-    systemPrompt, 
+    systemPrompt: result.systemPrompt, 
     enhancedPrompt, 
-    atdNotices, 
-    disclaimers, 
+    atdNotices: result.atdNotices, 
+    disclaimers: result.disclaimers, 
     suggestions,
-    expansionPrompt
+    expansionPrompt,
+    responseMode: result.responseMode
   };
 }
