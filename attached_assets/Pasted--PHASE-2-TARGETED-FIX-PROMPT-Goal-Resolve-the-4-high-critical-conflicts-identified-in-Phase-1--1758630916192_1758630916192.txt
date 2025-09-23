@@ -1,0 +1,78 @@
+🔒 PHASE 2 — TARGETED FIX PROMPT
+
+Goal: Resolve the 4 high/critical conflicts identified in Phase 1, while leaving all other logic untouched.
+Scope: Only the flagged lines/files.
+Guardrails:
+
+Do not introduce new flags or modes.
+
+Do not alter classification routing (that was confirmed correct).
+
+Apply minimal, line-scoped patches.
+
+Ensure all modes remain isolated (no cross-mode contamination).
+
+🔧 PATCH PLAN
+
+Fix JavaScript Error in llm-api.jsx (line 453)
+
+- metadataType: typeof metadata,
++ metadataType: metadata ? typeof metadata : 'undefined',
+
+
+Prevents runtime ReferenceError and preserves debug trace integrity.
+
+Respect Master Expansion Flag in MessageBubble.jsx (line 736)
+
+- {!isUser && isLast && metadata?.canExpand && !isStreaming &&
++ {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT &&
+
+
+Ensures expansion buttons are only rendered if expansion is globally enabled.
+
+Clear Disclaimers on STOP AI in MessageBubble.jsx (lines 488–490)
+
+- status !== "stopped" && (
++ status !== "stopped" && metadata?.forceShowDisclaimers !== false && (
+
+
+And in STOP handler (stopActiveAIRequest in llm-api.jsx):
+
+metadata.disclaimers = []; // Clear disclaimers on stop
+
+
+Ensures disclaimers are fully cleared, not just hidden.
+
+Re-Enforce Concise Mode in buildConciseMedicationPrompt()
+Add at end of the function:
+
+prompt += "\n\n[STRICT RULE: Limit output to 3-5 sentences only. Do NOT expand, explain, or include side effects/interactions.]";
+
+
+Hard stop instruction ensures medication queries don’t bleed into expansion.
+
+✅ ACCEPTANCE CRITERIA AFTER FIX
+
+Medication queries (“aspirin dosage”) → 3-5 sentences, no expansion text, expansion button only if flag enabled.
+
+STOP AI → freezes output, clears disclaimers, shows “AI stopped by user”.
+
+Expansion flag → expansion UI respects master toggle.
+
+No runtime errors → metadata debug trace safe.
+
+Educational, triage, general modes remain unaffected.
+
+📝 NEXT PHASE RECOMMENDATION
+
+Apply this PHASE 2 Fix Pass.
+
+Run the 3 standard test queries with debug traces on:
+
+“what is the dosage of aspirin?” → concise only.
+
+“what is IBS?” → detailed, no expansion button.
+
+“I have chest pain” → triage + disclaimers.
+
+Verify console/server logs confirm correct prompt routing & disclaimers cleared.
