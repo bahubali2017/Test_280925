@@ -3,7 +3,8 @@
  * Phase 9: Medical Safety Guidelines - Fallback handling and disclaimer enforcement
  */
 
-import { SAFETY_DISCLAIMERS, filterOverconfidentLanguage } from '../config/safety-rules.js';
+import { selectDisclaimers } from '../disclaimers.js';
+import { filterOverconfidentLanguage } from '../config/safety-rules.js';
 
 /**
  * Generate context-aware emergency response based on symptoms
@@ -19,7 +20,7 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
     return {
       response: generateChestPainEmergencyResponse(),
       type: "emergency",
-      disclaimer: SAFETY_DISCLAIMERS.emergency,
+      disclaimerPack: selectDisclaimers('emergency', ['chest pain']),
       requiresHumanIntervention: true,
       recommendedActions: [
         "Call emergency services (911) immediately if experiencing severe symptoms",
@@ -47,7 +48,7 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
     return {
       response: generateBreathingEmergencyResponse(),
       type: "emergency", 
-      disclaimer: SAFETY_DISCLAIMERS.emergency,
+      disclaimerPack: selectDisclaimers('emergency', ['difficulty breathing']),
       requiresHumanIntervention: true,
       recommendedActions: [
         "Call emergency services (911) immediately",
@@ -74,7 +75,7 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
   return {
     response: "I've detected that this may be a medical emergency. I cannot provide adequate guidance for emergency situations.",
     type: "emergency",
-    disclaimer: SAFETY_DISCLAIMERS.emergency,
+    disclaimerPack: selectDisclaimers('emergency'),
     requiresHumanIntervention: true,
     recommendedActions: [
       "Call emergency services immediately",
@@ -209,7 +210,7 @@ export function generateFallbackResponse(context) {
     return {
       response: "I'm experiencing technical difficulties and cannot provide reliable medical guidance at this time.",
       type: "technical_error",
-      disclaimer: SAFETY_DISCLAIMERS.fallback,
+      disclaimerPack: selectDisclaimers('non_urgent'),
       requiresHumanIntervention: true,
       recommendedActions: [
         "Try again in a few minutes",
@@ -274,18 +275,20 @@ export function processAIResponseForSafety(aiResponse, context) {
   processedResponse = addCautionaryLanguage(processedResponse);
   
   // 3. Ensure appropriate disclaimer based on context
-  const disclaimer = selectAppropriateDisclaimer(context);
+  const disclaimerPack = selectAppropriateDisclaimer(context);
   
   // 4. Add emergency notice if needed
   let emergencyNotice = "";
   if (context.isEmergency) {
-    emergencyNotice = "\n\n🚨 **EMERGENCY NOTICE**: " + SAFETY_DISCLAIMERS.emergency + "\n";
+    const emergencyPack = selectDisclaimers('emergency');
+    emergencyNotice = "\n\n🚨 **EMERGENCY NOTICE**: " + emergencyPack.disclaimers.join(' ') + "\n";
   } else if (context.isMentalHealth) {
-    emergencyNotice = "\n\n💙 **MENTAL HEALTH NOTICE**: " + SAFETY_DISCLAIMERS.mental_health + "\n";
+    const mentalHealthPack = selectDisclaimers('emergency', ['suicidal ideation']);
+    emergencyNotice = "\n\n💙 **MENTAL HEALTH NOTICE**: " + mentalHealthPack.disclaimers.join(' ') + "\n";
   }
   
   // 5. Combine response with safety elements
-  const finalResponse = `${processedResponse}${emergencyNotice}\n\n${disclaimer}`;
+  const finalResponse = `${processedResponse}${emergencyNotice}\n\n${disclaimerPack.disclaimers.join(' ')}`;
   
   return finalResponse;
 }
@@ -315,25 +318,25 @@ function addCautionaryLanguage(response) {
 }
 
 /**
- * Select appropriate disclaimer based on context
+ * Select appropriate disclaimer pack based on context
  * @param {object} context - Response context
- * @returns {string} Appropriate disclaimer text
+ * @returns {object} Appropriate disclaimer pack from selectDisclaimers()
  */
 function selectAppropriateDisclaimer(context) {
   if (context.isEmergency) {
-    return SAFETY_DISCLAIMERS.emergency;
+    return selectDisclaimers('emergency');
   }
   
   if (context.isMentalHealth) {
-    return SAFETY_DISCLAIMERS.mental_health;
+    return selectDisclaimers('emergency', ['suicidal ideation']);
   }
   
   // Check if response mentions medication
   if (context.detectedSymptoms?.some(s => s.includes('medication') || s.includes('drug') || s.includes('pill'))) {
-    return SAFETY_DISCLAIMERS.medication;
+    return selectDisclaimers('non_urgent');
   }
   
-  return SAFETY_DISCLAIMERS.general;
+  return selectDisclaimers('non_urgent');
 }
 
 /**
@@ -358,8 +361,12 @@ export function validateResponseSafety(response) {
     }
   }
   
-  // Check for missing disclaimers
-  const hasDisclaimer = Object.values(SAFETY_DISCLAIMERS).some(disclaimer => 
+  // Check for missing disclaimers - check if any disclaimers from selectDisclaimers are present
+  const emergencyPack = selectDisclaimers('emergency');
+  const urgentPack = selectDisclaimers('urgent');
+  const nonUrgentPack = selectDisclaimers('non_urgent');
+  const allDisclaimers = [...emergencyPack.disclaimers, ...urgentPack.disclaimers, ...nonUrgentPack.disclaimers];
+  const hasDisclaimer = allDisclaimers.some(disclaimer => 
     response.includes(disclaimer.substring(0, 20)) // Check first 20 chars of disclaimer
   );
   
