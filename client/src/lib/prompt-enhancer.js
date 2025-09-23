@@ -430,7 +430,9 @@ ${userRole === 'doctor'
 
 Always end with: ${baseDisclaimer}
 
-CRITICAL: Keep response strictly to dosage information only. Expansion invitations are handled separately by UI.`;
+CRITICAL: Keep response strictly to dosage information only. Expansion invitations are handled separately by UI.
+
+[STRICT RULE: Limit output to 3-5 sentences only. Do NOT expand, explain, or include side effects/interactions.]`;
 
   console.log('📋 [PROMPT] Final medication system prompt (should contain NO expansion text):', prompt);
   return prompt;
