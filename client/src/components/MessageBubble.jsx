@@ -487,7 +487,7 @@ export function MessageBubble({
                 )}
 
                 {/* Display specific disclaimers from layer processing - NOT for stopped messages */}
-                {metadata?.queryIntent?.disclaimers && metadata.queryIntent.disclaimers.length > 0 && !showHighRiskAlert && status !== "stopped" && (
+                {metadata?.queryIntent?.disclaimers && metadata.queryIntent.disclaimers.length > 0 && !showHighRiskAlert && status !== "stopped" && metadata?.forceShowDisclaimers !== false && (
                   <div className="mb-2 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/50">
                     <div className="flex items-start">
                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">

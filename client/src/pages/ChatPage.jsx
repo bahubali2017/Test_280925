@@ -703,7 +703,12 @@ export default function ChatPage() {
                 metadata: {
                   ...msg.metadata,
                   isStreaming: false,
-                  status: 'stopping'
+                  status: 'stopping',
+                  // Clear disclaimers immediately when stopping
+                  queryIntent: {
+                    ...msg.metadata?.queryIntent,
+                    disclaimers: []
+                  }
                 }
               }
             : msg
