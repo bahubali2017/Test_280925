@@ -1,0 +1,125 @@
+🔒 PHASE 1 — READ-ONLY AUDIT (NO CODE CHANGES)
+
+Goal: Produce a precise, file-by-file report of how each mode is routed and where conflicts/overlaps exist. Do not modify any code, configs, or caches. If logging is needed, propose snippets but do not apply.
+
+Scope (scan only)
+
+client/src/lib/: prompt-enhancer.js, llm-api.jsx, expansion-state.js, expansion-prompts.js, disclaimers.js, any medical-*/** processors
+
+client/src/components/MessageBubble.jsx
+
+client/src/config/ai-flags.js (and any CONCISE_SETTINGS, EXPANSION_SETTINGS)
+
+server/routes.js (SSE/streaming, disclaimer injection, app-config)
+
+client/public/sw.js, server/utils/buildCache.js (version/caching)
+
+What to extract (per file)
+
+Classification & Routing
+
+Where classifyQuestionType() is defined/called and all return types.
+
+Where buildPromptsForQuery() dispatches to:
+
+buildConciseMedicationPrompt
+
+buildEducationalPrompt
+
+buildTriagePrompt
+
+buildGeneralPrompt
+
+Any cross-calls between mode builders (flag as conflict).
+
+Prompt contamination checks
+
+In medication/concise paths, list lines containing forbidden keywords: side effects|interactions|contraindications|expand|more details.
+
+Note any injection of expansion text into system prompts.
+
+Expansion system
+
+Where metadata.canExpand is set.
+
+UI expansion control in MessageBubble.jsx (button conditions).
+
+Confirm expansion-state.js / expansion-prompts.js are UI-only (no initial prompt injection).
+
+STOP AI flow
+
+All handlers that run on stop (client & server): how status, content, metadata.disclaimers are treated.
+
+Whether disclaimers are cleared when status === 'stopped'.
+
+Any code that re-injects disclaimers post-stop (flag).
+
+Disclaimers (duplication risk)
+
+Sources: disclaimers.js, client safety rules, server/routes.js symptom/emergency injection.
+
+Identify duplicates/overlaps and call sites.
+
+Streaming & formatting
+
+Server: any per-chunk cleanup/trim/transform (flag if present).
+
+Client: post-final cleanup only; confirm ReactMarkdown is the single renderer; list any additional formatters.
+
+Flags & settings
+
+Current values and usage sites for AI_FLAGS, CONCISE_SETTINGS, EXPANSION_SETTINGS (or equivalents).
+
+Where flags gate behavior (exact lines).
+
+Legacy/dead code
+
+Presence of expansion-handler.js, cleanMarkdownFormatting, or other unused handlers; list references (if any).
+
+Versioning/caching
+
+How the client picks bundle hash/version; mustRefresh behavior; any stale-cache risks noted.
+
+Runtime verification (read-only)
+
+Using the existing trace sink (no new code):
+
+Run three queries and capture [DEBUG-TRACE] server logs:
+
+“what is the dosage of aspirin?”
+
+“what is IBS?”
+
+“I have chest pain”
+
+For each, report:
+
+questionType, mode, canExpand
+
+First 300–400 chars of systemPrompt (if logged already)
+
+Audit booleans if available: hasSideEffects, hasExpandWords
+
+Deliverables (one markdown report)
+
+Per-file findings with exact line numbers and code snippets (≤3 lines each).
+
+Per-mode call graph (ASCII) showing classification → builder → UI/flags path.
+
+Conflict table: [Area] / [File:Line] / [Why it conflicts] / [Severity].
+
+Acceptance criteria checklist readiness per mode:
+
+Medication (concise 3–5 sentences, no expansion text in prompt, canExpand=true)
+
+Educational (detailed, no expansion button)
+
+Symptom/Triage (templates + disclaimers)
+
+General (standard)
+
+STOP AI (freezes text, clears disclaimers, shows stopped badge)
+
+Proposed minimal patches (as diffs) NOT applied, each mapped to a single conflict, with estimated risk.
+
+🛑 Do not edit files, restart servers, clear caches, or toggle flags. This task is audit-only.
