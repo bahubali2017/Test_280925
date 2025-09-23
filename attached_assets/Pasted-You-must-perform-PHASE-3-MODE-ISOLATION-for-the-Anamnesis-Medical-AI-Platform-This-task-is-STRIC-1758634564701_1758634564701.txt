@@ -1,0 +1,46 @@
+You must perform PHASE 3: MODE ISOLATION for the Anamnesis Medical AI Platform. 
+This task is STRICT and must follow these rules:
+
+1. ISOLATION OF MODES
+   - Implement 4 separate builder functions inside client/src/lib/prompt-enhancer.js:
+     • buildConciseMedicationPrompt()
+     • buildEducationalPrompt()
+     • buildSymptomPrompt()
+     • buildGeneralPrompt()
+   - Each builder must be self-contained and never reference another mode’s text or logic.
+
+2. ROUTING
+   - Update buildPromptsForQuery() to strictly route:
+     • medication → buildConciseMedicationPrompt()
+     • educational → buildEducationalPrompt()
+     • symptom → buildSymptomPrompt()
+     • general → buildGeneralPrompt()
+   - Add strict debug logs:
+     console.log('[MODE]', questionType, '→', builderFunctionName);
+
+3. CONFLICT PREVENTION
+   - Remove ALL legacy expansion or mode-mixing code.
+   - Ensure expansion invitations are handled ONLY by UI in MessageBubble.jsx.
+   - Prohibit expansion, side effects, or follow-up text inside system prompts.
+
+4. RENDERING CLEANUP
+   - MessageBubble.jsx must render responses based ONLY on metadata.responseMode.
+   - Deduplicate disclaimers via dedupeDisclaimers() before rendering.
+   - Expansion button must respect AI_FLAGS.ENABLE_EXPANSION_PROMPT.
+   - Ensure disclaimers are never duplicated or leaked between modes.
+
+5. VERIFICATION REQUIREMENTS
+   - Add debug traces to confirm mode routing:
+     [TRACE] classifyQuestionType → { questionType }
+     [TRACE] buildPromptsForQuery → { mode }
+     [TRACE] systemPrompt(head) → [first 300 chars]
+   - Output final bundle hash + timestamp for deployment confirmation.
+
+6. CRITICAL CONSTRAINTS
+   - DO NOT reintroduce deprecated expansion-handler.js or safety-rules.js.
+   - DO NOT inject expansion instructions into medication mode prompts.
+   - DO NOT mutate metadata props in components.
+   - Ensure STOP AI disclaimer clearing remains functional and idempotent.
+
+This is a STRICT step-by-step task. 
+Do not proceed to Phase 4 until Phase 3 is fully implemented and verified.
