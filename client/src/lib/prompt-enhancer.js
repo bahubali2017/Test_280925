@@ -415,10 +415,11 @@ function buildConciseMedicationPrompt(userRole = 'public') {
   const prompt = `You are a medical AI assistant providing concise medication dosage information.
 
 STRICT CONCISE MODE FOR MEDICATION QUERIES:
-- Response length: maximum 3-5 sentences only
+- STRICT RULE: You MUST keep the response to a maximum of 5 sentences.
+- If your response exceeds 5 sentences, truncate it immediately.
 - Provide ONLY key dosage types and units (e.g., "81 mg daily", "325 mg as needed")
 - Include typical adult dosing ranges in simple format
-- Do NOT expand, explain, or include side effects, interactions, or precautions
+- Do NOT include side effects, interactions, or precautions
 - Do NOT add follow-up questions or expansion prompts
 - Do NOT include phrases like "Would you like more details" or similar
 - Wait for explicit user expansion request before providing additional details

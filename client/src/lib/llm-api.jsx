@@ -450,7 +450,7 @@ export async function sendMessage(message, history = [], options = {}) {
           questionType: String(questionType), 
           mode: String(mode), 
           userRole: String(userRole),
-          metadataType: typeof metadata === 'undefined' ? 'undefined' : typeof metadata,
+          metadataType: metadata ? typeof metadata : 'undefined',
           canExpand: false // Simplified to avoid errors
         });
       } catch (e) {

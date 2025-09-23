@@ -1,0 +1,90 @@
+🔧 Adjustments per Fix
+1. JavaScript Error Fix (llm-api.jsx:453)
+
+Current:
+
+metadataType: typeof metadata === 'undefined' ? 'undefined' : typeof metadata,
+
+
+Recommendation:
+
+metadataType: metadata ? typeof metadata : 'undefined',
+
+
+✔️ Clearer, avoids the double typeof check
+✔️ Easier to read while staying safe
+
+2. Master Expansion Flag (MessageBubble.jsx:737)
+
+Current:
+
+!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT &&
+
+
+Recommendation:
+Keep as-is, but add a debug trace for visibility:
+
+!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && (() => {
+  console.log('[TRACE] Expansion button gated by master flag', { enableExpansion: AI_FLAGS.ENABLE_EXPANSION_PROMPT });
+  return true;
+})() &&
+
+
+✔️ Ensures we can confirm at runtime the master toggle works
+✔️ No behavior change, just transparency
+
+3. Disclaimer Clearing on STOP AI
+
+Current:
+
+Immediate & final updates both set disclaimers: []
+
+UI condition uses status !== "stopped" and metadata?.forceShowDisclaimers !== false
+
+Recommendation:
+Add a force-hide safeguard inside MessageBubble.jsx:
+
+if (status === "stopped") {
+  metadata.queryIntent.disclaimers = [];
+}
+
+
+✔️ Guarantees disclaimers don’t “leak back” from stale metadata
+✔️ Makes STOP AI behavior idempotent (same result no matter how often stop is called)
+
+4. Concise Mode Enforcement (prompt-enhancer.js)
+
+Current Prompt Rule:
+
+- Response length: maximum 3-5 sentences only
+- Do NOT expand, explain, or include side effects, interactions, or precautions
+
+
+Recommendation (stronger enforcement):
+
+STRICT RULE: You MUST keep the response to a maximum of 5 sentences.
+If your response exceeds 5 sentences, truncate it immediately.
+Do NOT include side effects, interactions, or precautions.
+
+
+Optional server-side safeguard in processAIResponse():
+
+if (questionType === "medication") {
+  // truncate to 5 sentences max
+  const sentences = cleaned.split(/[.!?]\s+/);
+  cleaned = sentences.slice(0, 5).join('. ') + '.';
+}
+
+
+✔️ Ensures concise mode cannot be bypassed by the LLM ignoring instructions
+✔️ Adds deterministic enforcement beyond prompt text
+
+✅ Summary of Adjustments
+
+Fix 1 (JS error): Cleaner conditional
+
+Fix 2 (Expansion): Add debug logging to confirm master toggle effect
+
+Fix 3 (Disclaimer): Add safeguard inside MessageBubble to force clear disclaimers
+
+Fix 4 (Concise): Strengthen system prompt + optional server-side truncation

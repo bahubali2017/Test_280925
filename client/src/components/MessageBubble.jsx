@@ -486,6 +486,9 @@ export function MessageBubble({
                   </div>
                 )}
 
+                {/* Force-hide safeguard for stopped messages */}
+                {status === "stopped" && metadata?.queryIntent && (metadata.queryIntent.disclaimers = [])}
+                
                 {/* Display specific disclaimers from layer processing - NOT for stopped messages */}
                 {metadata?.queryIntent?.disclaimers && metadata.queryIntent.disclaimers.length > 0 && !showHighRiskAlert && status !== "stopped" && metadata?.forceShowDisclaimers !== false && (
                   <div className="mb-2 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/50">
@@ -734,7 +737,10 @@ export function MessageBubble({
             )}
 
             {/* NEW: Expansion invitation - show only when response can be expanded */}
-            {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT &&
+            {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && (() => {
+              console.log('[TRACE] Expansion button gated by master flag', { enableExpansion: AI_FLAGS.ENABLE_EXPANSION_PROMPT });
+              return true;
+            })() &&
              (status === 'delivered' || status === 'completed' || status === 'stopped') && (() => {
                console.log('🔘 [MessageBubble] Expansion button conditions:', { 
                  isUser, isLast, canExpand: metadata?.canExpand, isStreaming, status,
