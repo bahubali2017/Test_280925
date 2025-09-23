@@ -191,6 +191,57 @@ export function classifyQuestionType(query) {
 // All mode-specific formatting is now handled by isolated builders
 
 /**
+ * Build isolated concise medication prompt - PHASE 3 MODE ISOLATION
+ * @param {import("./layer-context.js").LayerContext} ctx - Layer context
+ * @param {object} opts - Options object
+ * @param {string} [opts.userRole='public'] - User role
+ * @returns {{ systemPrompt: string, disclaimers: string[], atdNotices: string[], responseMode: string, questionType: string }} Medication prompt configuration
+ */
+export function buildConciseMedicationPrompt(ctx, opts = {}) {
+  const { userRole = 'public' } = opts;
+  
+  const baseDisclaimer = userRole === 'doctor' 
+    ? "⚠️ Professional reference only. Verify with official prescribing information."
+    : "⚠️ Informational purposes only. Not a substitute for professional medical advice.";
+
+  const systemPrompt = `You are a medical AI assistant providing concise medication dosage information.
+
+STRICT CONCISE MODE FOR MEDICATION QUERIES:
+- STRICT RULE: You MUST keep the response to a maximum of 5 sentences.
+- If your response exceeds 5 sentences, truncate it immediately.
+- Provide ONLY key dosage types and units (e.g., "81 mg daily", "325 mg as needed")
+- Include typical adult dosing ranges in simple format
+- Do NOT include side effects, interactions, or precautions
+- Do NOT add follow-up questions or expansion prompts
+- Do NOT include phrases like "Would you like more details" or similar
+- Wait for explicit user expansion request before providing additional details
+
+${userRole === 'doctor' 
+  ? "Use clinical terminology with typical dosing ranges and adjustment criteria."
+  : "Use patient-friendly language with simple dosage explanations."
+}
+
+Always end with: ${baseDisclaimer}
+
+CRITICAL: Keep response strictly to dosage information only. Expansion invitations are handled separately by UI.
+
+[STRICT RULE: Limit output to 3-5 sentences only. Do NOT expand, explain, or include side effects/interactions.]`;
+
+  // Get disclaimers using centralized system
+  const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['medication']);
+  
+  console.log('📋 [PROMPT] buildConciseMedicationPrompt completed (isolated)');
+  
+  return {
+    systemPrompt,
+    disclaimers,
+    atdNotices,
+    responseMode: 'concise_medication',
+    questionType: 'medication'
+  };
+}
+
+/**
  * Build isolated educational prompt - PHASE 3 MODE ISOLATION
  * @param {import("./layer-context.js").LayerContext} ctx - Layer context
  * @param {object} opts - Options object
