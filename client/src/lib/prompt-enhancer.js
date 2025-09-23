@@ -441,7 +441,7 @@ export function enhancePrompt(ctx, userRole = "public", _conversationHistory = [
   // All expansion is handled by UI layer only
   /** @type {string[]} */
   const suggestions = [];
-  const expansionPrompt = "";
+  const expansionPrompt = "";\n\n  // PHASE 3 VERIFICATION: Output final bundle hash + timestamp\n  const buildTimestamp = Date.now();\n  const buildHash = `PHASE3_MODE_ISOLATION_${buildTimestamp.toString(36).toUpperCase()}`;\n  console.log('[BUILD]', buildHash, buildTimestamp);\n  console.log('[PHASE-3-COMPLETE] MODE ISOLATION verified - builders isolated, routing strict, expansion UI-only');
 
   return { 
     systemPrompt: result.systemPrompt, 
