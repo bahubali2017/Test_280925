@@ -7,6 +7,7 @@ import AnimatedNeuralLogo from '../components/AnimatedNeuralLogo.jsx'; // eslint
 import { ThemeToggle } from '../components/ThemeToggle.jsx'; // eslint-disable-line no-unused-vars
 import { apiRequest } from '../lib/queryClient';
 import { getRandomStarterQuestions } from '../lib/suggestions';
+import { clearDisclaimers } from '../lib/disclaimers.js';
 
 // Simple UUID generator using crypto API with fallback
 const generateUUID = () => {
@@ -700,16 +701,11 @@ export default function ChatPage() {
                 ...msg,
                 isStreaming: false,
                 status: 'stopping',
-                metadata: {
+                metadata: clearDisclaimers({
                   ...msg.metadata,
                   isStreaming: false,
-                  status: 'stopping',
-                  // Clear disclaimers immediately when stopping
-                  queryIntent: {
-                    ...msg.metadata?.queryIntent,
-                    disclaimers: []
-                  }
-                }
+                  status: 'stopping'
+                })
               }
             : msg
         )
@@ -745,7 +741,7 @@ export default function ChatPage() {
                 status: 'stopped',
                 isCancelled: true,
                 isError: false,
-                metadata: {
+                metadata: clearDisclaimers({
                   ...msg.metadata,
                   isStreaming: false,
                   isCancelled: true,
@@ -753,14 +749,8 @@ export default function ChatPage() {
                   cancelledByUser: true,
                   manuallyAborted: true,
                   partialContentLength: latestContent.length,
-                  stoppedAt: new Date().toISOString(),
-                  // Clear disclaimers for stopped messages as required
-                  queryIntent: {
-                    ...msg.metadata?.queryIntent,
-                    disclaimers: [],
-                    atd: null
-                  }
-                }
+                  stoppedAt: new Date().toISOString()
+                })
               }
             : msg
         );
