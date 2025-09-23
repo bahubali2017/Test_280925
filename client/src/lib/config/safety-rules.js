@@ -133,17 +133,8 @@ export const EMERGENCY_CONTACTS = {
   }
 };
 
-/**
- * Mandatory disclaimer templates
- * @type {Record<string, string>}
- */
-export const SAFETY_DISCLAIMERS = {
-  general: "⚠️ This is not a medical diagnosis. Always consult a licensed healthcare provider for medical decisions.",
-  emergency: "🚨 This may be a medical emergency. Please call emergency services or seek immediate medical attention.",
-  mental_health: "🆘 If you're having thoughts of self-harm, please reach out for help immediately. You're not alone.",
-  medication: "💊 Do not start, stop, or change any medications without consulting your healthcare provider.",
-  fallback: "❌ I wasn't able to determine the most accurate information. Please speak with a healthcare provider."
-};
+// SAFETY_DISCLAIMERS removed - now centralized in disclaimers.js via selectDisclaimers()
+// All disclaimer text now comes from the unified disclaimer system
 
 /**
  * Privacy compliance patterns - data to exclude from logging

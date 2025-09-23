@@ -95,3 +95,12 @@ export function selectDisclaimers(level, symptomNames = []) {
 
   return nonUrgent;
 }
+
+/**
+ * Deduplicate disclaimer array by removing exact duplicates
+ * @param {string[]} disclaimers - Array of disclaimer strings
+ * @returns {string[]} Deduplicated array
+ */
+export function dedupeDisclaimers(disclaimers) {
+  return [...new Set(disclaimers.map(d => d.trim()))];
+}

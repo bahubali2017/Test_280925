@@ -7,6 +7,7 @@ import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggest
 import { getExpansionInvitationText } from '../lib/expansion-prompts.js';
 import { isDebug, trace } from '../lib/debug-flag.js';
 import { AI_FLAGS } from '../config/ai-flags.js';
+import { dedupeDisclaimers } from '../lib/disclaimers.js';
 
 /**
  * @typedef {object} MessageMetadata
@@ -501,7 +502,7 @@ export function MessageBubble({
                       <div>
                         <strong>Medical Notice:</strong>
                         <ul className="mt-1 ml-2">
-                          {metadata.queryIntent.disclaimers.map((disclaimer, index) => (
+                          {dedupeDisclaimers(metadata.queryIntent.disclaimers).map((disclaimer, index) => (
                             <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
                           ))}
                         </ul>
