@@ -1,0 +1,87 @@
+🔒 STRICT AGENT PROMPT — DISCLAIMER CONSOLIDATION & CONFLICT RESOLUTION
+
+You must perform a full audit and cleanup of disclaimer injection across the codebase. The goal is to prevent duplication, enforce a single source of truth, and preserve all existing STOP AI adjustments. Follow these steps exactly:
+
+1. Full Audit of Disclaimer Sources
+
+Search and list all files/functions where disclaimers are created, injected, or rendered.
+
+Expected locations:
+
+client/src/lib/disclaimers.js
+
+client/src/config/safety-rules.js
+
+server/routes.js
+
+client/src/components/MessageBubble.jsx
+
+Report exact line numbers and usage.
+
+Identify any overlaps (e.g., emergency disclaimers defined in multiple places).
+
+2. Centralize Disclaimer Injection
+
+All disclaimer text must come only from disclaimers.js.
+
+The server (routes.js) should only add structured metadata like:
+
+metadata: { riskLevel: "emergency" }
+
+
+but not inject full disclaimer text.
+
+The client (MessageBubble.jsx) must call selectDisclaimers() from disclaimers.js based on metadata.riskLevel.
+
+3. Implement Deduplication Utility
+
+Create a helper function in disclaimers.js:
+
+export function dedupeDisclaimers(disclaimers) {
+  return [...new Set(disclaimers.map(d => d.trim()))];
+}
+
+
+Apply it in MessageBubble.jsx before rendering disclaimer lists.
+
+4. Respect STOP AI Adjustments
+
+✅ Ensure previously implemented adjustments remain intact:
+
+Disclaimers cleared when STOP AI is clicked (already patched in ChatPage.jsx and MessageBubble.jsx).
+
+metadata?.forceShowDisclaimers !== false condition remains active.
+
+Verify no regressions introduced by centralizing disclaimer logic.
+
+5. Strict Testing Scenarios
+
+Test all flows and confirm:
+
+Medication query (e.g., "aspirin dosage") → concise response, no disclaimers shown.
+
+Symptom query (e.g., "chest pain") → triage response with correct emergency disclaimer (from disclaimers.js only, no duplicates).
+
+STOP AI clicked mid-response → disclaimers cleared, “AI stopped by user” shown, no disclaimer reappears.
+
+Expansion disabled → no expansion buttons, disclaimers unaffected.
+
+6. Deployment & Verification
+
+After changes, provide:
+
+✅ Hard code evidence for removed duplicate disclaimer definitions.
+
+✅ Evidence of dedupeDisclaimers() integration.
+
+✅ Logs showing structured metadata { riskLevel: "emergency" } passed from server → client.
+
+✅ Runtime test results for “aspirin dosage”, “chest pain”, and STOP AI.
+
+⚠️ Rules of Execution:
+
+Do not reintroduce multiple disclaimer sources.
+
+Do not alter unrelated systems (expansion, concise mode, triage) beyond disclaimer handling.
+
+Every modification must be minimal, targeted, and logged with before/after line evidence.
