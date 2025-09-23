@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { getExpansionInvitationText } from '../lib/expansion-prompts.js';
 import { isDebug, trace } from '../lib/debug-flag.js';
+import { AI_FLAGS } from '../config/ai-flags.js';
 
 /**
  * @typedef {object} MessageMetadata
@@ -733,7 +734,7 @@ export function MessageBubble({
             )}
 
             {/* NEW: Expansion invitation - show only when response can be expanded */}
-            {!isUser && isLast && metadata?.canExpand && !isStreaming && 
+            {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT &&
              (status === 'delivered' || status === 'completed' || status === 'stopped') && (() => {
                console.log('🔘 [MessageBubble] Expansion button conditions:', { 
                  isUser, isLast, canExpand: metadata?.canExpand, isStreaming, status,
