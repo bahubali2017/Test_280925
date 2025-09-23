@@ -1,7 +1,6 @@
 import { selectDisclaimers } from "./disclaimers.js";
-import { AI_FLAGS, CONCISE_SETTINGS, CLASSIFIER_SETTINGS } from "../config/ai-flags.js";
-import { isDebug, trace } from "./debug-flag.js";
-// OLD expansion-handler.js imports removed - using new expansion-state.js system
+import { AI_FLAGS, CLASSIFIER_SETTINGS } from "../config/ai-flags.js";
+// PHASE 3 MODE ISOLATION - minimal imports for isolated builders
 
 /** Inline fallbacks if templates cannot be loaded from disk */
 const FALLBACK_TEMPLATES = {
@@ -182,25 +181,8 @@ export function classifyQuestionType(query) {
   return "general";
 }
 
-/**
- * Classify if query is medication-related (legacy function for compatibility)
- * @param {string} input - User input text
- * @returns {boolean}
- */
-function classifyMedicationQuery(input) {
-  if (!AI_FLAGS.ENABLE_MED_QUERY_CLASSIFIER) return false;
-  
-  const medKeywords = [
-    "dosage", "dose", "mg", "ml", "iu",
-    "contraindication", "interaction", "interactions",
-    "side effect", "side effects", "pharmacology", 
-    "prescribe", "prescription", "tablet", "capsule",
-    "medication", "medicine", "drug", "pill"
-  ];
-  
-  const lowered = input.toLowerCase();
-  return medKeywords.some(keyword => lowered.includes(keyword));
-}
+// REMOVED: classifyMedicationQuery function - violates PHASE 3 MODE ISOLATION
+// Medication classification is now handled by classifyQuestionType
 
 // REMOVED: buildRolePolicy function - violates PHASE 3 MODE ISOLATION
 // Role-specific policies are now handled within each isolated builder
@@ -213,7 +195,7 @@ function classifyMedicationQuery(input) {
  * @param {import("./layer-context.js").LayerContext} ctx - Layer context
  * @param {object} opts - Options object
  * @param {string} [opts.userRole='public'] - User role
- * @returns {object} Educational prompt configuration
+ * @returns {{ systemPrompt: string, disclaimers: string[], atdNotices: string[], responseMode: string, questionType: string }} Educational prompt configuration
  */
 export function buildEducationalPrompt(ctx, opts = {}) {
   const { userRole = 'public' } = opts;
@@ -250,7 +232,7 @@ Analyze and provide educational information about the user's query.`;
  * @param {import("./layer-context.js").LayerContext} ctx - Layer context
  * @param {object} opts - Options object
  * @param {string} [opts.userRole='public'] - User role
- * @returns {object} Symptom prompt configuration
+ * @returns {{ systemPrompt: string, disclaimers: string[], atdNotices: string[], responseMode: string, questionType: string }} Symptom prompt configuration
  */
 export function buildSymptomPrompt(ctx, opts = {}) {
   const { userRole = 'public' } = opts;
@@ -259,7 +241,12 @@ export function buildSymptomPrompt(ctx, opts = {}) {
   const templateKey = chooseTemplateKey(triageLevel, ctx.symptoms || []);
   const contextBlock = buildContextBlock(ctx);
   
-  const systemPrompt = renderTemplate(templateKey, contextBlock);
+  // Role-specific adjustments for symptom prompts
+  const roleAdjustment = userRole === 'doctor' 
+    ? "\nUse clinical terminology and provide differential considerations."
+    : "\nUse patient-friendly language and avoid complex medical terms.";
+  
+  const systemPrompt = renderTemplate(templateKey, contextBlock) + roleAdjustment;
   
   // Get disclaimers using centralized system
   const disclaimerLevel = triageLevel.toLowerCase().replace("_", "_");
@@ -285,7 +272,7 @@ export function buildSymptomPrompt(ctx, opts = {}) {
  * @param {import("./layer-context.js").LayerContext} ctx - Layer context
  * @param {object} opts - Options object
  * @param {string} [opts.userRole='public'] - User role
- * @returns {object} General prompt configuration
+ * @returns {{ systemPrompt: string, disclaimers: string[], atdNotices: string[], responseMode: string, questionType: string }} General prompt configuration
  */
 export function buildGeneralPrompt(ctx, opts = {}) {
   const { userRole = 'public' } = opts;
@@ -320,32 +307,35 @@ Provide balanced, brief guidance for the user's query.`;
  * @param {object} params - Parameters
  * @param {string} params.query - User query
  * @param {string} [params.userRole='public'] - User role
- * @param {object} params.flags - AI flags configuration (unused in isolated mode)
- * @param {import("./layer-context.js").LayerContext} [params.ctx] - Layer context for builders
- * @returns {object} Prompt configuration with mode information
+ * @param {object} [params.flags] - AI flags configuration (unused in isolated mode)
+ * @param {import("./layer-context.js").LayerContext|null} [params.ctx] - Layer context for builders
+ * @returns {{ systemPrompt: string, questionType: string, mode: string, disclaimers: string[], atdNotices: string[], responseMode: string }} Prompt configuration with mode information
  */
-export function buildPromptsForQuery({ query, userRole = 'public', flags, ctx = null }) {
+export function buildPromptsForQuery({ query, userRole = 'public', ctx = null }) {
   const questionType = classifyQuestionType(query);
   
   // REQUIRED TRACE: Classification result
   console.log('[TRACE] classifyQuestionType →', { questionType });
   
   // STRICT ROUTING - PHASE 3 MODE ISOLATION
+  /** @type {{ systemPrompt: string, disclaimers: string[], atdNotices: string[], responseMode: string, questionType: string }} */
   let builderResult;
   let builderName;
   
+  const contextInput = ctx || { userInput: query };
+  
   if (questionType === "medication") {
     builderName = "buildConciseMedicationPrompt";
-    builderResult = buildConciseMedicationPrompt(ctx || { userInput: query }, { userRole });
+    builderResult = buildConciseMedicationPrompt(contextInput, { userRole });
   } else if (questionType === "educational") {
     builderName = "buildEducationalPrompt";
-    builderResult = buildEducationalPrompt(ctx || { userInput: query }, { userRole });
+    builderResult = buildEducationalPrompt(contextInput, { userRole });
   } else if (questionType === "symptom") {
     builderName = "buildSymptomPrompt";
-    builderResult = buildSymptomPrompt(ctx || { userInput: query }, { userRole });
+    builderResult = buildSymptomPrompt(contextInput, { userRole });
   } else {
     builderName = "buildGeneralPrompt";
-    builderResult = buildGeneralPrompt(ctx || { userInput: query }, { userRole });
+    builderResult = buildGeneralPrompt(contextInput, { userRole });
   }
   
   // REQUIRED TRACE: Mode routing
@@ -368,62 +358,13 @@ export function buildPromptsForQuery({ query, userRole = 'public', flags, ctx = 
 // REMOVED: buildBaseSystemPrompt function - violates PHASE 3 MODE ISOLATION
 // Base prompts are now handled within each isolated builder
 
-/**
- * Build isolated concise medication prompt - PHASE 3 MODE ISOLATION
- * @param {import("./layer-context.js").LayerContext} ctx - Layer context
- * @param {object} opts - Options object
- * @param {string} [opts.userRole='public'] - User role
- * @returns {object} Medication prompt configuration
- */
-export function buildConciseMedicationPrompt(ctx, opts = {}) {
-  const { userRole = 'public' } = opts;
-  
-  const baseDisclaimer = userRole === 'doctor' 
-    ? "⚠️ Professional reference only. Verify with official prescribing information."
-    : "⚠️ Informational purposes only. Not a substitute for professional medical advice.";
-
-  const systemPrompt = `You are a medical AI assistant providing concise medication dosage information.
-
-STRICT CONCISE MODE FOR MEDICATION QUERIES:
-- STRICT RULE: You MUST keep the response to a maximum of 5 sentences.
-- If your response exceeds 5 sentences, truncate it immediately.
-- Provide ONLY key dosage types and units (e.g., "81 mg daily", "325 mg as needed")
-- Include typical adult dosing ranges in simple format
-- Do NOT include side effects, interactions, or precautions
-- Do NOT add follow-up questions or expansion prompts
-- Do NOT include phrases like "Would you like more details" or similar
-- Wait for explicit user expansion request before providing additional details
-
-${userRole === 'doctor' 
-  ? "Use clinical terminology with typical dosing ranges and adjustment criteria."
-  : "Use patient-friendly language with simple dosage explanations."
-}
-
-Always end with: ${baseDisclaimer}
-
-CRITICAL: Keep response strictly to dosage information only. Expansion invitations are handled separately by UI.
-
-[STRICT RULE: Limit output to 3-5 sentences only. Do NOT expand, explain, or include side effects/interactions.]`;
-
-  // Get disclaimers using centralized system
-  const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['medication']);
-  
-  console.log('📋 [PROMPT] buildConciseMedicationPrompt completed (isolated)');
-  
-  return {
-    systemPrompt,
-    disclaimers,
-    atdNotices,
-    responseMode: 'concise_medication',
-    questionType: 'medication'
-  };
-}
+// REMOVED: Duplicate buildConciseMedicationPrompt function - original is at top of file
 
 /**
  * PHASE 3 MODE ISOLATION: Enhanced main enhancer using isolated builders
  * @param {import("./layer-context.js").LayerContext} ctx
  * @param {string} [userRole="public"] - User role for role-based responses
- * @param {Array} [_conversationHistory=[]] - Previous conversation messages (unused)
+ * @param {string[]} [_conversationHistory=[]] - Previous conversation messages (unused)
  * @returns {{ systemPrompt: string, enhancedPrompt: string, atdNotices: string[], disclaimers: string[], suggestions: string[], expansionPrompt: string, responseMode: string }}
  */
 export function enhancePrompt(ctx, userRole = "public", _conversationHistory = []) {
@@ -447,6 +388,7 @@ export function enhancePrompt(ctx, userRole = "public", _conversationHistory = [
 
   // PHASE 3: No expansion prompts or suggestions in system prompts
   // All expansion is handled by UI layer only
+  /** @type {string[]} */
   const suggestions = [];
   const expansionPrompt = "";
 
