@@ -317,7 +317,8 @@ export default function ChatPage() {
                     ...msg,
                     content: info.fullContent || msg.content + chunk,
                     isStreaming: true,
-                    status: 'streaming'
+                    status: 'streaming',
+                    metadata: { ...msg.metadata, ...(info.metadata || {}) }
                   }
                 : msg
             ));
@@ -542,7 +543,8 @@ export default function ChatPage() {
                     ...msg,
                     content: info.fullContent || msg.content + chunk,
                     isStreaming: true,
-                    status: 'streaming'
+                    status: 'streaming',
+                    metadata: { ...msg.metadata, ...(info.metadata || {}) }
                   }
                 : msg
             ));
