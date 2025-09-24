@@ -148,22 +148,22 @@ export async function processMedicalSafety(userInput, options = {}) {
   // Create medical context for processing
   const context = createLayerContext(userInput);
   if (demographics && typeof demographics === 'object') {
-    context.demographics = demographics;
+    context.demographics = /** @type {any} */ (demographics);
   }
   
   try {
     // 1. TRIAGE ASSESSMENT - Enhanced triage with safety bias
-    const triageResult = /** @type {TriageResult} */ (performEnhancedTriage(context));
+    const triageResult = /** @type {TriageResult} */ (/** @type {unknown} */ (performEnhancedTriage(context)));
     
     // 2. EMERGENCY DETECTION - Check for emergency situations
-    const emergencyDetection = /** @type {EmergencyDetection} */ (detectEmergency(userInput, region, demographics));
+    const emergencyDetection = /** @type {EmergencyDetection} */ (detectEmergency(userInput, region, /** @type {any} */ (demographics)));
     
     // 3. ATD ROUTING DECISION - Determine if provider referral needed
     const atdRouting = /** @type {ATDRouting} */ (routeToProvider(
-      triageResult, 
-      emergencyDetection, 
+      /** @type {any} */ (triageResult), 
+      /** @type {any} */ (emergencyDetection), 
       userInput, 
-      { ...demographics, sessionId }
+      /** @type {any} */ ({ ...demographics, sessionId })
     ));
     
     // 4. SAFETY CONTEXT COMPILATION
@@ -218,8 +218,27 @@ export async function processMedicalSafety(userInput, options = {}) {
       safetyContext: { 
         userInput: sanitizeForPrivacy(userInput), 
         region,
-        triageResult: { level: 'NON_URGENT', reasons: [], safetyFlags: [], emergencyProtocol: false, mentalHealthCrisis: false },
-        emergencyDetection: { isEmergency: false },
+        triageResult: { 
+          level: 'NON_URGENT', 
+          reasons: [], 
+          safetyFlags: [], 
+          emergencyProtocol: false, 
+          mentalHealthCrisis: false,
+          symptomNames: [],
+          severityAssessment: {},
+          conservativeBiasApplied: false,
+          detectedSymptoms: []
+        },
+        emergencyDetection: { 
+          isEmergency: false,
+          emergencyType: null,
+          severity: 'moderate',
+          triggeredPatterns: [],
+          emergencyContacts: {},
+          immediateActions: '',
+          requiresEmergencyServices: false,
+          emergencyMessage: ''
+        },
         atdRouting: { 
           routeToProvider: false, 
           priorityScore: 1,
@@ -356,7 +375,7 @@ function generateSafetyNotices(safetyContext, systemPrompt = "", aiResponse = ""
       message: emergencyDetection.emergencyMessage || 'Emergency detected - seek immediate medical attention',
       isVisible: true,
       recommendedActions: emergencyDetection.immediateActions ? emergencyDetection.immediateActions.split('\n').filter(Boolean) : [],
-      emergencyContacts: emergencyDetection.emergencyContacts || []
+      emergencyContacts: emergencyDetection.emergencyContacts ? [emergencyDetection.emergencyContacts] : []
     };
     notices.push(emergencyNotice);
   }
@@ -368,7 +387,7 @@ function generateSafetyNotices(safetyContext, systemPrompt = "", aiResponse = ""
       type: 'general',
       message: atdRouting.patientGuidance || 'Consider consulting a healthcare provider',
       isVisible: true,
-      recommendedActions: (atdRouting.structuredData && atdRouting.structuredData.recommendedActions) ? atdRouting.structuredData.recommendedActions : []
+      recommendedActions: (atdRouting && atdRouting.structuredData && atdRouting.structuredData.recommendedActions) ? atdRouting.structuredData.recommendedActions : []
     };
     notices.push(providerNotice);
   }
@@ -408,7 +427,7 @@ function generateTriageWarning(safetyContext) {
     emergencyProtocol: (triageResult && triageResult.emergencyProtocol) || (emergencyDetection && emergencyDetection.isEmergency) || false,
     mentalHealthCrisis: triageResult ? triageResult.mentalHealthCrisis : false,
     recommendedActions: (atdRouting && atdRouting.structuredData && atdRouting.structuredData.recommendedActions) ? atdRouting.structuredData.recommendedActions : [],
-    emergencyContacts: (emergencyDetection && emergencyDetection.emergencyContacts) ? emergencyDetection.emergencyContacts : [],
+    emergencyContacts: (emergencyDetection && emergencyDetection.emergencyContacts) ? [emergencyDetection.emergencyContacts] : [],
     showActions: true
   };
   
