@@ -1,0 +1,110 @@
+🔧 Agent Prompt v4 — Fix LegalPage.jsx Unavailability
+
+You are tasked with validating, fixing, and deploying the LegalPage.jsx component so that /legal loads correctly in the browser without runtime errors. Follow these steps exactly:
+
+1. Validation Phase
+
+Rebuild project and test route:
+
+npm run build && npm run preview
+
+
+Open /legal route locally and confirm if the error reproduces.
+
+Inspect build output:
+
+ls -R dist | grep LegalPage
+
+
+Ensure a bundled LegalPage asset exists.
+
+Verify router config:
+
+Open client/src/App.jsx (or routes.js if used).
+
+Confirm <Route path="/legal" element={<LegalPage />} /> (or wouter equivalent) exists.
+
+Capture any runtime error in DevTools console for /legal.
+
+2. Fix Phase
+
+If error is:
+
+ReferenceError: Cannot access 'L' before initialization'
+→ Scan LegalPage.jsx for variable declarations starting with L (like const L = ...) that conflict with JSX or hoisting. Rename safely (legalConfig, legalContent).
+
+404 Not Found
+→ Ensure route /legal is exported in router. If using SPA + Vite, add fallback in vite.config.js:
+
+export default defineConfig({
+  plugins: [react()],
+  server: { historyApiFallback: true }
+})
+
+
+Other build/runtime errors
+→ Refactor LegalPage.jsx while preserving TRIPLE-0 compliance:
+
+✅ 0 TypeScript errors
+
+✅ 0 ESLint warnings
+
+✅ 0 LSP diagnostics
+
+Keep all runtime semantics, props, and legal text intact.
+
+3. Compliance Phase
+
+Add/verify JSDoc typedefs:
+
+LegalTabId
+
+LegalPageState
+
+LegalMetadata
+
+TabConfig
+
+LegalPageProps
+
+Ensure type guards exist: isValidTabId(), hasValidContent().
+
+Add accessibility roles:
+role="tablist", role="tab", role="tabpanel", aria-labelledby="legal-title".
+
+4. Test Phase
+
+Run ESLint + TS strict mode:
+
+npm run lint && tsc --noEmit
+
+
+Visit /legal and confirm:
+
+✅ No runtime errors
+
+✅ Legal text renders correctly
+
+✅ Tab navigation works (Terms ↔ License)
+
+✅ Download buttons work
+
+Try incognito to confirm CDN cache isn’t masking errors.
+
+5. Documentation Phase
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark LegalPage.jsx as ✅ FIXED
+
+Note "TRIPLE-0 compliance achieved; root cause hoisting/routing fixed"
+
+Adjust error/file counts accordingly.
+
+⚠️ Reminder:
+
+Preserve all legal content verbatim (Terms, License, disclaimers).
+
+Adjust JSDoc typedefs and examples to match the actual code, never mismatched templates.
+
+Maintain TRIPLE-0 compliance after patch.

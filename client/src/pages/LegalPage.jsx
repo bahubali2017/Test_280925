@@ -625,12 +625,12 @@ export default function LegalPage() {
             {hasValidContent ? (
               <>
                 {(() => {
-                  const termsConfig = getTabConfig('terms');
-                  return termsConfig ? renderTabPanel(termsConfig, termsContent, activeTab) : null;
+                  const termsConfigSafe = getTabConfig('terms');
+                  return termsConfigSafe ? renderTabPanel(termsConfigSafe, termsContent, activeTab) : null;
                 })()}
                 {(() => {
-                  const licenseConfig = getTabConfig('license');
-                  return licenseConfig ? renderTabPanel(licenseConfig, licenseContent, activeTab) : null;
+                  const licenseConfigSafe = getTabConfig('license');
+                  return licenseConfigSafe ? renderTabPanel(licenseConfigSafe, licenseContent, activeTab) : null;
                 })()}
               </>
             ) : (
