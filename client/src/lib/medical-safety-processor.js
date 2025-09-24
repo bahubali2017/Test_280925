@@ -66,7 +66,8 @@ export async function processMedicalSafety(userInput, options = {}) {
       reason: emergencyDetection.isEmergency ? 'safety_concern' : 'ambiguous_input',
       triageLevel: triageResult.level,
       isEmergency: emergencyDetection.isEmergency,
-      isMentalHealth: triageResult.mentalHealthCrisis
+      isMentalHealth: triageResult.mentalHealthCrisis,
+      existingDisclaimers: [] // Pass empty array to prevent duplication in this path
     }) : null;
     
     return {
@@ -98,7 +99,8 @@ export async function processMedicalSafety(userInput, options = {}) {
         reason: 'technical_error',
         triageLevel: 'NON_URGENT',
         isEmergency: false,
-        isMentalHealth: false
+        isMentalHealth: false,
+        existingDisclaimers: [] // Pass empty array to prevent duplication in this path
       }),
       shouldBlockAI: true,
       requiresHumanReview: true,
