@@ -831,7 +831,7 @@ export default function ChatPage() {
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="flex flex-col items-center space-y-4">
           <div className="animate-pulse">
-            <AnimatedNeuralLogo />
+            <div className="w-12 h-12 bg-primary/20 rounded-full animate-pulse"></div>
           </div>
           <p className="text-muted-foreground">Loading your medical AI assistant...</p>
         </div>
@@ -870,9 +870,6 @@ export default function ChatPage() {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <div className="text-center space-y-6 p-6">
-          <div className="mb-8">
-            <AnimatedNeuralLogo />
-          </div>
           <div className="space-y-4">
             <h1 className="text-3xl font-bold text-foreground">Welcome to Anamnesis</h1>
             <p className="text-lg text-muted-foreground max-w-md">
@@ -895,7 +892,7 @@ export default function ChatPage() {
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center space-x-3">
-          <div className="w-8 h-8">
+          <div className="w-10 h-10 flex items-center justify-center">
             <AnimatedNeuralLogo />
           </div>
           <div>
@@ -948,9 +945,6 @@ export default function ChatPage() {
             {messages.length === 0 && !isFetchingHistory && (
               <div className="text-center py-12 space-y-6">
                 <div className="mb-6">
-                  <div className="w-16 h-16 mx-auto mb-4">
-                    <AnimatedNeuralLogo />
-                  </div>
                   <h2 className="text-2xl font-bold text-foreground mb-2">
                     Hello, {user?.name ? user.name.split(' ')[0] : 'there'}!
                   </h2>
@@ -967,7 +961,7 @@ export default function ChatPage() {
                       <button
                         key={index}
                         onClick={() => handleStarterClick(question)}
-                        className="p-3 text-left rounded-lg bg-card hover:bg-accent hover:text-accent-foreground transition-colors duration-200 border border-border text-sm"
+                        className="rounded-full bg-cyan-100 px-4 py-2 text-cyan-800 hover:bg-cyan-200 transition-colors"
                       >
                         <span className="text-primary mr-2">💬</span>
                         {question}
