@@ -1179,7 +1179,8 @@ router.get("/app-config.json", async (req, res) => {
           if (!closed && !controller.signal.aborted) {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: true,
-              requestTime: requestDuration
+              requestTime: requestDuration,
+              disclaimers: disclaimers // ✅ PHASE 6.4: Include disclaimers in final metadata
             })}\n\n`);
           }
 
