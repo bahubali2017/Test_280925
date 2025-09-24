@@ -8,23 +8,102 @@
  * @file Analyzes patterns and suggests system improvements
  */
 
-import { loadRecentFeedback, analyzeFeedbackTrends } from './feedback-handler.js';
-import { loadEvaluationDataset, calculateMetrics } from './metrics-evaluator.js';
+/** @typedef {{[k: string]: number}} NumDict */
+/** @typedef {{[k: string]: string}} StringDict */
 
 /**
- * Improvement suggestion structure
- * @typedef {{
- *   id: string;
- *   category: string;
- *   priority: "low" | "medium" | "high" | "critical";
- *   description: string;
- *   evidence: Array<string>;
- *   implementationNotes: string;
- *   estimatedImpact: "minor" | "moderate" | "significant" | "major";
- *   suggestedBy: string;
- *   timestamp: string;
- * }} ImprovementSuggestion
+ * @typedef {'low'|'medium'|'high'|'critical'} Severity
  */
+
+/**
+ * @typedef SuggestionContext
+ * @property {string} sessionId
+ * @property {string} userId
+ * @property {{ model?: string, route?: string, locale?: string }=} meta
+ * @property {{ processingTime?: number, confidence?: number, triageLevel?: string, isHighRisk?: boolean }=} metrics
+ * @property {{ userInput?: string, enhancedPrompt?: string, symptoms?: string[] }=} text
+ */
+
+/**
+ * @typedef SuggestionRule
+ * @property {string} id
+ * @property {string} description
+ * @property {(ctx: SuggestionContext) => boolean} predicate
+ * @property {Severity} severity
+ * @property {string} recommendation
+ * @property {StringDict=} tags
+ */
+
+/**
+ * @typedef ImprovementSuggestion
+ * @property {string} id
+ * @property {string} title
+ * @property {string} message
+ * @property {Severity} severity
+ * @property {StringDict=} tags
+ */
+
+/**
+ * @typedef SuggesterConfig
+ * @property {number} maxPerRun
+ * @property {Severity=} minSeverity
+ * @property {StringDict=} defaults
+ */
+
+/**
+ * @typedef SuggesterReport
+ * @property {ImprovementSuggestion[]} suggestions
+ * @property {NumDict} countsBySeverity
+ */
+
+/**
+ * @typedef LegacyImprovementSuggestion
+ * @property {string} id
+ * @property {string} category
+ * @property {"low" | "medium" | "high" | "critical"} priority
+ * @property {string} description
+ * @property {Array<string>} evidence
+ * @property {string} implementationNotes
+ * @property {"minor" | "moderate" | "significant" | "major"} estimatedImpact
+ * @property {string} suggestedBy
+ * @property {string} timestamp
+ */
+
+/**
+ * @typedef EvaluationDataItem
+ * @property {string=} userInput
+ * @property {string=} triageLevel
+ * @property {string=} responseCategory
+ * @property {string=} llmResponse
+ * @property {boolean=} isHighRisk
+ * @property {Array<string>=} disclaimers
+ */
+
+/**
+ * @typedef FeedbackDataItem
+ * @property {string=} feedbackText
+ * @property {{category?: string}=} analysis
+ */
+
+/**
+ * @typedef FeedbackAnalysis
+ * @property {{accuracy: {low: number}}} trends
+ * @property {number} totalFeedback
+ * @property {number} averageAccuracy
+ */
+
+/**
+ * @typedef MetricsAnalysis
+ * @property {number} accuracy
+ * @property {number} precision
+ * @property {number} recall
+ * @property {number} falsePositives
+ * @property {number} falseNegatives
+ * @property {number} disclaimerRatio
+ */
+
+import { loadRecentFeedback, analyzeFeedbackTrends } from './feedback-handler.js';
+import { loadEvaluationDataset, calculateMetrics } from './metrics-evaluator.js';
 
 /**
  * Analysis categories for improvement suggestions
@@ -39,12 +118,35 @@ export const ImprovementCategory = {
   DISCLAIMER_COVERAGE: 'disclaimer_coverage'
 };
 
+/** @type {Severity} */
+const DEFAULT_MIN_SEVERITY = 'low';
+
+/**
+ * Simple logger function
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {...unknown} args - Additional arguments
+ * @returns {void}
+ */
+function log(level, message, ...args) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] [improvement-suggester] ${message}`;
+  
+  if (level === 'error') {
+    console.error(logMessage, ...args);
+  } else if (level === 'warn') {
+    console.warn(logMessage, ...args);
+  } else {
+    console.info(logMessage, ...args);
+  }
+}
+
 /**
  * Analyzes system performance and generates improvement suggestions
  * @param {object} [options] - Analysis options
- * @param {number} options.feedbackDays - Days of feedback to analyze (default: 30)
- * @param {number} options.minOccurrences - Minimum pattern occurrences to suggest (default: 3)
- * @returns {Promise<Array<ImprovementSuggestion>>} Array of improvement suggestions
+ * @param {number} [options.feedbackDays] - Days of feedback to analyze (default: 30)
+ * @param {number} [options.minOccurrences] - Minimum pattern occurrences to suggest (default: 3)
+ * @returns {Promise<Array<LegacyImprovementSuggestion>>} Array of improvement suggestions
  */
 export async function generateImprovementSuggestions(options = { feedbackDays: 30, minOccurrences: 3 }) {
   const {
@@ -53,7 +155,7 @@ export async function generateImprovementSuggestions(options = { feedbackDays: 3
   } = options;
   
   try {
-    console.log('[improvement-suggester] Starting analysis...');
+    log('info', 'Starting analysis...');
     
     // Load analysis data
     const feedbackData = await loadRecentFeedback(feedbackDays * 10); // Approximate daily volume
@@ -64,6 +166,7 @@ export async function generateImprovementSuggestions(options = { feedbackDays: 3
     const metricsAnalysis = calculateMetrics(evaluationData);
     
     // Generate suggestions from different analysis paths
+    /** @type {LegacyImprovementSuggestion[]} */
     const suggestions = [
       ...analyzeTriageDisagreements(evaluationData, minOccurrences),
       ...analyzeFeedbackPatterns(feedbackData, feedbackAnalysis, minOccurrences),
@@ -75,33 +178,36 @@ export async function generateImprovementSuggestions(options = { feedbackDays: 3
     // Sort by priority and impact
     const prioritizedSuggestions = prioritizeSuggestions(suggestions);
     
-    console.log(`[improvement-suggester] Generated ${prioritizedSuggestions.length} suggestions`);
+    log('info', `Generated ${prioritizedSuggestions.length} suggestions`);
     
     return prioritizedSuggestions;
     
   } catch (error) {
-    console.error('[improvement-suggester] Failed to generate suggestions:', error.message);
+    log('error', 'Failed to generate suggestions:', error instanceof Error ? error.message : String(error));
     return [];
   }
 }
 
 /**
  * Analyzes repeated triage disagreements from evaluation data
- * @private
- * @param {Array<object>} evaluationData - Evaluation dataset
+ * @param {Array<EvaluationDataItem>} evaluationData - Evaluation dataset
  * @param {number} minOccurrences - Minimum occurrences to flag
- * @returns {Array<ImprovementSuggestion>} Triage-related suggestions
+ * @returns {Array<LegacyImprovementSuggestion>} Triage-related suggestions
  */
 function analyzeTriageDisagreements(evaluationData, minOccurrences) {
-  /** @type {Array<import('./improvement-suggester.js').ImprovementSuggestion>} */
+  /** @type {Array<LegacyImprovementSuggestion>} */
   const suggestions = [];
+  /** @type {{[k: string]: string[]}} */
   const disagreements = {};
   
   // Track disagreement patterns
   evaluationData.forEach(data => {
-    if (data.userInput && data.triageLevel) {
+    const userInput = data && typeof data.userInput === 'string' ? data.userInput : '';
+    const triageLevel = data && typeof data.triageLevel === 'string' ? data.triageLevel : '';
+    
+    if (userInput && triageLevel) {
       // Simplify to check for common patterns
-      const inputWords = data.userInput.toLowerCase().split(' ');
+      const inputWords = userInput.toLowerCase().split(' ');
       const keySymptoms = inputWords.filter(word => 
         ['pain', 'headache', 'chest', 'heart', 'breathing', 'fever', 'dizzy'].includes(word)
       );
@@ -111,7 +217,7 @@ function analyzeTriageDisagreements(evaluationData, minOccurrences) {
         if (!disagreements[pattern]) {
           disagreements[pattern] = [];
         }
-        disagreements[pattern].push(data.triageLevel);
+        disagreements[pattern].push(triageLevel);
       }
     }
   });
@@ -144,26 +250,31 @@ function analyzeTriageDisagreements(evaluationData, minOccurrences) {
 
 /**
  * Analyzes user feedback patterns for improvement opportunities
- * @private
- * @param {Array<object>} feedbackData - User feedback data
- * @param {object} feedbackAnalysis - Aggregated feedback analysis
+ * @param {Array<FeedbackDataItem>} feedbackData - User feedback data
+ * @param {FeedbackAnalysis} feedbackAnalysis - Aggregated feedback analysis
  * @param {number} minOccurrences - Minimum occurrences to flag
- * @returns {Array<ImprovementSuggestion>} Feedback-based suggestions
+ * @returns {Array<LegacyImprovementSuggestion>} Feedback-based suggestions
  */
 function analyzeFeedbackPatterns(feedbackData, feedbackAnalysis, minOccurrences) {
-  /** @type {Array<import('./improvement-suggester.js').ImprovementSuggestion>} */
+  /** @type {Array<LegacyImprovementSuggestion>} */
   const suggestions = [];
   
   // Check for high volume of low accuracy feedback
-  if (feedbackAnalysis.trends.accuracy.low >= minOccurrences) {
+  const trends = feedbackAnalysis && feedbackAnalysis.trends ? feedbackAnalysis.trends : { accuracy: { low: 0 } };
+  const lowAccuracyCount = trends.accuracy && typeof trends.accuracy.low === 'number' ? trends.accuracy.low : 0;
+  
+  if (lowAccuracyCount >= minOccurrences) {
+    const totalFeedback = feedbackAnalysis && typeof feedbackAnalysis.totalFeedback === 'number' ? feedbackAnalysis.totalFeedback : 0;
+    const averageAccuracy = feedbackAnalysis && typeof feedbackAnalysis.averageAccuracy === 'number' ? feedbackAnalysis.averageAccuracy : 0;
+    
     suggestions.push({
       id: `accuracy_feedback_${Date.now()}`,
       category: ImprovementCategory.RESPONSE_QUALITY,
       priority: 'high',
       description: 'High volume of low accuracy feedback received',
       evidence: [
-        `${feedbackAnalysis.trends.accuracy.low} low accuracy ratings out of ${feedbackAnalysis.totalFeedback} total`,
-        `Average accuracy rating: ${feedbackAnalysis.averageAccuracy.toFixed(2)}/3.0`
+        `${lowAccuracyCount} low accuracy ratings out of ${totalFeedback} total`,
+        `Average accuracy rating: ${averageAccuracy.toFixed(2)}/3.0`
       ],
       implementationNotes: 'Review recent responses flagged as low accuracy and identify common failure patterns',
       estimatedImpact: 'major',
@@ -173,10 +284,13 @@ function analyzeFeedbackPatterns(feedbackData, feedbackAnalysis, minOccurrences)
   }
   
   // Check for safety-related feedback
-  const safetyFeedback = feedbackData.filter(f => 
-    f.analysis?.category === 'safety' || 
-    (f.feedbackText && f.feedbackText.toLowerCase().includes('unsafe'))
-  );
+  const safetyFeedback = feedbackData.filter(f => {
+    const analysis = f && f.analysis ? f.analysis : {};
+    const category = analysis && typeof analysis.category === 'string' ? analysis.category : '';
+    const feedbackText = f && typeof f.feedbackText === 'string' ? f.feedbackText : '';
+    
+    return category === 'safety' || feedbackText.toLowerCase().includes('unsafe');
+  });
   
   if (safetyFeedback.length >= 1) { // Even one safety concern is important
     suggestions.push({
@@ -196,10 +310,13 @@ function analyzeFeedbackPatterns(feedbackData, feedbackAnalysis, minOccurrences)
   }
   
   // Check for clarity issues
-  const clarityFeedback = feedbackData.filter(f => 
-    f.analysis?.category === 'clarity' ||
-    (f.feedbackText && f.feedbackText.toLowerCase().includes('confus'))
-  );
+  const clarityFeedback = feedbackData.filter(f => {
+    const analysis = f && f.analysis ? f.analysis : {};
+    const category = analysis && typeof analysis.category === 'string' ? analysis.category : '';
+    const feedbackText = f && typeof f.feedbackText === 'string' ? f.feedbackText : '';
+    
+    return category === 'clarity' || feedbackText.toLowerCase().includes('confus');
+  });
   
   if (clarityFeedback.length >= minOccurrences) {
     suggestions.push({
@@ -223,23 +340,29 @@ function analyzeFeedbackPatterns(feedbackData, feedbackAnalysis, minOccurrences)
 
 /**
  * Analyzes performance metrics for improvement opportunities
- * @private
- * @param {object} metrics - Performance metrics
- * @returns {Array<ImprovementSuggestion>} Performance-based suggestions
+ * @param {MetricsAnalysis} metrics - Performance metrics
+ * @returns {Array<LegacyImprovementSuggestion>} Performance-based suggestions
  */
 function analyzePerformanceMetrics(metrics) {
-  /** @type {Array<import('./improvement-suggester.js').ImprovementSuggestion>} */
+  /** @type {Array<LegacyImprovementSuggestion>} */
   const suggestions = [];
   
+  const accuracy = metrics && typeof metrics.accuracy === 'number' ? metrics.accuracy : 0;
+  const precision = metrics && typeof metrics.precision === 'number' ? metrics.precision : 0;
+  const recall = metrics && typeof metrics.recall === 'number' ? metrics.recall : 0;
+  const falsePositives = metrics && typeof metrics.falsePositives === 'number' ? metrics.falsePositives : 0;
+  const falseNegatives = metrics && typeof metrics.falseNegatives === 'number' ? metrics.falseNegatives : 0;
+  const disclaimerRatio = metrics && typeof metrics.disclaimerRatio === 'number' ? metrics.disclaimerRatio : 0;
+  
   // Check overall accuracy
-  if (metrics.accuracy < 0.8) {
+  if (accuracy < 0.8) {
     suggestions.push({
       id: `low_accuracy_${Date.now()}`,
       category: ImprovementCategory.TRIAGE_ACCURACY,
-      priority: metrics.accuracy < 0.6 ? 'critical' : 'high',
+      priority: accuracy < 0.6 ? 'critical' : 'high',
       description: 'Overall system accuracy below acceptable threshold',
       evidence: [
-        `Current accuracy: ${(metrics.accuracy * 100).toFixed(1)}%`,
+        `Current accuracy: ${(accuracy * 100).toFixed(1)}%`,
         `Target accuracy: 80%+`
       ],
       implementationNotes: 'Comprehensive review of triage logic and prompt engineering needed',
@@ -250,15 +373,15 @@ function analyzePerformanceMetrics(metrics) {
   }
   
   // Check precision for high-risk detection
-  if (metrics.precision < 0.7) {
+  if (precision < 0.7) {
     suggestions.push({
       id: `low_precision_${Date.now()}`,
       category: ImprovementCategory.TRIAGE_ACCURACY,
       priority: 'high',
       description: 'High false positive rate in emergency detection',
       evidence: [
-        `Current precision: ${(metrics.precision * 100).toFixed(1)}%`,
-        `False positives: ${metrics.falsePositives}`
+        `Current precision: ${(precision * 100).toFixed(1)}%`,
+        `False positives: ${falsePositives}`
       ],
       implementationNotes: 'Tighten emergency detection criteria to reduce false alarms',
       estimatedImpact: 'significant',
@@ -268,15 +391,15 @@ function analyzePerformanceMetrics(metrics) {
   }
   
   // Check recall for high-risk detection
-  if (metrics.recall < 0.9) {
+  if (recall < 0.9) {
     suggestions.push({
       id: `low_recall_${Date.now()}`,
       category: ImprovementCategory.SAFETY_PROTOCOLS,
       priority: 'critical',
       description: 'Missing emergency cases - safety risk',
       evidence: [
-        `Current recall: ${(metrics.recall * 100).toFixed(1)}%`,
-        `False negatives: ${metrics.falseNegatives}`
+        `Current recall: ${(recall * 100).toFixed(1)}%`,
+        `False negatives: ${falseNegatives}`
       ],
       implementationNotes: 'Broaden emergency detection patterns - prioritize safety over precision',
       estimatedImpact: 'major',
@@ -286,14 +409,14 @@ function analyzePerformanceMetrics(metrics) {
   }
   
   // Check disclaimer usage
-  if (metrics.disclaimerRatio < 0.5) {
+  if (disclaimerRatio < 0.5) {
     suggestions.push({
       id: `low_disclaimers_${Date.now()}`,
       category: ImprovementCategory.DISCLAIMER_COVERAGE,
       priority: 'medium',
       description: 'Low disclaimer usage may indicate insufficient safety warnings',
       evidence: [
-        `Current disclaimer ratio: ${(metrics.disclaimerRatio * 100).toFixed(1)}%`,
+        `Current disclaimer ratio: ${(disclaimerRatio * 100).toFixed(1)}%`,
         'Target: 50%+ for medical advice responses'
       ],
       implementationNotes: 'Review disclaimer triggers and ensure appropriate safety warnings',
@@ -308,20 +431,21 @@ function analyzePerformanceMetrics(metrics) {
 
 /**
  * Analyzes fallback response patterns
- * @private
- * @param {Array<object>} evaluationData - Evaluation dataset
+ * @param {Array<EvaluationDataItem>} evaluationData - Evaluation dataset
  * @param {number} minOccurrences - Minimum occurrences to flag
- * @returns {Array<ImprovementSuggestion>} Fallback-related suggestions
+ * @returns {Array<LegacyImprovementSuggestion>} Fallback-related suggestions
  */
 function analyzeFallbackPatterns(evaluationData, minOccurrences) {
-  /** @type {Array<import('./improvement-suggester.js').ImprovementSuggestion>} */
+  /** @type {Array<LegacyImprovementSuggestion>} */
   const suggestions = [];
   
   // Count fallback responses
-  const fallbacks = evaluationData.filter(data => 
-    data.responseCategory === 'fallback' ||
-    (data.llmResponse && data.llmResponse.includes('I apologize'))
-  );
+  const fallbacks = evaluationData.filter(data => {
+    const responseCategory = data && typeof data.responseCategory === 'string' ? data.responseCategory : '';
+    const llmResponse = data && typeof data.llmResponse === 'string' ? data.llmResponse : '';
+    
+    return responseCategory === 'fallback' || llmResponse.includes('I apologize');
+  });
   
   if (fallbacks.length >= minOccurrences) {
     const fallbackRate = fallbacks.length / evaluationData.length;
@@ -347,20 +471,22 @@ function analyzeFallbackPatterns(evaluationData, minOccurrences) {
 
 /**
  * Analyzes disclaimer coverage gaps
- * @private
- * @param {Array<object>} evaluationData - Evaluation dataset
- * @param {object} _metrics - Performance metrics (unused)
- * @returns {Array<ImprovementSuggestion>} Disclaimer-related suggestions
+ * @param {Array<EvaluationDataItem>} evaluationData - Evaluation dataset
+ * @param {MetricsAnalysis} _metrics - Performance metrics (unused)
+ * @returns {Array<LegacyImprovementSuggestion>} Disclaimer-related suggestions
  */
 function analyzeDisclaimerGaps(evaluationData, _metrics) {
-  /** @type {Array<import('./improvement-suggester.js').ImprovementSuggestion>} */
+  /** @type {Array<LegacyImprovementSuggestion>} */
   const suggestions = [];
   
   // Find high-risk cases without disclaimers
-  const highRiskWithoutDisclaimers = evaluationData.filter(data => 
-    (data.triageLevel === 'emergency' || data.isHighRisk) &&
-    (!data.disclaimers || data.disclaimers.length === 0)
-  );
+  const highRiskWithoutDisclaimers = evaluationData.filter(data => {
+    const triageLevel = data && typeof data.triageLevel === 'string' ? data.triageLevel : '';
+    const isHighRisk = data && typeof data.isHighRisk === 'boolean' ? data.isHighRisk : false;
+    const disclaimers = data && Array.isArray(data.disclaimers) ? data.disclaimers : [];
+    
+    return (triageLevel === 'emergency' || isHighRisk) && disclaimers.length === 0;
+  });
   
   if (highRiskWithoutDisclaimers.length > 0) {
     suggestions.push({
@@ -384,11 +510,11 @@ function analyzeDisclaimerGaps(evaluationData, _metrics) {
 
 /**
  * Prioritizes suggestions based on impact and urgency
- * @private
- * @param {Array<ImprovementSuggestion>} suggestions - Raw suggestions
- * @returns {Array<ImprovementSuggestion>} Prioritized suggestions
+ * @param {Array<LegacyImprovementSuggestion>} suggestions - Raw suggestions
+ * @returns {Array<LegacyImprovementSuggestion>} Prioritized suggestions
  */
 function prioritizeSuggestions(suggestions) {
+  /** @type {NumDict} */
   const priorityWeight = {
     'critical': 4,
     'high': 3,
@@ -396,6 +522,7 @@ function prioritizeSuggestions(suggestions) {
     'low': 1
   };
   
+  /** @type {NumDict} */
   const impactWeight = {
     'major': 4,
     'significant': 3,
@@ -406,7 +533,7 @@ function prioritizeSuggestions(suggestions) {
   return suggestions
     .map(suggestion => ({
       ...suggestion,
-      _score: (priorityWeight[suggestion.priority] || 1) + (impactWeight[suggestion.estimatedImpact] || 1)
+      _score: (priorityWeight[suggestion.priority] ?? 1) + (impactWeight[suggestion.estimatedImpact] ?? 1)
     }))
     .sort((a, b) => b._score - a._score)
     .map(({ _score, ...suggestion }) => suggestion);
@@ -424,6 +551,7 @@ export async function generateImprovementReport(options = {}) {
     const evaluationData = await loadEvaluationDataset();
     
     // Group suggestions by category
+    /** @type {{[k: string]: LegacyImprovementSuggestion[]}} */
     const suggestionsByCategory = suggestions.reduce((acc, suggestion) => {
       const category = suggestion.category;
       if (!acc[category]) acc[category] = [];
@@ -432,6 +560,7 @@ export async function generateImprovementReport(options = {}) {
     }, {});
     
     // Calculate urgency metrics
+    /** @type {NumDict} */
     const urgencyMetrics = {
       critical: suggestions.filter(s => s.priority === 'critical').length,
       high: suggestions.filter(s => s.priority === 'high').length,
@@ -459,7 +588,7 @@ export async function generateImprovementReport(options = {}) {
     };
     
   } catch (error) {
-    console.error('[improvement-suggester] Failed to generate improvement report:', error.message);
+    log('error', 'Failed to generate improvement report:', error instanceof Error ? error.message : String(error));
     return {
       error: 'Failed to generate improvement report',
       timestamp: new Date().toISOString()
@@ -469,11 +598,11 @@ export async function generateImprovementReport(options = {}) {
 
 /**
  * Generates next steps based on suggestions
- * @private
- * @param {Array<ImprovementSuggestion>} suggestions - All suggestions
+ * @param {Array<LegacyImprovementSuggestion>} suggestions - All suggestions
  * @returns {Array<string>} Next step recommendations
  */
 function generateNextSteps(suggestions) {
+  /** @type {string[]} */
   const steps = [];
   
   const criticalSuggestions = suggestions.filter(s => s.priority === 'critical');
