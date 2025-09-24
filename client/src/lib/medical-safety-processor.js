@@ -14,6 +14,9 @@ import { AI_FLAGS } from '../config/ai-flags.js';
 /**
  * @typedef {object} Demographics
  * @property {string} [role] - User role (public, healthcare_professional, etc.)
+ * @property {number} [age] - User age
+ * @property {string} [sex] - User sex (male, female, other)
+ * @property {string} [sessionId] - Session identifier
  */
 
 /**
@@ -30,26 +33,34 @@ import { AI_FLAGS } from '../config/ai-flags.js';
  * @property {string[]} safetyFlags - Safety flags detected
  * @property {boolean} emergencyProtocol - Whether emergency protocol is active
  * @property {boolean} mentalHealthCrisis - Whether mental health crisis detected
- * @property {string[]} [symptomNames] - Detected symptom names
+ * @property {string[]} symptomNames - Detected symptom names
+ * @property {object} severityAssessment - Severity assessment data
+ * @property {boolean} conservativeBiasApplied - Whether conservative bias was applied
+ * @property {object[]} detectedSymptoms - Detected symptoms with details
  */
 
 /**
  * @typedef {object} EmergencyDetection
  * @property {boolean} isEmergency - Whether emergency detected
- * @property {string} [emergencyType] - Type of emergency (mental_health, etc.)
- * @property {string} [emergencyMessage] - Emergency message
- * @property {string} [immediateActions] - Immediate actions needed
- * @property {object[]} [emergencyContacts] - Emergency contact information
- * @property {string} [severity] - Emergency severity level
+ * @property {'medical'|'mental_health'|'trauma'|null} emergencyType - Type of emergency
+ * @property {string} severity - Emergency severity (critical, high, moderate)
+ * @property {string[]} triggeredPatterns - Patterns that triggered emergency detection
+ * @property {object} emergencyContacts - Emergency contact information
+ * @property {string} immediateActions - Immediate actions needed
+ * @property {boolean} requiresEmergencyServices - Whether to call emergency services
+ * @property {string} emergencyMessage - User-facing emergency message
  */
 
 /**
  * @typedef {object} ATDRouting
  * @property {boolean} routeToProvider - Whether to route to healthcare provider
- * @property {string} [patientGuidance] - Patient guidance message
- * @property {number} [priorityScore] - Priority score for routing
- * @property {object} [structuredData] - Structured routing data
+ * @property {'emergency'|'urgent'|'routine'|'mental_health'} providerType - Type of provider needed
+ * @property {object} structuredData - Structured medical data for provider
  * @property {string[]} [structuredData.recommendedActions] - Recommended actions
+ * @property {string} providerMessage - Message formatted for healthcare provider
+ * @property {string} patientGuidance - Guidance message for patient
+ * @property {string[]} clinicalFlags - Clinical flags for provider attention
+ * @property {number} priorityScore - Priority score (1-10, 10 being highest)
  */
 
 /**
@@ -136,27 +147,24 @@ export async function processMedicalSafety(userInput, options = {}) {
   
   // Create medical context for processing
   const context = createLayerContext(userInput);
-  if (demographics) {
+  if (demographics && typeof demographics === 'object') {
     context.demographics = demographics;
   }
   
   try {
     // 1. TRIAGE ASSESSMENT - Enhanced triage with safety bias
-    /** @type {TriageResult} */
-    const triageResult = performEnhancedTriage(context);
+    const triageResult = /** @type {TriageResult} */ (performEnhancedTriage(context));
     
     // 2. EMERGENCY DETECTION - Check for emergency situations
-    /** @type {EmergencyDetection} */
-    const emergencyDetection = detectEmergency(userInput, region, demographics);
+    const emergencyDetection = /** @type {EmergencyDetection} */ (detectEmergency(userInput, region, demographics));
     
     // 3. ATD ROUTING DECISION - Determine if provider referral needed
-    /** @type {ATDRouting} */
-    const atdRouting = routeToProvider(
+    const atdRouting = /** @type {ATDRouting} */ (routeToProvider(
       triageResult, 
       emergencyDetection, 
       userInput, 
       { ...demographics, sessionId }
-    );
+    ));
     
     // 4. SAFETY CONTEXT COMPILATION
     /** @type {SafetyContext} */
@@ -196,7 +204,7 @@ export async function processMedicalSafety(userInput, options = {}) {
       requiresHumanReview: atdRouting.routeToProvider,
       emergencyProtocol: triageResult.emergencyProtocol || emergencyDetection.isEmergency,
       routeToProvider: atdRouting.routeToProvider,
-      priorityScore: atdRouting.priorityScore || 1
+      priorityScore: atdRouting.priorityScore
     };
     
     return result;
@@ -212,7 +220,15 @@ export async function processMedicalSafety(userInput, options = {}) {
         region,
         triageResult: { level: 'NON_URGENT', reasons: [], safetyFlags: [], emergencyProtocol: false, mentalHealthCrisis: false },
         emergencyDetection: { isEmergency: false },
-        atdRouting: { routeToProvider: false, priorityScore: 1 },
+        atdRouting: { 
+          routeToProvider: false, 
+          priorityScore: 1,
+          providerType: /** @type {'routine'} */ ('routine'),
+          structuredData: { recommendedActions: [] },
+          providerMessage: '',
+          patientGuidance: '',
+          clinicalFlags: []
+        },
         demographics: demographics || {},
         timestamp: new Date().toISOString()
       },
@@ -289,7 +305,7 @@ export function postProcessAIResponse(aiResponse, safetyContext, systemPrompt = 
   };
   
   // Process response and check if we need to add general disclaimers
-  let processedResponse = processAIResponseForSafety(aiResponse, responseContext);
+  let processedResponse = processAIResponseForSafety(aiResponse, /** @type {any} */ (responseContext));
   
   // If role-based disclaimers are present, avoid adding duplicate general disclaimers
   if (hasRoleBasedDisclaimers(systemPrompt, aiResponse)) {
