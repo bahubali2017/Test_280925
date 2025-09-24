@@ -7,32 +7,18 @@
 /** @typedef {{[k: string]: string}} StringDict */
 
 /**
- * @typedef TriageResult
- * @property {string} triageLevel
- * @property {boolean} isHighRisk
- * @property {string[]} [bodySystems]
- * @property {number} [confidence]
- * @property {number} [processingTime]
- * @property {string[]} [flags]
- */
-
-/**
- * @typedef RouterContext
- * @property {string} sessionId
- * @property {string} userId
- * @property {string} query
- * @property {number} ts
- * @property {TriageResult=} triage
- * @property {{[k:string]: unknown}=} metadata
- */
-
-/**
- * @typedef RouterDecision
- * @property {string} route
- * @property {string} reason
- * @property {boolean} highPriority
- * @property {TriageResult=} triage
- * @property {StringDict=} tags
+ * @typedef ActualTriageResult
+ * @property {string} level - Triage level (EMERGENCY, URGENT, etc.)
+ * @property {string[]} [symptomNames] - Array of detected symptom names
+ * @property {string[]} [safetyFlags] - Safety flags array
+ * @property {object} [severityAssessment] - Severity assessment object
+ * @property {number} [severityAssessment.severeCount] - Count of severe symptoms
+ * @property {string[]} [reasons] - Triage reasoning array
+ * @property {boolean} [emergencyProtocol] - Emergency protocol flag
+ * @property {boolean} [mentalHealthCrisis] - Mental health crisis flag
+ * @property {boolean} [conservativeBiasApplied] - Conservative bias flag
+ * @property {object[]} [detectedSymptoms] - Detected symptoms array
+ * @property {string[]} [recommendedActions] - Recommended actions array
  */
 
 /**

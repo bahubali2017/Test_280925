@@ -10,12 +10,8 @@ import { anonymizeText } from '../../analytics/anonymizer.js';
 const TEST_CASES_PATH = 'client/src/tests/qa/test-cases.json';
 const TEST_RESULTS_PATH = 'client/src/tests/qa/test-results.json';
 
-/** @typedef {{ id: string, input: string, expected: string, meta?: Record<string, unknown> }} TestCase */
-/** @typedef {{ id: string, passed: boolean, actual: string, expected: string, durationMs: number, error?: string }} TestResult */
-/** @typedef {{ total: number, passed: number, failed: number, results: TestResult[] }} TestReport */
-
 /**
- * @typedef {object} ExtendedTestCase
+ * @typedef {object} ActualTestCase
  * @property {string} id - Unique test case identifier
  * @property {string} category - Test category (emergency, urgent, etc.)
  * @property {string} description - Human readable test description
@@ -33,12 +29,12 @@ const TEST_RESULTS_PATH = 'client/src/tests/qa/test-results.json';
  */
 
 /**
- * @typedef {object} ExtendedTestResult
+ * @typedef {object} ActualTestResult
  * @property {string} testId - Test case ID
  * @property {string} category - Test category
  * @property {string} description - Test description
  * @property {boolean} passed - Overall test pass/fail status
- * @property {object|null} actualResult - Actual system output
+ * @property {ActualResultData|null} actualResult - Actual system output
  * @property {object} expectedResult - Expected outcomes
  * @property {string[]} failures - List of specific assertion failures
  * @property {number} processingTimeMs - Actual processing time
@@ -46,8 +42,18 @@ const TEST_RESULTS_PATH = 'client/src/tests/qa/test-results.json';
  */
 
 /**
+ * @typedef {object} ActualResultData
+ * @property {string} triageLevel - Actual triage level
+ * @property {boolean} isHighRisk - Actual high risk flag
+ * @property {boolean} hasATD - Whether ATD was present
+ * @property {boolean} hasDisclaimer - Whether disclaimer was present
+ * @property {number} processingTimeMs - Processing time
+ * @property {string[]} symptoms - Detected symptoms
+ */
+
+/**
  * @typedef {object} TestConfig
- * @property {ExtendedTestCase[]} testCases - Array of test cases
+ * @property {ActualTestCase[]} testCases - Array of test cases
  * @property {Record<string, unknown>} [regressionBaselines] - Regression baselines
  */
 
@@ -81,8 +87,8 @@ async function loadTestCases() {
 
 /**
  * Executes a single test case through the QA pipeline
- * @param {ExtendedTestCase} testCase - Test case to execute
- * @returns {Promise<ExtendedTestResult>} Test execution result
+ * @param {ActualTestCase} testCase - Test case to execute
+ * @returns {Promise<ActualTestResult>} Test execution result
  */
 async function executeTestCase(testCase) {
   const startTime = Date.now();
@@ -280,7 +286,7 @@ export async function runAllTests(options = {}) {
   console.info(`📊 Executing ${testCases.length} test cases...`);
   
   const startTime = Date.now();
-  /** @type {ExtendedTestResult[]} */
+  /** @type {ActualTestResult[]} */
   const results = [];
   
   // Execute each test case
