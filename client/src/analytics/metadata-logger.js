@@ -19,6 +19,7 @@ import { sanitizeMetadata } from './anonymizer.js';
  * @property {number} [stageTimings.parseIntent] - Intent parsing time
  * @property {number} [stageTimings.triage] - Triage processing time
  * @property {number} [stageTimings.enhancePrompt] - Prompt enhancement time
+ * @property {any} [index] - Allow index access for dynamic fields
  */
 
 /**
@@ -31,6 +32,7 @@ import { sanitizeMetadata } from './anonymizer.js';
  * @property {string[]} [disclaimers] - Disclaimer messages
  * @property {string[]} [suggestions] - Suggestion messages
  * @property {QueryMetadata} [metadata] - Query metadata
+ * @property {any} [index] - Allow index access for dynamic fields
  */
 
 /**
@@ -192,7 +194,7 @@ export async function logEnrichedMetadata(queryResult, additionalMetrics = { par
     };
 
     // Sanitize metadata to ensure no PII
-    const sanitizedMetadata = sanitizeMetadata(enrichedMetadata);
+    const sanitizedMetadata = /** @type {EnrichedMetadata} */ (sanitizeMetadata(enrichedMetadata));
     
     // Add missing field flags
     sanitizedMetadata.validation = flagMissingFields(queryResult);
@@ -227,7 +229,8 @@ function flagMissingFields(queryResult) {
   const requiredFields = ['userInput', 'enhancedPrompt', 'triageLevel', 'metadata'];
   
   for (const field of requiredFields) {
-    if (!queryResult[field]) {
+    const fieldValue = queryResult[field as keyof QueryResult];
+    if (!fieldValue) {
       validation.missingFields.push(field);
       validation.qualityScore -= 0.2;
     }
@@ -238,7 +241,8 @@ function flagMissingFields(queryResult) {
     const metadataFields = ['processingTime', 'intentConfidence', 'bodySystem'];
     
     for (const field of metadataFields) {
-      if (queryResult.metadata[field] === undefined || queryResult.metadata[field] === null) {
+      const fieldValue = queryResult.metadata[field as keyof QueryMetadata];
+      if (fieldValue === undefined || fieldValue === null) {
         validation.incompleteFields.push(`metadata.${field}`);
         validation.qualityScore -= 0.1;
       }
