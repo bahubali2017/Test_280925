@@ -38,19 +38,19 @@ export async function routeMedicalQuery(userInput) {
     updateLayerContext(ctx, { triage });
 
     t.start("enhancePrompt");
-    const { systemPrompt, enhancedPrompt, atdNotices, disclaimers } = enhancePrompt(ctx);
+    const { systemPrompt, enhancedPrompt, atdNotices } = enhancePrompt(ctx);
+    const disclaimers = []; // Single centralized source - router no longer injects
     t.stop("enhancePrompt");
     updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
 
     const processingTime = Math.max(0, Math.round(now() - t0));
-    console.log('[DISCLAIMER_DEBUG] router disclaimers from enhancer:', disclaimers?.length || 0, 'items');
-    console.log('[DISCLAIMER_DEBUG] router setting disclaimers to: [] (empty array)');
+    console.log('[DISCLAIMER_DEBUG] router setting disclaimers to: [] (empty array - centralized flow)');
     
     const normalized = normalizeRouterResult({
       userInput: ctx.userInput,
       enhancedPrompt,
       isHighRisk: !!ctx.triage?.isHighRisk,
-      disclaimers: [], // Let prompt-enhancer be the single source of disclaimers
+      disclaimers, // Use explicit empty array
       atd: atdNotices && atdNotices.length ? atdNotices : null,
       suggestions: ctx.triage?.isHighRisk
         ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]

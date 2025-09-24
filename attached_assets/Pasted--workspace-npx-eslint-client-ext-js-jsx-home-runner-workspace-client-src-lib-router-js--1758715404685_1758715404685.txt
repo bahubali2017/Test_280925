@@ -1,0 +1,24 @@
+~/workspace$ npx eslint client/ --ext .js,.jsx
+
+/home/runner/workspace/client/src/lib/router.js
+  41:55  error  'disclaimers' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|GlobalErrorBoundary|InstallationNotice|Comp/u  no-unused-vars
+
+✖ 1 problem (1 error, 0 warnings)
+
+~/workspace$ npx eslint server/ --ext .js,.jsx
+
+/home/runner/workspace/server/routes.js
+  613:71  error  'enhancedPrompt' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|GlobalErrorBoundary|InstallationNotice|Comp/u  no-unused-vars
+  613:87  error  'userRole' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|GlobalErrorBoundary|InstallationNotice|Comp/u        no-unused-vars
+  891:71  error  'enhancedPrompt' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|GlobalErrorBoundary|InstallationNotice|Comp/u  no-unused-vars
+  891:87  error  'userRole' is assigned a value but never used. Allowed unused vars must match /React|Switch|Route|Redirect|Router|QueryClientProvider|AuthProvider|ProtectedRoute|ChatPage|ChevronRight|MoreHorizontal|ChevronDown|ChevronUp|Search|CheckIcon|ChevronsUpDown|Circle|X|Plus|Minus|Slot|Check|Button|Input|MessageBubble|SocialLoginButton|FcGoogle|FaMicrosoft|FaApple|OTPInput|OTPInputContext|Dot|Dialog|DialogContent|Label|LabelPrimitive|Controller|DayPicker|ChevronLeft|ArrowLeft|ArrowRight|Link|GripVertical|PanelLeft|Separator|Sheet|SheetContent|SheetDescription|SheetHeader|SheetTitle|SheetTrigger|Toast|ToastClose|ToastDescription|ToastProvider|ToastTitle|ToastViewport|App|Skeleton|Tooltip|TooltipContent|TooltipProvider|TooltipTrigger|GlobalErrorBoundary|InstallationNotice|Comp/u        no-unused-vars
+
+✖ 4 problems (4 errors, 0 warnings)
+
+~/workspace$ npx tsc --noEmit
+client/public/sw.js:5:7 - error TS7034: Variable 'CRITICAL_ASSETS' implicitly has type 'any[]' in some locations where its type cannot be determined.
+
+5 const CRITICAL_ASSETS = [];
+        ~~~~~~~~~~~~~~~
+
+client/public/sw.js:10:9 - error TS2339: Property 'waitUntil' does not exist on type 'Event'.
