@@ -456,7 +456,6 @@ export async function sendMessage(message, history = [], options = {}) {
           questionType: String(questionType), 
           mode: String(mode), 
           userRole: String(userRole),
-          metadataType: metadata ? typeof metadata : 'undefined',
           canExpand: false // Simplified to avoid errors
         });
       } catch (e) {
