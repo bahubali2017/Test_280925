@@ -203,15 +203,10 @@ async function processStream(stream, onUpdate, abortSignal) {
         if (!data) continue;
         
         if (data.done) {
-          // ✅ PHASE 6.5: Extract disclaimers from server metadata.queryIntent structure
-          if (data.metadata?.queryIntent?.disclaimers && Array.isArray(data.metadata.queryIntent.disclaimers)) {
-            console.log('[DISCLAIMER_DEBUG] Client received disclaimers from server:', data.metadata.queryIntent.disclaimers);
-            // Pass disclaimers to UI via final update with correct metadata structure
-            onUpdate('', { 
-              streaming: false, 
-              fullContent,
-              metadata: data.metadata // ✅ Forward entire metadata structure to UI
-            });
+          if (data.metadata) {
+            onUpdate('', { streaming: false, fullContent, metadata: data.metadata });
+          } else {
+            onUpdate('', { streaming: false, fullContent });
           }
           
           // TRACE: Stream completion (non-intrusive)
