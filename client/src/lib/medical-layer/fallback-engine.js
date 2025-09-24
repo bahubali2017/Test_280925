@@ -146,7 +146,7 @@ function generateBreathingEmergencyResponse() {
  * @typedef {object} FallbackResponse
  * @property {string} response - Fallback response text
  * @property {'general'|'emergency'|'mental_health'|'medication'|'technical_error'} type - Fallback type
- * @property {string|null} disclaimer - Safety disclaimer text (null to avoid duplication)
+ * @property {string|null|object} disclaimer - Safety disclaimer text (null to avoid duplication)\n * @property {object} [disclaimerPack] - Safety disclaimer pack (when using structured disclaimers)
  * @property {boolean} requiresHumanIntervention - Whether human assistance is needed
  * @property {string[]} recommendedActions - Suggested next steps for user
  * @property {string[]} [followUpQuestions] - Optional follow-up questions
@@ -161,10 +161,11 @@ function generateBreathingEmergencyResponse() {
  * @param {string} context.triageLevel - Triage level if available
  * @param {boolean} context.isEmergency - Whether emergency was detected
  * @param {boolean} context.isMentalHealth - Whether mental health concern
+ * @param {string[]} [context.existingDisclaimers] - Existing disclaimers to reuse
  * @returns {FallbackResponse} Appropriate fallback response
  */
 export function generateFallbackResponse(context) {
-  const { originalQuery, reason, triageLevel, isEmergency, isMentalHealth } = context;
+  const { originalQuery, reason, triageLevel, isEmergency, isMentalHealth, existingDisclaimers } = context;
   
   // Emergency fallback - highest priority with context-aware responses
   if (isEmergency) {
@@ -210,7 +211,12 @@ export function generateFallbackResponse(context) {
     return {
       response: "I'm experiencing technical difficulties and cannot provide reliable medical guidance at this time.",
       type: "technical_error",
-      disclaimerPack: selectDisclaimers('non_urgent'),
+      disclaimerPack: (() => {
+        console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
+        return (existingDisclaimers && existingDisclaimers.length > 0)
+          ? { disclaimers: existingDisclaimers, atdNotices: [] }
+          : selectDisclaimers('non_urgent');
+      })(),
       requiresHumanIntervention: true,
       recommendedActions: [
         "Try again in a few minutes",
@@ -320,9 +326,10 @@ function addCautionaryLanguage(response) {
 /**
  * Select appropriate disclaimer pack based on context
  * @param {object} context - Response context
+ * @param {string[]} [existingDisclaimers] - Existing disclaimers to reuse
  * @returns {object} Appropriate disclaimer pack from selectDisclaimers()
  */
-function selectAppropriateDisclaimer(context) {
+function selectAppropriateDisclaimer(context, existingDisclaimers) {
   if (context.isEmergency) {
     return selectDisclaimers('emergency');
   }
@@ -332,11 +339,17 @@ function selectAppropriateDisclaimer(context) {
   }
   
   // Check if response mentions medication
-  if (context.detectedSymptoms?.some(s => s.includes('medication') || s.includes('drug') || s.includes('pill'))) {
-    return selectDisclaimers('non_urgent');
+  if (context.detectedSymptoms?.some((s) => s.includes('medication') || s.includes('drug') || s.includes('pill'))) {
+    console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
+    return (existingDisclaimers && existingDisclaimers.length > 0)
+      ? { disclaimers: existingDisclaimers, atdNotices: [] }
+      : selectDisclaimers('non_urgent');
   }
   
-  return selectDisclaimers('non_urgent');
+  console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
+  return (existingDisclaimers && existingDisclaimers.length > 0)
+    ? { disclaimers: existingDisclaimers, atdNotices: [] }
+    : selectDisclaimers('non_urgent');
 }
 
 /**
@@ -364,6 +377,7 @@ export function validateResponseSafety(response) {
   // Check for missing disclaimers - check if any disclaimers from selectDisclaimers are present
   const emergencyPack = selectDisclaimers('emergency');
   const urgentPack = selectDisclaimers('urgent');
+  console.log('[DISCLAIMER_FIX] VALIDATION_CHECK', 'NEW'); // Always new for validation
   const nonUrgentPack = selectDisclaimers('non_urgent');
   const allDisclaimers = [...emergencyPack.disclaimers, ...urgentPack.disclaimers, ...nonUrgentPack.disclaimers];
   const hasDisclaimer = allDisclaimers.some(disclaimer => 
