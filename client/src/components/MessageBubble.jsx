@@ -499,7 +499,7 @@ export function MessageBubble({
                       <div>
                         <strong>Medical Notice:</strong>
                         <ul className="mt-1 ml-2">
-                          {dedupeDisclaimers(metadata.queryIntent.disclaimers).map((disclaimer, index) => (
+                          {dedupeDisclaimers(metadata?.queryIntent?.disclaimers || []).map((disclaimer, index) => (
                             <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
                           ))}
                         </ul>
