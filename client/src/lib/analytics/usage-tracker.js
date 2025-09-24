@@ -4,7 +4,7 @@
  */
 
 /**
- * @typedef {string | number | boolean | null | Json[] | {[k: string]: Json}} Json
+ * @typedef {string | number | boolean | null | Array<unknown> | {[k: string]: unknown}} Json
  */
 
 /** @typedef {{[k: string]: string}} StringDict */
@@ -50,7 +50,7 @@
  * @typedef PatternData
  * @property {number} count
  * @property {Date} lastUsed
- * @property {Array<{sessionId: string, symptoms: string[], responseTime: number, timestamp: Date}>} patterns
+ * @property {Array<{sessionId: string, symptoms: string[], responseTime: number, timestamp: Date, userQuery?: string, errorDetails?: object}>} patterns
  * @property {string[]} outcomes
  */
 
@@ -225,15 +225,16 @@ function updateLearningMetrics(queryType, urgency, userFeedback, additionalData)
   metrics.userSatisfaction = (alpha * userFeedback) + ((1 - alpha) * metrics.userSatisfaction);
   
   // Update accuracy if provided
-  const accuracyRating = additionalData && typeof additionalData === 'object' && 
-    typeof additionalData.accuracyRating === 'number' ? additionalData.accuracyRating : null;
+  const additionalDataObj = additionalData && typeof additionalData === 'object' ? additionalData : {};
+  const accuracyRating = 'accuracyRating' in additionalDataObj && 
+    typeof additionalDataObj.accuracyRating === 'number' ? additionalDataObj.accuracyRating : null;
   if (accuracyRating !== null) {
     metrics.accuracy = (alpha * accuracyRating) + ((1 - alpha) * metrics.accuracy);
   }
   
   // Update response time if provided
-  const responseTime = additionalData && typeof additionalData === 'object' &&
-    typeof additionalData.responseTime === 'number' ? additionalData.responseTime : null;
+  const responseTime = 'responseTime' in additionalDataObj &&
+    typeof additionalDataObj.responseTime === 'number' ? additionalDataObj.responseTime : null;
   if (responseTime !== null) {
     metrics.avgResponseTime = (alpha * responseTime) + ((1 - alpha) * metrics.avgResponseTime);
   }
@@ -271,13 +272,13 @@ export function analyzeUsagePatterns(timeWindowDays = 7) {
   };
   
   // Analyze usage patterns
-  for (const [patternKey, pattern] of usagePatterns.entries()) {
+  for (const [patternKey, pattern] of Array.from(usagePatterns.entries())) {
     if (pattern.lastUsed < cutoffDate) continue;
     
     const [queryType, urgency] = patternKey.split('_');
     
     // Count recent patterns
-    const recentPatterns = pattern.patterns.filter(p => p.timestamp >= cutoffDate);
+    const recentPatterns = pattern.patterns.filter((p) => p.timestamp >= cutoffDate);
     analysis.totalQueries += recentPatterns.length;
     
     // Query type distribution
@@ -287,7 +288,7 @@ export function analyzeUsagePatterns(timeWindowDays = 7) {
     analysis.queryDistribution[queryType] += recentPatterns.length;
     
     // Urgency distribution - guard against invalid urgency values
-    if (urgency === 'emergency' || urgency === 'urgent' || urgency === 'non_urgent') {
+    if (urgency && (urgency === 'emergency' || urgency === 'urgent' || urgency === 'non_urgent')) {
       analysis.urgencyDistribution[urgency] += recentPatterns.length;
     }
     
@@ -384,7 +385,7 @@ export function generateFeedbackInsights() {
   }
   
   // Convert learning metrics to insights format
-  for (const [key, metrics] of learningMetrics.entries()) {
+  for (const [key, metrics] of Array.from(learningMetrics.entries())) {
     insights.learningMetrics[key] = {
       userSatisfaction: Math.round(metrics.userSatisfaction * 10) / 10,
       accuracy: Math.round(metrics.accuracy * 10) / 10,
@@ -509,7 +510,7 @@ function getErrorAnalysis() {
   };
   
   // Analyze error patterns
-  for (const [patternKey, pattern] of usagePatterns.entries()) {
+  for (const [patternKey, pattern] of Array.from(usagePatterns.entries())) {
     if (!patternKey.startsWith('error_')) continue;
     
     const errorType = patternKey.replace('error_', '');
@@ -524,10 +525,9 @@ function getErrorAnalysis() {
     const cutoffDate = new Date();
     cutoffDate.setDate(cutoffDate.getDate() - 7);
     
-    const recentErrorPatterns = pattern.patterns.filter(p => p.timestamp >= cutoffDate);
+    const recentErrorPatterns = pattern.patterns.filter((p) => p.timestamp >= cutoffDate);
     for (const p of recentErrorPatterns) {
-      const query = typeof p === 'object' && p !== null && 'userQuery' in p ? 
-        String(p.userQuery) : '';
+      const query = p.userQuery ? String(p.userQuery) : '';
       errorAnalysis.recentErrors.push({
         type: errorType,
         query,
@@ -578,7 +578,7 @@ function getLearningMetricsOverview() {
   
   let totalSatisfaction = 0, totalAccuracy = 0, totalSuccessRate = 0, count = 0;
   
-  for (const [key, metrics] of learningMetrics.entries()) {
+  for (const [key, metrics] of Array.from(learningMetrics.entries())) {
     totalSatisfaction += metrics.userSatisfaction;
     totalAccuracy += metrics.accuracy;
     totalSuccessRate += metrics.successRate;
@@ -626,7 +626,7 @@ export function exportUsageData(format = 'json') {
   };
   
   // Anonymize and export usage patterns
-  for (const [patternKey, pattern] of usagePatterns.entries()) {
+  for (const [patternKey, pattern] of Array.from(usagePatterns.entries())) {
     const avgResponseTime = pattern.patterns.length > 0 ? 
       pattern.patterns.reduce((sum, p) => sum + p.responseTime, 0) / pattern.patterns.length : 0;
     
