@@ -1,0 +1,102 @@
+🔹 Agent Prompt — Fix llm-api.jsx
+
+Task:
+Refactor client/src/lib/llm-api.jsx to eliminate all TypeScript strict mode errors and ESLint issues.
+Target = TRIPLE-0 POLICY:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+No any, no unknown, no suppressions.
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --jsx react --pretty false client/src/lib/llm-api.jsx
+eslint client/src/lib/llm-api.jsx --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+JSDoc typedefs must match the actual API structures. Adjust field names and function signatures to the real code.
+
+Preserve all API integration logic (fetch, headers, payloads, streaming, etc.).
+
+Replace unsafe property access with type guards and optional chaining.
+
+Replace console.log with structured logging (console.info|warn|error) or logger utility.
+
+Remove unused vars/imports, enforce prefer-const.
+
+Explicitly type all request/response objects, accumulators, and async returns.
+
+JSX must remain strictly typed: component props annotated with JSDoc.
+
+Suggested JSDoc typedefs (adjust to actual code)
+/**
+ * @typedef {Object} LLMRequest
+ * @property {string} model - Target LLM model
+ * @property {string} prompt - User input or system instruction
+ * @property {number} [temperature] - Sampling temperature
+ * @property {number} [maxTokens] - Maximum tokens to generate
+ * @property {Record<string, any>=} context - Optional metadata
+ */
+
+/**
+ * @typedef {Object} LLMResponse
+ * @property {string} id
+ * @property {string} model
+ * @property {string} output
+ * @property {number} tokensUsed
+ * @property {number} latencyMs
+ * @property {boolean} [streamed]
+ * @property {string[]=} warnings
+ */
+
+/**
+ * @typedef {Object} StreamConfig
+ * @property {boolean} enabled
+ * @property {number} [chunkSize]
+ */
+
+Refactor Targets
+
+API Functions (adjust names to match real implementation):
+
+/** @param {LLMRequest} request @returns {Promise<LLMResponse>} */
+export async function callLLM(request) { ... }
+
+/** @param {LLMRequest} request @param {StreamConfig} config @returns {AsyncGenerator<string>} */
+export async function streamLLMResponse(request, config) { ... }
+
+/** @param {Response} response @returns {Promise<LLMResponse>} */
+async function parseLLMResponse(response) { ... }
+
+
+Accumulators
+
+/** @type {string[]} */ const streamedChunks = [];
+
+
+Ensure null safety on response.json(), response.body, and external APIs.
+
+Explicit return annotations on all functions.
+
+Use instanceof Error when catching errors.
+
+ESLint Fixes
+
+Remove unused imports.
+
+Enforce prefer-const.
+
+Fix inconsistent returns.
+
+Ensure JSX components have explicit prop validation with JSDoc.
+
+Deliverables
+
+Full corrected file with accurate JSDoc typedefs matching actual implementation.
+
+TypeScript + ESLint validation passes with 0 errors/warnings.
+
+All LLM API integration and JSX functionality preserved.
