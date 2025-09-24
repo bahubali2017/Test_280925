@@ -1,0 +1,102 @@
+Agent prompt — fix client/src/tests/layer-tests/router.test.js
+
+Goal: 0 TypeScript errors. 0 ESLint issues. No suppressions. Preserve test semantics.
+
+Run checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/layer-tests/router.test.js
+eslint client/src/tests/layer-tests/router.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Keep test names, assertions, order, and snapshot content identical.
+
+Import @jest/globals explicitly if globals are untyped.
+
+Replace top-level await with beforeAll/afterAll or an async wrapper.
+
+Prefer const. Remove unused imports/vars. Use _ prefix if an arg is intentionally unused.
+
+All JSDoc typedefs must match the actual shapes used in this file. Adjust templates to reality.
+
+Add JSDoc typedefs (EDIT TO MATCH ACTUAL CODE)
+
+import { describe, it, test, expect, beforeAll, afterAll, beforeEach, jest } from "@jest/globals";
+
+/** @typedef {"emergency"|"urgent"|"non_urgent"|"info"} TriageLevel */
+
+/** @typedef {{
+  userInput: string;
+  region?: string;
+  demographics?: { age?: number; sex?: string };
+  metadata?: Record<string, unknown>;
+}} RouterInput */
+
+/** @typedef {{
+  triageLevel: TriageLevel;
+  isHighRisk: boolean;
+  reasons?: string[];
+  routes?: string[];
+  disclaimers?: string[];
+  atd?: { shouldEscalate?: boolean; target?: string };
+}} RouterOutput */
+
+
+Type the helpers/mocks
+
+/** @param {RouterInput} input @returns {Promise<RouterOutput>} */
+async function runRouter(input) { /* call actual router with proper cast/guards */ }
+
+/** @param {unknown} v @returns {v is RouterOutput} */
+function isRouterOutput(v) { return !!v && typeof v === "object" && "triageLevel" in v; }
+
+
+Fix targets
+
+Guard dynamic property access:
+
+const meta = (input && typeof input === "object" && "metadata" in input && input.metadata && typeof input.metadata === "object") ? input.metadata : {};
+
+
+Typed accumulators:
+
+/** @type {RouterOutput[]} */ const cases = [];
+/** @type {Record<string, number>} */ const counts = {};
+
+
+Async tests:
+
+it("routes emergencies", async () => {
+  const out = await runRouter({ userInput: "crushing chest pain" });
+  expect(isRouterOutput(out)).toBe(true);
+  if (isRouterOutput(out)) expect(out.triageLevel).toBe("emergency");
+});
+
+
+Timers/mocks typing:
+
+/** @type {ReturnType<typeof setTimeout>} */ let t;
+
+
+Replace console.log with console.info|warn|error only if present.
+
+Validation
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/layer-tests/router.test.js
+eslint client/src/tests/layer-tests/router.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must be zero.
+
+Deliverables
+
+Updated file with accurate JSDoc matching real usage.
+
+No change to test behavior or expectations.
+
+Post-fix
+
+Update TS_ERROR_MASTER_AUDIT_v2.md: mark router.test.js as ✅ FIXED and adjust totals/rankings.
