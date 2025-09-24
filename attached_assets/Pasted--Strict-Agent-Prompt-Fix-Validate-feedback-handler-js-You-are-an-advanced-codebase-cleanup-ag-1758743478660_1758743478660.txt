@@ -1,0 +1,92 @@
+🔒 Strict Agent Prompt — Fix & Validate feedback-handler.js
+
+You are an advanced codebase cleanup agent.
+Your task is to fully refactor and validate client/src/qa/feedback-handler.js.
+
+Goals
+
+Eliminate all TypeScript errors (currently ~27).
+
+Eliminate all ESLint warnings/errors.
+
+Preserve all feedback-related functionality.
+
+Ensure safe and correct integration with the database.
+
+No use of any, unknown, @ts-ignore, or eslint-disable.
+
+All JSDoc typedefs must match actual runtime data structures used in the file.
+
+Steps
+
+Type System
+
+Add comprehensive JSDoc typedefs for:
+
+FeedbackEntry (id, sessionId, userId, messageId, content, severity, createdAt, etc.)
+
+FeedbackHandlerConfig (API endpoint, database client, retries, etc.)
+
+FeedbackResult (success:boolean, error?:string)
+
+All arrays typed explicitly (FeedbackEntry[] not never[]).
+
+Use Record<string, unknown> for dynamic metadata fields.
+
+Database Integration
+
+If feedback is sent to the backend:
+
+const res = await fetch('/api/feedback', { method:'POST', body: JSON.stringify(entry) });
+if (!res.ok) throw new Error(`Feedback not saved: ${res.status}`);
+
+
+If feedback writes directly to DB client: validate correct insert call with required fields.
+
+Add error handling + logging (console.error) on failed DB calls.
+
+Safety Enhancements
+
+Null-safe property access for all optional feedback fields.
+
+Validate required fields before saving (sessionId, messageId, content).
+
+Protect against empty/invalid submissions (return early with failure result).
+
+ESLint Compliance
+
+Remove unused vars/imports.
+
+Replace raw console.log with structured logging:
+
+console.info for normal ops
+
+console.warn for warnings
+
+console.error for errors
+
+Tests
+
+If test file exists (feedback-handler.test.js), update types there too.
+
+Ensure FeedbackResult.success === true only when DB confirms write.
+
+Validation
+
+Run these after refactor:
+
+tsc --noEmit --strict --allowJs --checkJs client/src/qa/feedback-handler.js
+eslint client/src/qa/feedback-handler.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must return 0 errors.
+
+Deliverables
+
+Final updated feedback-handler.js with strict TypeScript + ESLint compliance.
+
+JSDoc typedefs reflecting actual feedback schema.
+
+Verified DB integration with safe persistence logic.
+
+Updated TS_ERROR_MASTER_AUDIT_v2.md: mark feedback-handler.js as ✅ FIXED.

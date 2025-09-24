@@ -24,6 +24,92 @@ import { anonymizeText } from '../analytics/anonymizer.js';
  */
 
 /**
+ * Query context for feedback reference
+ * @typedef {{
+ *   userInput: string;
+ *   triageLevel: string;
+ *   llmResponse: string;
+ * }} QueryContext
+ */
+
+/**
+ * Enriched feedback entry for storage
+ * @typedef {{
+ *   query: string;
+ *   perceivedAccuracy: "low" | "medium" | "high";
+ *   feedbackText: string;
+ *   userType: "doctor" | "patient" | "unknown";
+ *   responseQuality: "poor" | "fair" | "good" | "excellent" | null;
+ *   suggestions: string[];
+ *   timestamp: string;
+ *   sessionId: string;
+ *   feedbackId: string;
+ *   context: {
+ *     originalQuery: string;
+ *     systemTriage: string;
+ *     systemResponse: string | null;
+ *   } | null;
+ *   analysis: {
+ *     category: string;
+ *     severity: string;
+ *     actionRequired: boolean;
+ *   };
+ * }} FeedbackEntry
+ */
+
+/**
+ * Feedback handler configuration
+ * @typedef {{
+ *   apiEndpoint?: string;
+ *   retries?: number;
+ *   timeout?: number;
+ * }} FeedbackHandlerConfig
+ */
+
+/**
+ * Feedback operation result
+ * @typedef {{
+ *   success: boolean;
+ *   error?: string;
+ *   feedbackId?: string;
+ * }} FeedbackResult
+ */
+
+/**
+ * Feedback analytics trends structure
+ * @typedef {{
+ *   accuracy: Record<string, number>;
+ *   userTypes: Record<string, number>;
+ *   categories: Record<string, number>;
+ *   severities: Record<string, number>;
+ * }} FeedbackTrends
+ */
+
+/**
+ * Feedback analytics summary
+ * @typedef {{
+ *   totalFeedback: number;
+ *   trends: FeedbackTrends;
+ *   averageAccuracy: number;
+ *   categories: Record<string, number>;
+ *   severities: Record<string, number>;
+ *   actionRequired: number;
+ *   timeRange: {
+ *     earliest?: string;
+ *     latest?: string;
+ *   };
+ * }} FeedbackAnalytics
+ */
+
+/**
+ * Feedback validation result
+ * @typedef {{
+ *   isValid: boolean;
+ *   errors: string[];
+ * }} FeedbackValidation
+ */
+
+/**
  * Feedback categories for analysis
  * @readonly
  */
@@ -55,27 +141,31 @@ const FEEDBACK_PATH = 'client/src/training-dataset/feedback.jsonl';
 /**
  * Captures and processes user feedback
  * @param {UserFeedback} feedback - User feedback object
- * @param {object} [queryContext] - Original query context for reference
- * @param {string} queryContext.userInput - Original user query
- * @param {string} queryContext.triageLevel - System's triage decision
- * @param {string} queryContext.llmResponse - System's response
- * @returns {Promise<boolean>} Success status of feedback capture
+ * @param {QueryContext} [queryContext] - Original query context for reference
+ * @returns {Promise<FeedbackResult>} Result of feedback capture operation
  */
-export async function captureFeedback(feedback, queryContext = null) {
+export async function captureFeedback(feedback, queryContext) {
   try {
     // Validate required fields
     if (!feedback || typeof feedback !== 'object') {
       console.warn('[feedback-handler] Invalid feedback object provided');
-      return false;
+      return { success: false, error: 'Invalid feedback object provided' };
     }
     
     if (!feedback.query || !feedback.perceivedAccuracy) {
       console.warn('[feedback-handler] Missing required feedback fields');
-      return false;
+      return { success: false, error: 'Missing required feedback fields' };
+    }
+    
+    // Validate feedback structure
+    const validation = validateFeedback(feedback);
+    if (!validation.isValid) {
+      console.warn('[feedback-handler] Feedback validation failed:', validation.errors);
+      return { success: false, error: `Validation failed: ${validation.errors.join(', ')}` };
     }
     
     // Create enriched feedback entry
-    const feedbackEntry = {
+    const feedbackEntry = /** @type {FeedbackEntry} */ ({
       // Core feedback data (anonymized)
       query: anonymizeText(feedback.query),
       perceivedAccuracy: feedback.perceivedAccuracy,
@@ -102,17 +192,18 @@ export async function captureFeedback(feedback, queryContext = null) {
         severity: assessFeedbackSeverity(feedback),
         actionRequired: requiresAction(feedback)
       }
-    };
+    });
     
     // Log to feedback dataset
     await appendToFeedbackDataset(feedbackEntry);
     
-    console.log('[feedback-handler] Feedback captured successfully:', feedbackEntry.feedbackId);
-    return true;
+    console.info('[feedback-handler] Feedback captured successfully:', feedbackEntry.feedbackId);
+    return { success: true, feedbackId: feedbackEntry.feedbackId };
     
   } catch (error) {
-    console.error('[feedback-handler] Failed to capture feedback:', error.message);
-    return false;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('[feedback-handler] Failed to capture feedback:', errorMessage);
+    return { success: false, error: `Failed to capture feedback: ${errorMessage}` };
   }
 }
 
@@ -195,7 +286,7 @@ function requiresAction(feedback) {
 /**
  * Appends feedback entry to JSONL dataset
  * @private
- * @param {object} feedbackEntry - Processed feedback entry
+ * @param {FeedbackEntry} feedbackEntry - Processed feedback entry
  * @returns {Promise<void>}
  */
 async function appendToFeedbackDataset(feedbackEntry) {
@@ -216,15 +307,16 @@ async function appendToFeedbackDataset(feedbackEntry) {
     fs.appendFileSync(FEEDBACK_PATH, jsonlLine, 'utf8');
     
   } catch (error) {
-    console.error('[feedback-handler] Failed to write feedback to dataset:', error.message);
-    throw error;
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('[feedback-handler] Failed to write feedback to dataset:', errorMessage);
+    throw new Error(`Failed to write feedback to dataset: ${errorMessage}`);
   }
 }
 
 /**
  * Loads and analyzes recent feedback data
  * @param {number} [limit=100] - Maximum number of feedback entries to load
- * @returns {Promise<Array<object>>} Recent feedback entries
+ * @returns {Promise<FeedbackEntry[]>} Recent feedback entries
  */
 export async function loadRecentFeedback(limit = 100) {
   try {
@@ -240,37 +332,51 @@ export async function loadRecentFeedback(limit = 100) {
     // Get most recent entries
     const recentLines = lines.slice(-limit);
     
-    return recentLines.map(line => {
+    /** @type {FeedbackEntry[]} */
+    const feedbackEntries = [];
+    
+    for (const line of recentLines) {
       try {
-        return JSON.parse(line);
+        const parsed = JSON.parse(line);
+        feedbackEntries.push(/** @type {FeedbackEntry} */ (parsed));
       } catch {
-        return null;
+        console.warn('[feedback-handler] Failed to parse feedback line:', line);
       }
-    }).filter(Boolean);
+    }
+    
+    return feedbackEntries;
     
   } catch (error) {
-    console.error('[feedback-handler] Failed to load feedback data:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('[feedback-handler] Failed to load feedback data:', errorMessage);
     return [];
   }
 }
 
 /**
  * Generates feedback analytics summary
- * @param {Array<object>} feedbackData - Feedback data to analyze
- * @returns {object} Analytics summary
+ * @param {FeedbackEntry[]} feedbackData - Feedback data to analyze
+ * @returns {FeedbackAnalytics} Analytics summary
  */
 export function analyzeFeedbackTrends(feedbackData) {
   if (!feedbackData || feedbackData.length === 0) {
     return {
       totalFeedback: 0,
-      trends: {},
+      trends: {
+        accuracy: {},
+        userTypes: {},
+        categories: {},
+        severities: {}
+      },
       averageAccuracy: 0,
       categories: {},
       severities: {},
-      actionRequired: 0
+      actionRequired: 0,
+      timeRange: {}
     };
   }
   
+  /** @type {FeedbackTrends} */
   const trends = {
     accuracy: { low: 0, medium: 0, high: 0 },
     userTypes: { doctor: 0, patient: 0, unknown: 0 },
@@ -282,28 +388,36 @@ export function analyzeFeedbackTrends(feedbackData) {
   let actionRequiredCount = 0;
   
   feedbackData.forEach(feedback => {
-    // Accuracy trends
-    if (feedback.perceivedAccuracy) {
-      trends.accuracy[feedback.perceivedAccuracy]++;
-      totalAccuracy += feedback.perceivedAccuracy === 'high' ? 3 : 
-                      feedback.perceivedAccuracy === 'medium' ? 2 : 1;
+    // Accuracy trends - safely access perceivedAccuracy
+    const accuracy = feedback.perceivedAccuracy;
+    if (accuracy && (accuracy === 'low' || accuracy === 'medium' || accuracy === 'high')) {
+      trends.accuracy[accuracy] = (trends.accuracy[accuracy] || 0) + 1;
+      totalAccuracy += accuracy === 'high' ? 3 : accuracy === 'medium' ? 2 : 1;
     }
     
-    // User type trends
-    if (feedback.userType) {
-      trends.userTypes[feedback.userType]++;
+    // User type trends - safely access userType
+    const userType = feedback.userType;
+    if (userType && (userType === 'doctor' || userType === 'patient' || userType === 'unknown')) {
+      trends.userTypes[userType] = (trends.userTypes[userType] || 0) + 1;
     }
     
-    // Category analysis
-    const category = feedback.analysis?.category || 'unknown';
+    // Category analysis - safely access nested properties
+    const category = feedback.analysis && typeof feedback.analysis === 'object' && 'category' in feedback.analysis
+      ? String(feedback.analysis.category)
+      : 'unknown';
     trends.categories[category] = (trends.categories[category] || 0) + 1;
     
-    // Severity analysis
-    const severity = feedback.analysis?.severity || 'unknown';
+    // Severity analysis - safely access nested properties
+    const severity = feedback.analysis && typeof feedback.analysis === 'object' && 'severity' in feedback.analysis
+      ? String(feedback.analysis.severity)
+      : 'unknown';
     trends.severities[severity] = (trends.severities[severity] || 0) + 1;
     
-    // Action required count
-    if (feedback.analysis?.actionRequired) {
+    // Action required count - safely access nested properties
+    const actionRequired = feedback.analysis && typeof feedback.analysis === 'object' && 'actionRequired' in feedback.analysis
+      ? Boolean(feedback.analysis.actionRequired)
+      : false;
+    if (actionRequired) {
       actionRequiredCount++;
     }
   });
@@ -311,13 +425,13 @@ export function analyzeFeedbackTrends(feedbackData) {
   return {
     totalFeedback: feedbackData.length,
     trends,
-    averageAccuracy: totalAccuracy / feedbackData.length,
+    averageAccuracy: feedbackData.length > 0 ? totalAccuracy / feedbackData.length : 0,
     categories: trends.categories,
     severities: trends.severities,
     actionRequired: actionRequiredCount,
     timeRange: {
-      earliest: feedbackData[0]?.timestamp,
-      latest: feedbackData[feedbackData.length - 1]?.timestamp
+      earliest: feedbackData.length > 0 ? feedbackData[0]?.timestamp : undefined,
+      latest: feedbackData.length > 0 ? feedbackData[feedbackData.length - 1]?.timestamp : undefined
     }
   };
 }
@@ -342,10 +456,11 @@ function generateFeedbackId() {
 
 /**
  * Validates feedback object structure
- * @param {object} feedback - Feedback object to validate
- * @returns {object} Validation result
+ * @param {UserFeedback} feedback - Feedback object to validate
+ * @returns {FeedbackValidation} Validation result
  */
 export function validateFeedback(feedback) {
+  /** @type {string[]} */
   const errors = [];
   
   if (!feedback) {
@@ -363,6 +478,14 @@ export function validateFeedback(feedback) {
   
   if (feedback.userType && !['doctor', 'patient', 'unknown'].includes(feedback.userType)) {
     errors.push('userType must be "doctor", "patient", or "unknown"');
+  }
+  
+  if (feedback.responseQuality && !['poor', 'fair', 'good', 'excellent'].includes(feedback.responseQuality)) {
+    errors.push('responseQuality must be "poor", "fair", "good", or "excellent"');
+  }
+  
+  if (feedback.suggestions && !Array.isArray(feedback.suggestions)) {
+    errors.push('suggestions must be an array of strings');
   }
   
   return {
