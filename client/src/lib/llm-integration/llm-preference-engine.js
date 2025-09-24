@@ -468,7 +468,8 @@ export function getModelPerformanceDashboard() {
   };
   
   // Convert performance cache to dashboard format
-  for (const [modelId, performance] of modelPerformanceCache.entries()) {
+  const performanceEntries = Array.from(modelPerformanceCache.entries());
+  for (const [modelId, performance] of performanceEntries) {
     dashboard.models[modelId] = {
       avgResponseTime: Math.round(performance.avgResponseTime),
       accuracyScore: Math.round(performance.accuracyScore * 10) / 10,
@@ -478,7 +479,8 @@ export function getModelPerformanceDashboard() {
   }
   
   // Convert circuit breaker states
-  for (const [modelId, breaker] of circuitBreakerStates.entries()) {
+  const circuitBreakerEntries = Array.from(circuitBreakerStates.entries());
+  for (const [modelId, breaker] of circuitBreakerEntries) {
     dashboard.circuitBreakers[modelId] = {
       state: breaker.state,
       failureCount: breaker.failureCount,
