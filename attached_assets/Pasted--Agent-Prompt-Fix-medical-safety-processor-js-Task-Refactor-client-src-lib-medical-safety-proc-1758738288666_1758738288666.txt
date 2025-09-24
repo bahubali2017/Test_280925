@@ -1,0 +1,99 @@
+🔹 Agent Prompt — Fix medical-safety-processor.js
+
+Task:
+Refactor client/src/lib/medical-safety-processor.js to eliminate all TypeScript strict mode errors and ESLint issues.
+Target = TRIPLE-0 POLICY:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+No any, no unknown, no suppressions.
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/medical-safety-processor.js
+eslint client/src/lib/medical-safety-processor.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+JSDoc typedefs must match the actual medical safety logic. Adjust to the fields your file really uses (flags, disclaimers, emergency routing).
+
+Preserve all medical safety functionality: emergency detection, disclaimer insertion, fallback responses, risk flagging.
+
+Replace unsafe property access with explicit type guards and null checks.
+
+Replace console.log with console.info|warn|error or structured logger.
+
+Remove unused variables/imports, enforce prefer-const.
+
+Explicitly type arrays, maps, and accumulators.
+
+Ensure error handling with instanceof Error.
+
+Suggested JSDoc typedefs (adjust to actual code)
+/**
+ * @typedef {Object} SafetyResult
+ * @property {boolean} shouldBlockAI
+ * @property {boolean} isEmergency
+ * @property {string[]} triggeredRules
+ * @property {string[]} disclaimers
+ * @property {string} [fallbackResponse]
+ */
+
+/**
+ * @typedef {Object} SafetyRule
+ * @property {string} id
+ * @property {string} description
+ * @property {(input: string) => boolean} check
+ * @property {string} severity
+ */
+
+/**
+ * @typedef {Object} SafetyContext
+ * @property {string} userRole
+ * @property {string} query
+ * @property {Record<string, any>} [metadata]
+ */
+
+Refactor Targets
+
+Accumulators
+
+/** @type {SafetyRule[]} */ const safetyRules = [];
+/** @type {string[]} */ const disclaimers = [];
+
+
+Core functions (adjust to actual code):
+
+/** @param {SafetyContext} context @returns {SafetyResult} */
+export function processMedicalSafety(context) { ... }
+
+/** @param {string} input @returns {boolean} */
+function detectEmergency(input) { ... }
+
+/** @param {string} userRole @returns {string[]} */
+function getRoleSpecificDisclaimers(userRole) { ... }
+
+
+Guard null/undefined metadata before access.
+
+Replace raw {} with typed shapes.
+
+Ensure map/reduce accumulators are typed.
+
+ESLint Fixes
+
+Remove unused imports/vars.
+
+Ensure consistent return values.
+
+Replace let with const where possible.
+
+Deliverables
+
+Full corrected file with accurate JSDoc typedefs matching the real safety logic.
+
+TypeScript + ESLint validation returns 0.
+
+Functionality unchanged: all disclaimers, safety rules, and emergency detection preserved.
