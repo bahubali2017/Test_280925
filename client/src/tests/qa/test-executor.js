@@ -5,28 +5,40 @@
 
 import fs from 'fs';
 import { routeMedicalQuery } from '../../lib/router.js';
-// Removed unused imports: evaluateTriageAccuracy, calculateMetrics
 import { anonymizeText } from '../../analytics/anonymizer.js';
 
 const TEST_CASES_PATH = 'client/src/tests/qa/test-cases.json';
 const TEST_RESULTS_PATH = 'client/src/tests/qa/test-results.json';
 
+/** @typedef {{ id: string, input: string, expected: string, meta?: Record<string, unknown> }} TestCase */
+/** @typedef {{ id: string, passed: boolean, actual: string, expected: string, durationMs: number, error?: string }} TestResult */
+/** @typedef {{ total: number, passed: number, failed: number, results: TestResult[] }} TestReport */
+
 /**
- * @typedef {object} TestCase
+ * @typedef {object} ExtendedTestCase
  * @property {string} id - Unique test case identifier
  * @property {string} category - Test category (emergency, urgent, etc.)
  * @property {string} description - Human readable test description
  * @property {object} input - Test input data
+ * @property {string} input.userQuery - User query string
+ * @property {boolean} [input.containsPII] - Whether input contains PII
+ * @property {string[]} [input.expectedSymptoms] - Expected symptoms in query
  * @property {object} expected - Expected outcomes
+ * @property {string} expected.triageLevel - Expected triage level
+ * @property {boolean} expected.isHighRisk - Expected high risk flag
+ * @property {boolean} expected.shouldHaveATD - Expected ATD presence
+ * @property {boolean} expected.shouldHaveDisclaimer - Expected disclaimer presence
+ * @property {string[]} [expected.atdKeywords] - Expected ATD keywords
+ * @property {number} [expected.maxProcessingTimeMs] - Max processing time
  */
 
 /**
- * @typedef {object} TestResult
+ * @typedef {object} ExtendedTestResult
  * @property {string} testId - Test case ID
  * @property {string} category - Test category
  * @property {string} description - Test description
  * @property {boolean} passed - Overall test pass/fail status
- * @property {object} actualResult - Actual system output
+ * @property {object|null} actualResult - Actual system output
  * @property {object} expectedResult - Expected outcomes
  * @property {string[]} failures - List of specific assertion failures
  * @property {number} processingTimeMs - Actual processing time
@@ -34,74 +46,125 @@ const TEST_RESULTS_PATH = 'client/src/tests/qa/test-results.json';
  */
 
 /**
+ * @typedef {object} TestConfig
+ * @property {ExtendedTestCase[]} testCases - Array of test cases
+ * @property {Record<string, unknown>} [regressionBaselines] - Regression baselines
+ */
+
+/**
+ * @typedef {object} CategoryStats
+ * @property {number} total - Total tests in category
+ * @property {number} passed - Passed tests in category
+ */
+
+/**
+ * @typedef {object} ExecutionOptions
+ * @property {string[]|null} [categories] - Categories to run
+ * @property {boolean} [saveResults] - Whether to save results
+ * @property {boolean} [verbose] - Verbose output
+ */
+
+/**
  * Loads test cases from JSON file
- * @returns {Promise<object>} Test cases configuration
+ * @returns {Promise<TestConfig>} Test cases configuration
  */
 async function loadTestCases() {
   try {
     const content = fs.readFileSync(TEST_CASES_PATH, 'utf8');
     return JSON.parse(content);
   } catch (error) {
-    console.error('[test-executor] Failed to load test cases:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[test-executor] Failed to load test cases:', errorMessage);
     throw new Error(`Cannot load test cases from ${TEST_CASES_PATH}`);
   }
 }
 
 /**
  * Executes a single test case through the QA pipeline
- * @param {TestCase} testCase - Test case to execute
- * @returns {Promise<TestResult>} Test execution result
+ * @param {ExtendedTestCase} testCase - Test case to execute
+ * @returns {Promise<ExtendedTestResult>} Test execution result
  */
 async function executeTestCase(testCase) {
   const startTime = Date.now();
+  /** @type {string[]} */
   const failures = [];
   
   try {
-    console.log(`\\n🧪 Executing test: ${testCase.id} - ${testCase.description}`);
+    console.info(`🧪 Executing test: ${testCase.id} - ${testCase.description}`);
     
     // Execute medical query through router
     const actualResult = await routeMedicalQuery(testCase.input.userQuery);
     const processingTime = Date.now() - startTime;
     
     // Validate triage level
-    if (actualResult.metadata?.triageLevel !== testCase.expected.triageLevel) {
-      failures.push(`Triage level mismatch: expected '${testCase.expected.triageLevel}', got '${actualResult.metadata?.triageLevel}'`);
+    const actualTriageLevel = actualResult && actualResult.metadata && typeof actualResult.metadata.triageLevel === 'string' 
+      ? actualResult.metadata.triageLevel 
+      : '';
+    const expectedTriageLevel = testCase.expected && typeof testCase.expected.triageLevel === 'string' 
+      ? testCase.expected.triageLevel 
+      : '';
+    
+    if (actualTriageLevel !== expectedTriageLevel) {
+      failures.push(`Triage level mismatch: expected '${expectedTriageLevel}', got '${actualTriageLevel}'`);
     }
     
     // Validate high risk classification
-    if (actualResult.isHighRisk !== testCase.expected.isHighRisk) {
-      failures.push(`High risk mismatch: expected ${testCase.expected.isHighRisk}, got ${actualResult.isHighRisk}`);
+    const actualIsHighRisk = actualResult && typeof actualResult.isHighRisk === 'boolean' 
+      ? actualResult.isHighRisk 
+      : false;
+    const expectedIsHighRisk = testCase.expected && typeof testCase.expected.isHighRisk === 'boolean' 
+      ? testCase.expected.isHighRisk 
+      : false;
+    
+    if (actualIsHighRisk !== expectedIsHighRisk) {
+      failures.push(`High risk mismatch: expected ${expectedIsHighRisk}, got ${actualIsHighRisk}`);
     }
     
     // Validate ATD presence
-    const hasATD = !!(actualResult.atd && actualResult.atd.length > 0);
-    if (hasATD !== testCase.expected.shouldHaveATD) {
-      failures.push(`ATD presence mismatch: expected ${testCase.expected.shouldHaveATD}, got ${hasATD}`);
+    const hasATD = !!(actualResult && actualResult.atd && Array.isArray(actualResult.atd) && actualResult.atd.length > 0);
+    const shouldHaveATD = testCase.expected && typeof testCase.expected.shouldHaveATD === 'boolean' 
+      ? testCase.expected.shouldHaveATD 
+      : false;
+    
+    if (hasATD !== shouldHaveATD) {
+      failures.push(`ATD presence mismatch: expected ${shouldHaveATD}, got ${hasATD}`);
     }
     
     // Validate disclaimer presence
-    const hasDisclaimer = actualResult.disclaimers && actualResult.disclaimers.length > 0;
-    if (hasDisclaimer !== testCase.expected.shouldHaveDisclaimer) {
-      failures.push(`Disclaimer presence mismatch: expected ${testCase.expected.shouldHaveDisclaimer}, got ${hasDisclaimer}`);
+    const hasDisclaimer = !!(actualResult && actualResult.disclaimers && Array.isArray(actualResult.disclaimers) && actualResult.disclaimers.length > 0);
+    const shouldHaveDisclaimer = testCase.expected && typeof testCase.expected.shouldHaveDisclaimer === 'boolean' 
+      ? testCase.expected.shouldHaveDisclaimer 
+      : false;
+    
+    if (hasDisclaimer !== shouldHaveDisclaimer) {
+      failures.push(`Disclaimer presence mismatch: expected ${shouldHaveDisclaimer}, got ${hasDisclaimer}`);
     }
     
     // Validate ATD keywords (if ATD expected)
-    if (testCase.expected.shouldHaveATD && hasATD) {
+    if (shouldHaveATD && hasATD && actualResult && actualResult.atd) {
       const atdText = actualResult.atd.join(' ').toLowerCase();
-      for (const keyword of testCase.expected.atdKeywords || []) {
-        if (!atdText.includes(keyword.toLowerCase())) {
+      const atdKeywords = testCase.expected && Array.isArray(testCase.expected.atdKeywords) 
+        ? testCase.expected.atdKeywords 
+        : [];
+      
+      for (const keyword of atdKeywords) {
+        if (typeof keyword === 'string' && !atdText.includes(keyword.toLowerCase())) {
           failures.push(`Missing ATD keyword: '${keyword}'`);
         }
       }
     }
     
     // Validate processing time
-    if (processingTime > (testCase.expected.maxProcessingTimeMs || 1000)) {
-      failures.push(`Processing time exceeded: ${processingTime}ms > ${testCase.expected.maxProcessingTimeMs}ms`);
+    const maxProcessingTime = testCase.expected && typeof testCase.expected.maxProcessingTimeMs === 'number' 
+      ? testCase.expected.maxProcessingTimeMs 
+      : 1000;
+    
+    if (processingTime > maxProcessingTime) {
+      failures.push(`Processing time exceeded: ${processingTime}ms > ${maxProcessingTime}ms`);
     }
     
     // Validate PII removal (if applicable)
-    if (testCase.input.containsPII) {
+    if (testCase.input && typeof testCase.input.containsPII === 'boolean' && testCase.input.containsPII) {
       const anonymizedQuery = anonymizeText(testCase.input.userQuery);
       if (anonymizedQuery === testCase.input.userQuery) {
         failures.push('PII was not properly anonymized');
@@ -109,29 +172,34 @@ async function executeTestCase(testCase) {
     }
     
     // Validate expected symptoms (if specified)
-    if (testCase.input.expectedSymptoms && testCase.input.expectedSymptoms.length > 0) {
+    const expectedSymptoms = testCase.input && Array.isArray(testCase.input.expectedSymptoms) 
+      ? testCase.input.expectedSymptoms 
+      : [];
+    
+    if (expectedSymptoms.length > 0) {
       const userInput = testCase.input.userQuery.toLowerCase();
-      // Check if symptoms appear in router result or detected by triage
+      /** @type {string[]} */
       const actualSymptomNames = [];
       
       // Check detected symptoms from metadata
-      if (actualResult.metadata?.symptoms) {
+      if (actualResult && actualResult.metadata && Array.isArray(actualResult.metadata.symptoms)) {
         actualSymptomNames.push(...actualResult.metadata.symptoms);
       }
       
-      
       // Fallback: check user input directly for expected symptoms
-      for (const expectedSymptom of testCase.input.expectedSymptoms) {
-        const expectedLower = expectedSymptom.toLowerCase();
-        if (userInput.includes(expectedLower) || actualSymptomNames.some(s => s.toLowerCase().includes(expectedLower))) {
-          if (!actualSymptomNames.includes(expectedSymptom)) {
-            actualSymptomNames.push(expectedSymptom);
+      for (const expectedSymptom of expectedSymptoms) {
+        if (typeof expectedSymptom === 'string') {
+          const expectedLower = expectedSymptom.toLowerCase();
+          if (userInput.includes(expectedLower) || actualSymptomNames.some(s => typeof s === 'string' && s.toLowerCase().includes(expectedLower))) {
+            if (!actualSymptomNames.includes(expectedSymptom)) {
+              actualSymptomNames.push(expectedSymptom);
+            }
           }
         }
       }
       
-      for (const expectedSymptom of testCase.input.expectedSymptoms) {
-        if (!actualSymptomNames.some(name => name.includes(expectedSymptom.toLowerCase()))) {
+      for (const expectedSymptom of expectedSymptoms) {
+        if (typeof expectedSymptom === 'string' && !actualSymptomNames.some(name => typeof name === 'string' && name.includes(expectedSymptom.toLowerCase()))) {
           failures.push(`Missing expected symptom: '${expectedSymptom}'`);
         }
       }
@@ -143,14 +211,14 @@ async function executeTestCase(testCase) {
       description: testCase.description,
       passed: failures.length === 0,
       actualResult: {
-        triageLevel: actualResult.metadata?.triageLevel,
-        isHighRisk: actualResult.isHighRisk,
+        triageLevel: actualTriageLevel,
+        isHighRisk: actualIsHighRisk,
         hasATD: hasATD,
         hasDisclaimer: hasDisclaimer,
         processingTimeMs: processingTime,
-        symptoms: testCase.input.expectedSymptoms?.filter(symptom => 
-          testCase.input.userQuery.toLowerCase().includes(symptom.toLowerCase())
-        ) || []
+        symptoms: expectedSymptoms.filter(symptom => 
+          typeof symptom === 'string' && testCase.input.userQuery.toLowerCase().includes(symptom.toLowerCase())
+        )
       },
       expectedResult: testCase.expected,
       failures,
@@ -159,16 +227,17 @@ async function executeTestCase(testCase) {
     };
     
     if (testResult.passed) {
-      console.log(`✅ PASS: ${testCase.id}`);
+      console.info(`✅ PASS: ${testCase.id}`);
     } else {
-      console.log(`❌ FAIL: ${testCase.id}`);
-      failures.forEach(failure => console.log(`   - ${failure}`));
+      console.error(`❌ FAIL: ${testCase.id}`);
+      failures.forEach(failure => console.error(`   - ${failure}`));
     }
     
     return testResult;
     
   } catch (error) {
-    console.error(`💥 ERROR in test ${testCase.id}:`, error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error(`💥 ERROR in test ${testCase.id}:`, errorMessage);
     
     return {
       testId: testCase.id,
@@ -177,7 +246,7 @@ async function executeTestCase(testCase) {
       passed: false,
       actualResult: null,
       expectedResult: testCase.expected,
-      failures: [`Test execution failed: ${error.message}`],
+      failures: [`Test execution failed: ${errorMessage}`],
       processingTimeMs: Date.now() - startTime,
       timestamp: new Date().toISOString()
     };
@@ -186,17 +255,17 @@ async function executeTestCase(testCase) {
 
 /**
  * Executes all test cases and generates comprehensive report
- * @param {object} options - Execution options
+ * @param {ExecutionOptions} [options={}] - Execution options
  * @returns {Promise<object>} Complete test execution report
  */
 export async function runAllTests(options = {}) {
   const { 
-    categories = null, // Run all categories if null
+    categories = null,
     saveResults = true,
     verbose = true 
   } = options;
   
-  console.log('🚀 Starting QA Test Executor...');
+  console.info('🚀 Starting QA Test Executor...');
   
   // Load test cases
   const testConfig = await loadTestCases();
@@ -205,12 +274,13 @@ export async function runAllTests(options = {}) {
   // Filter by categories if specified
   if (categories && Array.isArray(categories)) {
     testCases = testCases.filter(tc => categories.includes(tc.category));
-    console.log(`📋 Filtering to categories: ${categories.join(', ')}`);
+    console.info(`📋 Filtering to categories: ${categories.join(', ')}`);
   }
   
-  console.log(`📊 Executing ${testCases.length} test cases...`);
+  console.info(`📊 Executing ${testCases.length} test cases...`);
   
   const startTime = Date.now();
+  /** @type {ExtendedTestResult[]} */
   const results = [];
   
   // Execute each test case
@@ -227,6 +297,7 @@ export async function runAllTests(options = {}) {
   const passRate = (passed / results.length * 100).toFixed(1);
   
   // Calculate category-specific metrics
+  /** @type {Record<string, CategoryStats>} */
   const categoryStats = {};
   for (const result of results) {
     if (!categoryStats[result.category]) {
@@ -279,31 +350,31 @@ export async function runAllTests(options = {}) {
   
   // Display summary
   if (verbose) {
-    console.log(`\\n📈 TEST EXECUTION SUMMARY`);
-    console.log(`=========================`);
-    console.log(`Total Tests: ${summary.executionSummary.totalTests}`);
-    console.log(`Passed: ${summary.executionSummary.passed} (${summary.executionSummary.passRate})`);
-    console.log(`Failed: ${summary.executionSummary.failed}`);
-    console.log(`Execution Time: ${totalTime}ms`);
+    console.info(`\n📈 TEST EXECUTION SUMMARY`);
+    console.info(`=========================`);
+    console.info(`Total Tests: ${summary.executionSummary.totalTests}`);
+    console.info(`Passed: ${summary.executionSummary.passed} (${summary.executionSummary.passRate})`);
+    console.info(`Failed: ${summary.executionSummary.failed}`);
+    console.info(`Execution Time: ${totalTime}ms`);
     
-    console.log(`\\n🏥 MEDICAL SAFETY METRICS`);
-    console.log(`==========================`);
-    console.log(`Emergency Detection: ${(emergencyRecall * 100).toFixed(1)}%`);
-    console.log(`Urgent Detection: ${(urgentPrecision * 100).toFixed(1)}%`);
-    console.log(`Avg Processing Time: ${Math.round(avgProcessingTime)}ms`);
+    console.info(`\n🏥 MEDICAL SAFETY METRICS`);
+    console.info(`==========================`);
+    console.info(`Emergency Detection: ${(emergencyRecall * 100).toFixed(1)}%`);
+    console.info(`Urgent Detection: ${(urgentPrecision * 100).toFixed(1)}%`);
+    console.info(`Avg Processing Time: ${Math.round(avgProcessingTime)}ms`);
     
-    console.log(`\\n📂 CATEGORY BREAKDOWN`);
-    console.log(`====================`);
+    console.info(`\n📂 CATEGORY BREAKDOWN`);
+    console.info(`====================`);
     summary.categoryBreakdown.forEach(cat => {
-      console.log(`${cat.category}: ${cat.passed}/${cat.total} (${cat.passRate})`);
+      console.info(`${cat.category}: ${cat.passed}/${cat.total} (${cat.passRate})`);
     });
     
     if (summary.failedTests.length > 0) {
-      console.log(`\\n❌ FAILED TESTS (${summary.failedTests.length})`);
-      console.log(`================`);
+      console.error(`\n❌ FAILED TESTS (${summary.failedTests.length})`);
+      console.error(`================`);
       summary.failedTests.forEach(test => {
-        console.log(`- ${test.testId}: ${test.description}`);
-        test.failures.forEach(failure => console.log(`  • ${failure}`));
+        console.error(`- ${test.testId}: ${test.description}`);
+        test.failures.forEach(failure => console.error(`  • ${failure}`));
       });
     }
   }
@@ -312,9 +383,10 @@ export async function runAllTests(options = {}) {
   if (saveResults) {
     try {
       fs.writeFileSync(TEST_RESULTS_PATH, JSON.stringify(summary, null, 2));
-      console.log(`\\n💾 Results saved to: ${TEST_RESULTS_PATH}`);
+      console.info(`\n💾 Results saved to: ${TEST_RESULTS_PATH}`);
     } catch (error) {
-      console.error('Failed to save test results:', error.message);
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      console.error('Failed to save test results:', errorMessage);
     }
   }
   
@@ -323,31 +395,40 @@ export async function runAllTests(options = {}) {
 
 /**
  * Runs regression tests against baseline metrics
- * @param {object} options - Regression test options
+ * @param {ExecutionOptions} [options={}] - Regression test options
  * @returns {Promise<object>} Regression analysis results
  */
 export async function runRegressionTests(options = {}) {
-  console.log('\\n🔄 Starting Regression Test Suite...');
+  console.info('\n🔄 Starting Regression Test Suite...');
   
   const testResults = await runAllTests({ ...options, verbose: false });
   const testConfig = await loadTestCases();
   const baselines = testConfig.regressionBaselines || {};
   
+  /** @type {Array<{metric: string, expected: number|string, actual: number|string, impact: string}>} */
+  const criticalRegressions = [];
+  /** @type {Array<{metric: string, expected: number|string, actual: number|string, impact: string}>} */
+  const warningRegressions = [];
+  /** @type {Array<{metric: string, improvement: string}>} */
+  const improvements = [];
+  
   const regressionResults = {
     timestamp: new Date().toISOString(),
     baselineComparison: {},
     regressionDetected: false,
-    criticalRegressions: [],
-    warningRegressions: [],
-    improvements: []
+    criticalRegressions,
+    warningRegressions,
+    improvements
   };
   
   // Compare emergency detection rate
   const actualEmergencyRate = parseFloat(testResults.medicalSafetyMetrics.emergencyDetectionRate);
-  const expectedEmergencyRate = baselines.emergency_detection_rate || 1.0;
+  const expectedEmergencyRate = typeof baselines.emergency_detection_rate === 'number' 
+    ? baselines.emergency_detection_rate 
+    : 1.0;
   
   if (actualEmergencyRate < expectedEmergencyRate) {
-    regressionResults.criticalRegressions.push({
+    criticalRegressions.push({
       metric: 'Emergency Detection Rate',
       expected: expectedEmergencyRate,
       actual: actualEmergencyRate,
@@ -358,10 +439,12 @@ export async function runRegressionTests(options = {}) {
   
   // Compare processing time
   const actualProcessingTime = testResults.medicalSafetyMetrics.averageProcessingTimeMs;
-  const expectedProcessingTime = baselines.average_processing_time_ms || 200;
+  const expectedProcessingTime = typeof baselines.average_processing_time_ms === 'number' 
+    ? baselines.average_processing_time_ms 
+    : 200;
   
   if (actualProcessingTime > expectedProcessingTime * 1.5) { // 50% increase threshold
-    regressionResults.warningRegressions.push({
+    warningRegressions.push({
       metric: 'Average Processing Time',
       expected: expectedProcessingTime,
       actual: actualProcessingTime,
@@ -372,10 +455,12 @@ export async function runRegressionTests(options = {}) {
   
   // Compare overall pass rate
   const actualPassRate = parseFloat(testResults.executionSummary.passRate);
-  const expectedPassRate = baselines.overall_pass_rate || 95.0;
+  const expectedPassRate = typeof baselines.overall_pass_rate === 'number' 
+    ? baselines.overall_pass_rate 
+    : 95.0;
   
   if (actualPassRate < expectedPassRate) {
-    regressionResults.criticalRegressions.push({
+    criticalRegressions.push({
       metric: 'Overall Pass Rate',
       expected: `${expectedPassRate}%`,
       actual: `${actualPassRate}%`,
@@ -386,23 +471,23 @@ export async function runRegressionTests(options = {}) {
   
   // Display regression results
   if (regressionResults.regressionDetected) {
-    console.log(`\\n🚨 REGRESSION DETECTED!`);
-    console.log(`=======================`);
+    console.error(`\n🚨 REGRESSION DETECTED!`);
+    console.error(`=======================`);
     
-    regressionResults.criticalRegressions.forEach(reg => {
-      console.log(`❌ CRITICAL: ${reg.metric}`);
-      console.log(`   Expected: ${reg.expected}, Actual: ${reg.actual}`);
-      console.log(`   Impact: ${reg.impact}`);
+    criticalRegressions.forEach(reg => {
+      console.error(`❌ CRITICAL: ${reg.metric}`);
+      console.error(`   Expected: ${reg.expected}, Actual: ${reg.actual}`);
+      console.error(`   Impact: ${reg.impact}`);
     });
     
-    regressionResults.warningRegressions.forEach(reg => {
-      console.log(`⚠️ WARNING: ${reg.metric}`);
-      console.log(`   Expected: ${reg.expected}, Actual: ${reg.actual}`);
-      console.log(`   Impact: ${reg.impact}`);
+    warningRegressions.forEach(reg => {
+      console.warn(`⚠️ WARNING: ${reg.metric}`);
+      console.warn(`   Expected: ${reg.expected}, Actual: ${reg.actual}`);
+      console.warn(`   Impact: ${reg.impact}`);
     });
   } else {
-    console.log(`\\n✅ NO REGRESSIONS DETECTED`);
-    console.log(`All metrics within acceptable ranges`);
+    console.info(`\n✅ NO REGRESSIONS DETECTED`);
+    console.info(`All metrics within acceptable ranges`);
   }
   
   return {
@@ -415,7 +500,8 @@ export async function runRegressionTests(options = {}) {
 if (import.meta.url === `file://${process.argv[1]}`) {
   const args = process.argv.slice(2);
   const isRegressionTest = args.includes('--regression');
-  const categories = args.find(arg => arg.startsWith('--categories='))?.split('=')[1]?.split(',');
+  const categoriesArg = args.find(arg => arg.startsWith('--categories='));
+  const categories = categoriesArg ? categoriesArg.split('=')[1]?.split(',') : null;
   
   try {
     if (isRegressionTest) {
@@ -424,7 +510,8 @@ if (import.meta.url === `file://${process.argv[1]}`) {
       await runAllTests({ categories });
     }
   } catch (error) {
-    console.error('Test execution failed:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Test execution failed:', errorMessage);
     process.exit(1);
   }
 }
