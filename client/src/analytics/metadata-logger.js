@@ -11,6 +11,121 @@ import { LogRotation } from './enums.js';
 import { sanitizeMetadata } from './anonymizer.js';
 
 /**
+ * @typedef {object} QueryMetadata
+ * @property {number} [processingTime] - Total processing time in ms
+ * @property {number} [intentConfidence] - Intent confidence score 0-1
+ * @property {string} [bodySystem] - Detected body system
+ * @property {object} [stageTimings] - Stage timing breakdown
+ * @property {number} [stageTimings.parseIntent] - Intent parsing time
+ * @property {number} [stageTimings.triage] - Triage processing time
+ * @property {number} [stageTimings.enhancePrompt] - Prompt enhancement time
+ */
+
+/**
+ * @typedef {object} QueryResult
+ * @property {string} [userInput] - Original user input
+ * @property {string} [enhancedPrompt] - Enhanced prompt text
+ * @property {string} [triageLevel] - Triage level classification
+ * @property {boolean} [isHighRisk] - High risk flag
+ * @property {string[]} [atd] - Advice to doctor notices
+ * @property {string[]} [disclaimers] - Disclaimer messages
+ * @property {string[]} [suggestions] - Suggestion messages
+ * @property {QueryMetadata} [metadata] - Query metadata
+ */
+
+/**
+ * @typedef {object} AdditionalMetrics
+ * @property {number} parseTime - Intent parsing time in ms
+ * @property {number} triageTime - Triage processing time in ms
+ * @property {number} promptTime - Prompt enhancement time in ms
+ * @property {number} totalTime - Total processing time in ms
+ */
+
+/**
+ * @typedef {object} TimingMetrics
+ * @property {number} parseTime - Parse time in ms
+ * @property {number} triageTime - Triage time in ms
+ * @property {number} promptTime - Prompt time in ms
+ * @property {number} totalTime - Total time in ms
+ */
+
+/**
+ * @typedef {object} QualityMetrics
+ * @property {number} intentConfidence - Intent confidence score
+ * @property {string} triageLevel - Triage level
+ * @property {boolean} isHighRisk - High risk flag
+ * @property {boolean} hasAtdNotices - Has ATD notices
+ * @property {string} bodySystemDetected - Detected body system
+ */
+
+/**
+ * @typedef {object} ResponseCharacteristics
+ * @property {number} disclaimerCount - Number of disclaimers
+ * @property {number} suggestionCount - Number of suggestions
+ * @property {number} enhancedPromptLength - Enhanced prompt length
+ * @property {number} userInputLength - User input length
+ */
+
+/**
+ * @typedef {object} MemoryUsage
+ * @property {number} [heapUsed] - Heap used in MB
+ * @property {number} [heapTotal] - Heap total in MB
+ * @property {number} [external] - External memory in MB
+ * @property {boolean} [available] - Whether memory info is available
+ * @property {string} [error] - Error message if unavailable
+ */
+
+/**
+ * @typedef {object} SystemMetrics
+ * @property {MemoryUsage} memoryUsage - Memory usage info
+ * @property {string[]} errorFlags - Error condition flags
+ * @property {number} performanceRating - Performance rating 0-1
+ */
+
+/**
+ * @typedef {object} ValidationResult
+ * @property {string[]} missingFields - Missing required fields
+ * @property {string[]} incompleteFields - Incomplete fields
+ * @property {number} qualityScore - Quality score 0-1
+ */
+
+/**
+ * @typedef {object} EnrichedMetadata
+ * @property {string} timestamp - ISO timestamp
+ * @property {string} sessionId - Session identifier
+ * @property {TimingMetrics} timing - Timing metrics
+ * @property {QualityMetrics} quality - Quality metrics
+ * @property {ResponseCharacteristics} response - Response characteristics
+ * @property {SystemMetrics} system - System metrics
+ * @property {ValidationResult} [validation] - Validation results
+ */
+
+/**
+ * @typedef {object} RotationConfig
+ * @property {"daily"|"hourly"|"weekly"} interval - Rotation interval
+ * @property {number} maxFiles - Maximum files to keep
+ * @property {boolean} compress - Whether to compress files
+ */
+
+/**
+ * @typedef {object} FileStats
+ * @property {string} name - File name
+ * @property {string} path - File path
+ * @property {object} stats - File stats object
+ * @property {number} [stats.mtimeMs] - Modified time in ms
+ * @property {number} stats.size - File size in bytes
+ */
+
+/**
+ * @typedef {object} LoggerStats
+ * @property {number} logFiles - Number of log files
+ * @property {number} totalSize - Total size in KB
+ * @property {RotationConfig} rotationConfig - Rotation configuration
+ * @property {string} [logsPath] - Logs directory path
+ * @property {string} [error] - Error message if failed
+ */
+
+/**
  * Base path for metadata log files
  * @private
  * @type {string}
@@ -20,9 +135,9 @@ const LOGS_BASE_PATH = 'client/src/training-dataset/logs';
 /**
  * Current log rotation configuration
  * @private
+ * @type {RotationConfig}
  */
 let rotationConfig = {
-  /** @type {"daily" | "hourly" | "weekly"} */
   interval: LogRotation.DAILY,
   maxFiles: 30,
   compress: false
@@ -30,12 +145,8 @@ let rotationConfig = {
 
 /**
  * Logs enriched metadata with detailed timing and quality metrics
- * @param {object} queryResult - Complete query processing result
- * @param {object} additionalMetrics - Additional performance metrics
- * @param {number} additionalMetrics.parseTime - Intent parsing time in ms
- * @param {number} additionalMetrics.triageTime - Triage processing time in ms  
- * @param {number} additionalMetrics.promptTime - Prompt enhancement time in ms
- * @param {number} additionalMetrics.totalTime - Total processing time in ms
+ * @param {QueryResult} queryResult - Complete query processing result
+ * @param {AdditionalMetrics} [additionalMetrics] - Additional performance metrics
  * @returns {Promise<boolean>} Success status of metadata logging
  */
 export async function logEnrichedMetadata(queryResult, additionalMetrics = { parseTime: 0, triageTime: 0, promptTime: 0, totalTime: 0 }) {
@@ -49,19 +160,19 @@ export async function logEnrichedMetadata(queryResult, additionalMetrics = { par
       
       // Performance metrics
       timing: {
-        parseTime: additionalMetrics.parseTime || queryResult.metadata?.stageTimings?.parseIntent || 0,
-        triageTime: additionalMetrics.triageTime || queryResult.metadata?.stageTimings?.triage || 0,
-        promptTime: additionalMetrics.promptTime || queryResult.metadata?.stageTimings?.enhancePrompt || 0,
-        totalTime: additionalMetrics.totalTime || queryResult.metadata?.processingTime || 0
+        parseTime: additionalMetrics.parseTime || (queryResult.metadata && queryResult.metadata.stageTimings && queryResult.metadata.stageTimings.parseIntent) || 0,
+        triageTime: additionalMetrics.triageTime || (queryResult.metadata && queryResult.metadata.stageTimings && queryResult.metadata.stageTimings.triage) || 0,
+        promptTime: additionalMetrics.promptTime || (queryResult.metadata && queryResult.metadata.stageTimings && queryResult.metadata.stageTimings.enhancePrompt) || 0,
+        totalTime: additionalMetrics.totalTime || (queryResult.metadata && queryResult.metadata.processingTime) || 0
       },
       
       // Quality metrics
       quality: {
-        intentConfidence: queryResult.metadata?.intentConfidence || 0,
+        intentConfidence: (queryResult.metadata && queryResult.metadata.intentConfidence) || 0,
         triageLevel: queryResult.triageLevel || 'unknown',
         isHighRisk: Boolean(queryResult.isHighRisk),
         hasAtdNotices: Boolean(queryResult.atd),
-        bodySystemDetected: queryResult.metadata?.bodySystem || 'unknown'
+        bodySystemDetected: (queryResult.metadata && queryResult.metadata.bodySystem) || 'unknown'
       },
       
       // Response characteristics
@@ -92,7 +203,8 @@ export async function logEnrichedMetadata(queryResult, additionalMetrics = { par
     return true;
 
   } catch (error) {
-    console.error('[metadata-logger] Failed to log enriched metadata:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[metadata-logger] Failed to log enriched metadata:', errorMessage);
     return false;
   }
 }
@@ -100,10 +212,11 @@ export async function logEnrichedMetadata(queryResult, additionalMetrics = { par
 /**
  * Flags missing or incomplete key fields in query result
  * @private
- * @param {object} queryResult - Query result to validate
- * @returns {object} Validation flags object
+ * @param {QueryResult} queryResult - Query result to validate
+ * @returns {ValidationResult} Validation flags object
  */
 function flagMissingFields(queryResult) {
+  /** @type {ValidationResult} */
   const validation = {
     missingFields: [],
     incompleteFields: [],
@@ -141,19 +254,22 @@ function flagMissingFields(queryResult) {
 /**
  * Detects error conditions in query processing
  * @private
- * @param {object} queryResult - Query result to analyze
- * @returns {Array<string>} Array of detected error conditions
+ * @param {QueryResult} queryResult - Query result to analyze
+ * @returns {string[]} Array of detected error conditions
  */
 function detectErrorConditions(queryResult) {
+  /** @type {string[]} */
   const errors = [];
 
   // Check for processing failures
-  if (!queryResult.metadata?.processingTime || queryResult.metadata.processingTime > 5000) {
+  const processingTime = queryResult.metadata && queryResult.metadata.processingTime;
+  if (!processingTime || processingTime > 5000) {
     errors.push('slow_processing');
   }
 
   // Check for low confidence
-  if (queryResult.metadata?.intentConfidence < 0.3) {
+  const intentConfidence = queryResult.metadata && queryResult.metadata.intentConfidence;
+  if (typeof intentConfidence === 'number' && intentConfidence < 0.3) {
     errors.push('low_confidence');
   }
 
@@ -173,20 +289,20 @@ function detectErrorConditions(queryResult) {
 /**
  * Calculates overall performance rating for the query processing
  * @private
- * @param {object} queryResult - Query result to rate
- * @param {object} additionalMetrics - Additional timing metrics
+ * @param {QueryResult} queryResult - Query result to rate
+ * @param {AdditionalMetrics} additionalMetrics - Additional timing metrics
  * @returns {number} Performance rating from 0.0 to 1.0
  */
 function calculatePerformanceRating(queryResult, additionalMetrics) {
   let rating = 1.0;
   
   // Timing performance (30% of rating)
-  const totalTime = additionalMetrics.totalTime || queryResult.metadata?.processingTime || 0;
+  const totalTime = additionalMetrics.totalTime || (queryResult.metadata && queryResult.metadata.processingTime) || 0;
   if (totalTime > 2000) rating -= 0.2;      // Slow
   else if (totalTime > 1000) rating -= 0.1; // Moderate
   
   // Confidence performance (25% of rating)
-  const confidence = queryResult.metadata?.intentConfidence || 0;
+  const confidence = (queryResult.metadata && queryResult.metadata.intentConfidence) || 0;
   if (confidence < 0.5) rating -= 0.15;
   else if (confidence < 0.7) rating -= 0.1;
   
@@ -206,7 +322,7 @@ function calculatePerformanceRating(queryResult, additionalMetrics) {
 /**
  * Writes metadata to a rotating log file
  * @private
- * @param {object} metadata - Metadata to write
+ * @param {EnrichedMetadata} metadata - Metadata to write
  * @param {Date} timestamp - Current timestamp
  * @returns {Promise<void>}
  */
@@ -240,7 +356,8 @@ async function writeToLogFile(metadata, timestamp) {
     await rotateLogsIfNeeded();
     
   } catch (error) {
-    console.error('[metadata-logger] File operation failed:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[metadata-logger] File operation failed:', errorMessage);
   }
 }
 
@@ -299,6 +416,7 @@ async function rotateLogsIfNeeded() {
     }
     
     // Get all log files
+    /** @type {FileStats[]} */
     const files = fs.readdirSync(LOGS_BASE_PATH)
       .filter(file => file.startsWith('metadata-') && file.endsWith('.log'))
       .map(file => ({
@@ -322,20 +440,17 @@ async function rotateLogsIfNeeded() {
     }
     
   } catch (error) {
-    console.error('[metadata-logger] Log rotation failed:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[metadata-logger] Log rotation failed:', errorMessage);
   }
 }
 
 /**
  * Configures log rotation settings
- * @param {object} config - Rotation configuration
- * @param {string} config.interval - Rotation interval
- * @param {number} config.maxFiles - Maximum number of files to keep
- * @param {boolean} config.compress - Whether to compress old files
- * @returns {object} Updated rotation configuration
+ * @param {Partial<RotationConfig>} config - Rotation configuration
+ * @returns {RotationConfig} Updated rotation configuration
  */
 export function configureLogRotation(config) {
-  /** @type {any} */
   const newConfig = { ...rotationConfig, ...config };
   rotationConfig = newConfig;
   return rotationConfig;
@@ -344,7 +459,7 @@ export function configureLogRotation(config) {
 /**
  * Gets current memory usage metrics
  * @private
- * @returns {object} Memory usage information
+ * @returns {MemoryUsage} Memory usage information
  */
 function getMemoryUsage() {
   try {
@@ -377,12 +492,12 @@ function generateSessionId() {
 
 /**
  * Gets metadata logger statistics
- * @returns {Promise<object>} Logger statistics and configuration
+ * @returns {Promise<LoggerStats>} Logger statistics and configuration
  */
 export async function getLoggerStats() {
   try {
     if (typeof window !== 'undefined') {
-      return { error: 'Not available in browser environment' };
+      return { error: 'Not available in browser environment', logFiles: 0, totalSize: 0, rotationConfig };
     }
 
     const fs = await import('fs');
@@ -413,6 +528,7 @@ export async function getLoggerStats() {
     };
     
   } catch (error) {
-    return { error: error.message };
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    return { error: errorMessage, logFiles: 0, totalSize: 0, rotationConfig };
   }
 }
