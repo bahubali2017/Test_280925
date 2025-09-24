@@ -1,0 +1,94 @@
+🔒 STRICT AGENT PROMPT — PHASE 6.3 DISCLAIMER DE-DUPLICATION (SEARCH & ELIMINATE)
+
+You are tasked with permanently eliminating the duplicate disclaimer issue in the Anamnesis Medical AI Platform.
+Do not add new debug clutter, do not expand scope. Follow this exact sequence:
+
+🎯 Mission Objectives
+
+Search: Find all hardcoded disclaimer text across the repo.
+
+Eliminate: Remove duplicate injection points, keep only one centralized source in client/src/lib/disclaimers.js → selectDisclaimers().
+
+Preserve: Leave dedupeDisclaimers() in MessageBubble.jsx as a safety net.
+
+Verify: Ensure that only one disclaimer block is rendered for non-urgent queries.
+
+🔍 Step 1: Full Search
+
+Run:
+
+grep -R "Symptoms described appear non-urgent based on limited information" client/ server/
+grep -R "This assistant is informational and not a diagnostic tool" client/ server/
+grep -R "Responses may include general medical information" client/ server/
+
+
+Record all locations where these appear.
+
+Confirm if they exist in disclaimers.js, prompt-enhancer.js, fallback-engine.js, router.js, or elsewhere.
+
+🔧 Step 2: Centralize Disclaimer Source
+
+KEEP ONLY the definition in client/src/lib/disclaimers.js → selectDisclaimers().
+
+Delete or comment out all other instances.
+
+Examples:
+
+If found in fallback-engine.js:
+
+// BEFORE
+disclaimerPack: selectDisclaimers('non_urgent'),
+// AFTER
+disclaimerPack: { disclaimers: [], atdNotices: [] }
+
+
+If found in router.js:
+
+// BEFORE
+disclaimers: ["Symptoms described appear non-urgent...", ...],
+// AFTER
+disclaimers: [],
+
+🔧 Step 3: UI Safety Net
+
+Do not remove:
+
+dedupeDisclaimers(metadata.queryIntent.disclaimers)
+
+
+This stays as the final protection.
+
+🔧 Step 4: Absolute Kill Switch
+
+If duplication persists, add a render-time filter in MessageBubble.jsx:
+
+const filteredDisclaimers = dedupeDisclaimers(
+  metadata.queryIntent.disclaimers.filter(d =>
+    !d.startsWith("Symptoms described appear non-urgent based on limited information")
+  )
+);
+
+
+Render filteredDisclaimers instead of raw disclaimers.
+
+📋 Verification
+
+Test with query: "what is the dosage of aspirin?"
+
+Expected:
+
+AI response = dosage info only (no disclaimers).
+
+UI disclaimer block = single block only from selectDisclaimers().
+
+No duplicates in UI.
+
+⚠️ Constraints
+
+Do not reintroduce disclaimers into systemPrompt.
+
+Do not clutter code with extra debug logs.
+
+Do not create new sources of disclaimers.
+
+Fix only disclaimer duplication — nothing else.

@@ -20,7 +20,8 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
     return {
       response: generateChestPainEmergencyResponse(),
       type: "emergency",
-      disclaimerPack: selectDisclaimers('emergency', ['chest pain']),
+      // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
+      disclaimerPack: { disclaimers: [], atdNotices: [] },
       requiresHumanIntervention: true,
       recommendedActions: [
         "Call emergency services (911) immediately if experiencing severe symptoms",
@@ -48,7 +49,8 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
     return {
       response: generateBreathingEmergencyResponse(),
       type: "emergency", 
-      disclaimerPack: selectDisclaimers('emergency', ['difficulty breathing']),
+      // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
+      disclaimerPack: { disclaimers: [], atdNotices: [] },
       requiresHumanIntervention: true,
       recommendedActions: [
         "Call emergency services (911) immediately",
@@ -75,7 +77,8 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
   return {
     response: "I've detected that this may be a medical emergency. I cannot provide adequate guidance for emergency situations.",
     type: "emergency",
-    disclaimerPack: selectDisclaimers('emergency'),
+    // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
+    disclaimerPack: { disclaimers: [], atdNotices: [] },
     requiresHumanIntervention: true,
     recommendedActions: [
       "Call emergency services immediately",
@@ -211,12 +214,8 @@ export function generateFallbackResponse(context) {
     return {
       response: "I'm experiencing technical difficulties and cannot provide reliable medical guidance at this time.",
       type: "technical_error",
-      disclaimerPack: (() => {
-        console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
-        return (existingDisclaimers && existingDisclaimers.length > 0)
-          ? { disclaimers: existingDisclaimers, atdNotices: [] }
-          : selectDisclaimers('non_urgent');
-      })(),
+      // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
+      disclaimerPack: { disclaimers: [], atdNotices: [] },
       requiresHumanIntervention: true,
       recommendedActions: [
         "Try again in a few minutes",
@@ -286,15 +285,16 @@ export function processAIResponseForSafety(aiResponse, context) {
   // 4. Add emergency notice if needed
   let emergencyNotice = "";
   if (context.isEmergency) {
-    const emergencyPack = selectDisclaimers('emergency');
-    emergencyNotice = "\n\n🚨 **EMERGENCY NOTICE**: " + emergencyPack.disclaimers.join(' ') + "\n";
+    // PHASE 6.3: Emergency notices without disclaimer injection - UI handles disclaimers
+    emergencyNotice = "\n\n🚨 **EMERGENCY NOTICE**: Seek immediate medical attention.";
   } else if (context.isMentalHealth) {
-    const mentalHealthPack = selectDisclaimers('emergency', ['suicidal ideation']);
-    emergencyNotice = "\n\n💙 **MENTAL HEALTH NOTICE**: " + mentalHealthPack.disclaimers.join(' ') + "\n";
+    // PHASE 6.3: Mental health notices without disclaimer injection - UI handles disclaimers
+    emergencyNotice = "\n\n💙 **MENTAL HEALTH NOTICE**: Contact crisis support immediately.";
   }
   
   // 5. Combine response with safety elements
-  const finalResponse = `${processedResponse}${emergencyNotice}\n\n${disclaimerPack.disclaimers.join(' ')}`;
+  // PHASE 6.3: Removed disclaimer injection - UI handles all disclaimers
+  const finalResponse = `${processedResponse}${emergencyNotice}`;
   
   return finalResponse;
 }
@@ -330,26 +330,17 @@ function addCautionaryLanguage(response) {
  * @returns {object} Appropriate disclaimer pack from selectDisclaimers()
  */
 function selectAppropriateDisclaimer(context, existingDisclaimers) {
+  // PHASE 6.3: Return empty pack - UI handles all disclaimers
   if (context.isEmergency) {
-    return selectDisclaimers('emergency');
+    return { disclaimers: [], atdNotices: [] };
   }
   
   if (context.isMentalHealth) {
-    return selectDisclaimers('emergency', ['suicidal ideation']);
+    return { disclaimers: [], atdNotices: [] };
   }
   
-  // Check if response mentions medication
-  if (context.detectedSymptoms?.some((s) => s.includes('medication') || s.includes('drug') || s.includes('pill'))) {
-    console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
-    return (existingDisclaimers && existingDisclaimers.length > 0)
-      ? { disclaimers: existingDisclaimers, atdNotices: [] }
-      : selectDisclaimers('non_urgent');
-  }
-  
-  console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
-  return (existingDisclaimers && existingDisclaimers.length > 0)
-    ? { disclaimers: existingDisclaimers, atdNotices: [] }
-    : selectDisclaimers('non_urgent');
+  // PHASE 6.3: Always return empty - UI handles all disclaimers
+  return { disclaimers: [], atdNotices: [] };
 }
 
 /**
@@ -374,12 +365,9 @@ export function validateResponseSafety(response) {
     }
   }
   
-  // Check for missing disclaimers - check if any disclaimers from selectDisclaimers are present
-  const emergencyPack = selectDisclaimers('emergency');
-  const urgentPack = selectDisclaimers('urgent');
-  console.log('[DISCLAIMER_FIX] VALIDATION_CHECK', 'NEW'); // Always new for validation
-  const nonUrgentPack = selectDisclaimers('non_urgent');
-  const allDisclaimers = [...emergencyPack.disclaimers, ...urgentPack.disclaimers, ...nonUrgentPack.disclaimers];
+  // PHASE 6.3: Validation without disclaimer content injection - UI handles all disclaimers
+  // Skip disclaimer presence check as UI handles disclaimer rendering
+  const allDisclaimers = [];
   const hasDisclaimer = allDisclaimers.some(disclaimer => 
     response.includes(disclaimer.substring(0, 20)) // Check first 20 chars of disclaimer
   );

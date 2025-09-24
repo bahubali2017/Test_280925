@@ -47,7 +47,7 @@
  *   userInput: "I have a mild headache since yesterday",
  *   enhancedPrompt: "User input: mild headache...\nTriage: NON_URGENT\n...",
  *   isHighRisk: false,
- *   disclaimers: ["This assistant is informational and not a diagnostic tool."],
+ *   disclaimers: ["Example disclaimer text"],
  *   suggestions: ["Can you describe the type of pain?", "Any triggers or relieving factors?"],
  *   metadata: {
  *     processingTime: 45,
