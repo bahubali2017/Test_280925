@@ -47,7 +47,7 @@ export async function routeMedicalQuery(userInput) {
       userInput: ctx.userInput,
       enhancedPrompt,
       isHighRisk: !!ctx.triage?.isHighRisk,
-      disclaimers,
+      disclaimers: [], // Let prompt-enhancer be the single source of disclaimers
       atd: atdNotices && atdNotices.length ? atdNotices : null,
       suggestions: ctx.triage?.isHighRisk
         ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
