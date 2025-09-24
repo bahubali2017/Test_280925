@@ -4,22 +4,113 @@
  */
 
 /**
+ * @typedef {string | number | boolean | null | Json[] | {[k: string]: Json}} Json
+ */
+
+/** @typedef {{[k: string]: string}} StringDict */
+/** @typedef {{[k: string]: number}} NumDict */
+
+/**
+ * @typedef UsageMetrics
+ * @property {number} totalRequests
+ * @property {number} successful
+ * @property {number} failed
+ * @property {number} avgLatencyMs
+ * @property {number} p95LatencyMs
+ * @property {NumDict=} byModel
+ * @property {NumDict=} byRoute
+ */
+
+/**
+ * @typedef TrackerConfig
+ * @property {string} appId
+ * @property {string} endpoint
+ * @property {number} flushIntervalMs
+ * @property {number} maxBatchSize
+ * @property {StringDict=} headers
+ * @property {boolean=} enabled
+ */
+
+/**
+ * @typedef UsageEvent
+ * @property {string} name
+ * @property {number} ts
+ * @property {{latencyMs?:number, ok?:boolean, model?:string, route?:string, tokensIn?:number, tokensOut?:number}=} meta
+ */
+
+/**
+ * @typedef FlushResult
+ * @property {boolean} ok
+ * @property {number} count
+ * @property {number} durationMs
+ * @property {string=} error
+ */
+
+/**
+ * @typedef PatternData
+ * @property {number} count
+ * @property {Date} lastUsed
+ * @property {Array<{sessionId: string, symptoms: string[], responseTime: number, timestamp: Date}>} patterns
+ * @property {string[]} outcomes
+ */
+
+/**
+ * @typedef FeedbackEntry
+ * @property {string} sessionId
+ * @property {string} queryType
+ * @property {string} urgency
+ * @property {number} userFeedback
+ * @property {string[]} improvements
+ * @property {Date} timestamp
+ * @property {number} [accuracyRating]
+ * @property {number} [responseTime]
+ */
+
+/**
+ * @typedef LearningMetric
+ * @property {number} accuracy
+ * @property {number} userSatisfaction
+ * @property {number} avgResponseTime
+ * @property {number} successRate
+ * @property {number} sampleCount
+ */
+
+/**
  * Usage pattern tracking data
- * @type {Map<string, {count: number, lastUsed: Date, patterns: object[], outcomes: string[]}>}
+ * @type {Map<string, PatternData>}
  */
 const usagePatterns = new Map();
 
 /**
  * Feedback data collection
- * @type {Array<{sessionId: string, queryType: string, urgency: string, userFeedback: number, timestamp: Date, improvements: string[]}>}
+ * @type {FeedbackEntry[]}
  */
 const feedbackCollection = [];
 
 /**
  * Learning metrics for system improvement
- * @type {Map<string, {accuracy: number, userSatisfaction: number, avgResponseTime: number, successRate: number, sampleCount: number}>}
+ * @type {Map<string, LearningMetric>}
  */
 const learningMetrics = new Map();
+
+/**
+ * Simple logger function
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {...unknown} args - Additional arguments
+ */
+function log(level, message, ...args) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] [Usage Tracker] ${message}`;
+  
+  if (level === 'error') {
+    console.error(logMessage, ...args);
+  } else if (level === 'warn') {
+    console.warn(logMessage, ...args);
+  } else {
+    console.info(logMessage, ...args);
+  }
+}
 
 /**
  * Track user query patterns and medical domain usage
@@ -29,6 +120,7 @@ const learningMetrics = new Map();
  * @param {string[]} symptoms - Detected symptoms
  * @param {string} triageResult - Triage classification result
  * @param {number} responseTime - Time taken to process query
+ * @returns {void}
  */
 export function trackQueryPattern(sessionId, queryType, urgency, symptoms, triageResult, responseTime) {
   const patternKey = `${queryType}_${urgency}`;
@@ -43,6 +135,8 @@ export function trackQueryPattern(sessionId, queryType, urgency, symptoms, triag
   }
   
   const pattern = usagePatterns.get(patternKey);
+  if (!pattern) return; // Guard against undefined
+  
   pattern.count++;
   pattern.lastUsed = new Date();
   
@@ -64,7 +158,7 @@ export function trackQueryPattern(sessionId, queryType, urgency, symptoms, triag
     pattern.outcomes = pattern.outcomes.slice(-100);
   }
   
-  console.log(`[Usage Tracker] Recorded pattern: ${patternKey}, Total: ${pattern.count}`);
+  log('info', `Recorded pattern: ${patternKey}, Total: ${pattern.count}`);
 }
 
 /**
@@ -75,6 +169,7 @@ export function trackQueryPattern(sessionId, queryType, urgency, symptoms, triag
  * @param {number} userFeedback - User satisfaction rating (1-10)
  * @param {string[]} improvements - Suggested improvements from user
  * @param {object} additionalData - Additional feedback context
+ * @returns {void}
  */
 export function recordUserFeedback(sessionId, queryType, urgency, userFeedback, improvements = [], additionalData = {}) {
   const feedback = {
@@ -84,7 +179,7 @@ export function recordUserFeedback(sessionId, queryType, urgency, userFeedback, 
     userFeedback,
     improvements,
     timestamp: new Date(),
-    ...additionalData
+    ...(additionalData && typeof additionalData === 'object' ? additionalData : {})
   };
   
   feedbackCollection.push(feedback);
@@ -97,7 +192,7 @@ export function recordUserFeedback(sessionId, queryType, urgency, userFeedback, 
   // Update learning metrics
   updateLearningMetrics(queryType, urgency, userFeedback, additionalData);
   
-  console.log(`[Feedback] Recorded rating ${userFeedback}/10 for ${queryType} (${urgency})`);
+  log('info', `Recorded rating ${userFeedback}/10 for ${queryType} (${urgency})`);
 }
 
 /**
@@ -106,6 +201,7 @@ export function recordUserFeedback(sessionId, queryType, urgency, userFeedback, 
  * @param {'emergency'|'urgent'|'non_urgent'} urgency - Query urgency
  * @param {number} userFeedback - User satisfaction rating
  * @param {object} additionalData - Additional context data
+ * @returns {void}
  */
 function updateLearningMetrics(queryType, urgency, userFeedback, additionalData) {
   const metricsKey = `${queryType}_${urgency}`;
@@ -121,19 +217,25 @@ function updateLearningMetrics(queryType, urgency, userFeedback, additionalData)
   }
   
   const metrics = learningMetrics.get(metricsKey);
+  if (!metrics) return; // Guard against undefined
+  
   const alpha = 0.1; // Learning rate for exponential moving average
   
   // Update user satisfaction score
   metrics.userSatisfaction = (alpha * userFeedback) + ((1 - alpha) * metrics.userSatisfaction);
   
   // Update accuracy if provided
-  if (additionalData.accuracyRating) {
-    metrics.accuracy = (alpha * additionalData.accuracyRating) + ((1 - alpha) * metrics.accuracy);
+  const accuracyRating = additionalData && typeof additionalData === 'object' && 
+    typeof additionalData.accuracyRating === 'number' ? additionalData.accuracyRating : null;
+  if (accuracyRating !== null) {
+    metrics.accuracy = (alpha * accuracyRating) + ((1 - alpha) * metrics.accuracy);
   }
   
   // Update response time if provided
-  if (additionalData.responseTime) {
-    metrics.avgResponseTime = (alpha * additionalData.responseTime) + ((1 - alpha) * metrics.avgResponseTime);
+  const responseTime = additionalData && typeof additionalData === 'object' &&
+    typeof additionalData.responseTime === 'number' ? additionalData.responseTime : null;
+  if (responseTime !== null) {
+    metrics.avgResponseTime = (alpha * responseTime) + ((1 - alpha) * metrics.avgResponseTime);
   }
   
   // Update success rate based on feedback threshold
@@ -152,13 +254,20 @@ export function analyzeUsagePatterns(timeWindowDays = 7) {
   const cutoffDate = new Date();
   cutoffDate.setDate(cutoffDate.getDate() - timeWindowDays);
   
+  /** @type {NumDict} */
+  const queryDistribution = {};
+  /** @type {string[]} */
+  const trends = [];
+  /** @type {string[]} */
+  const recommendations = [];
+  
   const analysis = {
     timeWindow: timeWindowDays,
     totalQueries: 0,
-    queryDistribution: {},
+    queryDistribution,
     urgencyDistribution: { emergency: 0, urgent: 0, non_urgent: 0 },
-    trends: [],
-    recommendations: []
+    trends,
+    recommendations
   };
   
   // Analyze usage patterns
@@ -177,11 +286,14 @@ export function analyzeUsagePatterns(timeWindowDays = 7) {
     }
     analysis.queryDistribution[queryType] += recentPatterns.length;
     
-    // Urgency distribution
-    analysis.urgencyDistribution[urgency] += recentPatterns.length;
+    // Urgency distribution - guard against invalid urgency values
+    if (urgency === 'emergency' || urgency === 'urgent' || urgency === 'non_urgent') {
+      analysis.urgencyDistribution[urgency] += recentPatterns.length;
+    }
     
     // Calculate average response time for this pattern
-    const avgResponseTime = recentPatterns.reduce((sum, p) => sum + p.responseTime, 0) / recentPatterns.length;
+    const avgResponseTime = recentPatterns.length > 0 ? 
+      recentPatterns.reduce((sum, p) => sum + p.responseTime, 0) / recentPatterns.length : 0;
     
     if (avgResponseTime > 1000) { // Slow response times
       analysis.recommendations.push(`Optimize ${queryType} processing - average response time: ${Math.round(avgResponseTime)}ms`);
@@ -212,17 +324,27 @@ export function analyzeUsagePatterns(timeWindowDays = 7) {
  * @returns {object} Feedback analysis and learning insights
  */
 export function generateFeedbackInsights() {
+  /** @type {NumDict} */
+  const satisfactionByType = {};
+  /** @type {NumDict} */
+  const commonImprovements = {};
+  /** @type {Record<string, object>} */
+  const learningMetricsData = {};
+  /** @type {string[]} */
+  const recommendations = [];
+  
   const insights = {
     totalFeedback: feedbackCollection.length,
     avgSatisfaction: 0,
-    satisfactionByType: {},
-    commonImprovements: {},
-    learningMetrics: {},
-    recommendations: []
+    satisfactionByType,
+    commonImprovements,
+    learningMetrics: learningMetricsData,
+    recommendations
   };
   
   if (feedbackCollection.length === 0) {
-    return { ...insights, recommendations: ["Insufficient feedback data for analysis"] };
+    insights.recommendations.push("Insufficient feedback data for analysis");
+    return insights;
   }
   
   // Calculate overall satisfaction
@@ -230,20 +352,25 @@ export function generateFeedbackInsights() {
   insights.avgSatisfaction = Math.round((totalSatisfaction / feedbackCollection.length) * 10) / 10;
   
   // Satisfaction by query type
-  const satisfactionByType = {};
+  /** @type {NumDict} */
+  const satisfactionTotals = {};
+  /** @type {NumDict} */
   const countByType = {};
   
   for (const feedback of feedbackCollection) {
-    if (!satisfactionByType[feedback.queryType]) {
-      satisfactionByType[feedback.queryType] = 0;
+    if (!satisfactionTotals[feedback.queryType]) {
+      satisfactionTotals[feedback.queryType] = 0;
       countByType[feedback.queryType] = 0;
     }
-    satisfactionByType[feedback.queryType] += feedback.userFeedback;
+    satisfactionTotals[feedback.queryType] += feedback.userFeedback;
     countByType[feedback.queryType]++;
   }
   
-  for (const [queryType, totalSatisfaction] of Object.entries(satisfactionByType)) {
-    insights.satisfactionByType[queryType] = Math.round((totalSatisfaction / countByType[queryType]) * 10) / 10;
+  for (const [queryType, totalSatisfaction] of Object.entries(satisfactionTotals)) {
+    const count = countByType[queryType];
+    if (count && count > 0) {
+      insights.satisfactionByType[queryType] = Math.round((totalSatisfaction / count) * 10) / 10;
+    }
   }
   
   // Common improvement suggestions
@@ -297,12 +424,14 @@ export function generateFeedbackInsights() {
  * @param {string} context - Context where error occurred
  * @param {string} userQuery - Original user query that caused error
  * @param {object} errorDetails - Detailed error information
+ * @returns {void}
  */
 export function trackErrorPattern(errorType, context, userQuery, errorDetails = {}) {
   const errorKey = `${errorType}_${context}`;
+  const patternKey = `error_${errorKey}`;
   
-  if (!usagePatterns.has(`error_${errorKey}`)) {
-    usagePatterns.set(`error_${errorKey}`, {
+  if (!usagePatterns.has(patternKey)) {
+    usagePatterns.set(patternKey, {
       count: 0,
       lastUsed: new Date(),
       patterns: [],
@@ -310,14 +439,19 @@ export function trackErrorPattern(errorType, context, userQuery, errorDetails = 
     });
   }
   
-  const errorPattern = usagePatterns.get(`error_${errorKey}`);
+  const errorPattern = usagePatterns.get(patternKey);
+  if (!errorPattern) return; // Guard against undefined
+  
   errorPattern.count++;
   errorPattern.lastUsed = new Date();
   
   errorPattern.patterns.push({
+    sessionId: '', // Not applicable for errors
+    symptoms: [], // Not applicable for errors
+    responseTime: 0, // Not applicable for errors
+    timestamp: new Date(),
     userQuery,
-    errorDetails,
-    timestamp: new Date()
+    errorDetails: errorDetails && typeof errorDetails === 'object' ? errorDetails : {}
   });
   
   // Keep only recent 25 error patterns per type
@@ -325,7 +459,7 @@ export function trackErrorPattern(errorType, context, userQuery, errorDetails = 
     errorPattern.patterns = errorPattern.patterns.slice(-25);
   }
   
-  console.warn(`[Error Tracking] Recorded error: ${errorKey}, Total: ${errorPattern.count}`);
+  log('warn', `Recorded error: ${errorKey}, Total: ${errorPattern.count}`);
 }
 
 /**
@@ -360,11 +494,18 @@ export function getUsageAnalyticsDashboard() {
  * @returns {object} Error analysis results
  */
 function getErrorAnalysis() {
+  /** @type {NumDict} */
+  const errorsByType = {};
+  /** @type {Array<{type: string, query: string, timestamp: Date}>} */
+  const recentErrors = [];
+  /** @type {string[]} */
+  const recommendations = [];
+  
   const errorAnalysis = {
     totalErrors: 0,
-    errorsByType: {},
-    recentErrors: [],
-    recommendations: []
+    errorsByType,
+    recentErrors,
+    recommendations
   };
   
   // Analyze error patterns
@@ -384,15 +525,19 @@ function getErrorAnalysis() {
     cutoffDate.setDate(cutoffDate.getDate() - 7);
     
     const recentErrorPatterns = pattern.patterns.filter(p => p.timestamp >= cutoffDate);
-    errorAnalysis.recentErrors.push(...recentErrorPatterns.map(p => ({
-      type: errorType,
-      query: p.userQuery,
-      timestamp: p.timestamp
-    })));
+    for (const p of recentErrorPatterns) {
+      const query = typeof p === 'object' && p !== null && 'userQuery' in p ? 
+        String(p.userQuery) : '';
+      errorAnalysis.recentErrors.push({
+        type: errorType,
+        query,
+        timestamp: p.timestamp
+      });
+    }
   }
   
   // Sort recent errors by timestamp
-  errorAnalysis.recentErrors.sort((a, b) => b.timestamp - a.timestamp);
+  errorAnalysis.recentErrors.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
   errorAnalysis.recentErrors = errorAnalysis.recentErrors.slice(0, 10); // Keep only 10 most recent
   
   // Generate error-based recommendations
@@ -411,10 +556,15 @@ function getErrorAnalysis() {
  * @returns {object} Learning metrics summary
  */
 function getLearningMetricsOverview() {
+  /** @type {Array<{type: string, satisfaction: number}>} */
+  const topPerformers = [];
+  /** @type {Array<{type: string, satisfaction: number}>} */
+  const needsImprovement = [];
+  
   const overview = {
     totalMetrics: learningMetrics.size,
-    topPerformers: [],
-    needsImprovement: [],
+    topPerformers,
+    needsImprovement,
     avgMetrics: {
       userSatisfaction: 0,
       accuracy: 0,
@@ -446,11 +596,13 @@ function getLearningMetricsOverview() {
   }
   
   // Calculate averages
-  overview.avgMetrics = {
-    userSatisfaction: Math.round((totalSatisfaction / count) * 10) / 10,
-    accuracy: Math.round((totalAccuracy / count) * 10) / 10,
-    successRate: Math.round((totalSuccessRate / count) * 100) / 100
-  };
+  if (count > 0) {
+    overview.avgMetrics = {
+      userSatisfaction: Math.round((totalSatisfaction / count) * 10) / 10,
+      accuracy: Math.round((totalAccuracy / count) * 10) / 10,
+      successRate: Math.round((totalSuccessRate / count) * 100) / 100
+    };
+  }
   
   return overview;
 }
@@ -461,31 +613,39 @@ function getLearningMetricsOverview() {
  * @returns {string} Exported data
  */
 export function exportUsageData(format = 'json') {
+  /** @type {Array<{type: string, count: number, avgResponseTime: number, recentUsage: Date}>} */
+  const patterns = [];
+  /** @type {Array<{queryType: string, urgency: string, rating: number, improvements: string[], timestamp: Date}>} */
+  const feedback = [];
+  
   const exportData = {
     timestamp: new Date().toISOString(),
-    patterns: [],
-    feedback: [],
+    patterns,
+    feedback,
     learningMetrics: Object.fromEntries(learningMetrics)
   };
   
   // Anonymize and export usage patterns
   for (const [patternKey, pattern] of usagePatterns.entries()) {
+    const avgResponseTime = pattern.patterns.length > 0 ? 
+      pattern.patterns.reduce((sum, p) => sum + p.responseTime, 0) / pattern.patterns.length : 0;
+    
     exportData.patterns.push({
       type: patternKey,
       count: pattern.count,
-      avgResponseTime: pattern.patterns.reduce((sum, p) => sum + p.responseTime, 0) / pattern.patterns.length || 0,
+      avgResponseTime,
       recentUsage: pattern.lastUsed
     });
   }
   
   // Anonymize and export feedback (remove session IDs)
-  for (const feedback of feedbackCollection) {
+  for (const feedbackItem of feedbackCollection) {
     exportData.feedback.push({
-      queryType: feedback.queryType,
-      urgency: feedback.urgency,
-      rating: feedback.userFeedback,
-      improvements: feedback.improvements,
-      timestamp: feedback.timestamp
+      queryType: feedbackItem.queryType,
+      urgency: feedbackItem.urgency,
+      rating: feedbackItem.userFeedback,
+      improvements: feedbackItem.improvements,
+      timestamp: feedbackItem.timestamp
     });
   }
   
@@ -502,20 +662,21 @@ export function exportUsageData(format = 'json') {
  * @param {boolean} includePatterns - Whether to reset usage patterns
  * @param {boolean} includeFeedback - Whether to reset feedback data
  * @param {boolean} includeLearning - Whether to reset learning metrics
+ * @returns {void}
  */
 export function resetAnalyticsData(includePatterns = true, includeFeedback = true, includeLearning = true) {
   if (includePatterns) {
     usagePatterns.clear();
-    console.log('[Analytics] Usage patterns reset');
+    log('info', 'Usage patterns reset');
   }
   
   if (includeFeedback) {
     feedbackCollection.splice(0, feedbackCollection.length);
-    console.log('[Analytics] Feedback collection reset');
+    log('info', 'Feedback collection reset');
   }
   
   if (includeLearning) {
     learningMetrics.clear();
-    console.log('[Analytics] Learning metrics reset');
+    log('info', 'Learning metrics reset');
   }
 }

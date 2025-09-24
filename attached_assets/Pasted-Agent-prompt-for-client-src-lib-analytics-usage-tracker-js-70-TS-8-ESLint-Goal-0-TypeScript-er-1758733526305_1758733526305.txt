@@ -1,0 +1,128 @@
+Agent prompt for client/src/lib/analytics/usage-tracker.js (70 TS + 8 ESLint)
+
+Goal: 0 TypeScript errors and 0 ESLint issues. No suppressions. No behavior change.
+
+Run per-file checks:
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/analytics/usage-tracker.js
+eslint client/src/lib/analytics/usage-tracker.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules:
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve exports and runtime semantics.
+
+Remove unused vars/imports. Prefer const.
+
+Replace console.* with project logger if available; otherwise keep explicit method calls (console.info, etc.) only where used.
+
+All params and returns must be explicitly typed via JSDoc.
+
+Guard all optional fields before access.
+
+Add JSDoc typedefs at top (adjust only if existing shared types exist):
+
+/**
+ * @typedef {string | number | boolean | null | Json[] | {[k: string]: Json}} Json
+ */
+
+/** @typedef {{[k: string]: string}} StringDict */
+/** @typedef {{[k: string]: number}} NumDict */
+
+/**
+ * @typedef UsageMetrics
+ * @property {number} totalRequests
+ * @property {number} successful
+ * @property {number} failed
+ * @property {number} avgLatencyMs
+ * @property {number} p95LatencyMs
+ * @property {NumDict=} byModel
+ * @property {NumDict=} byRoute
+ */
+
+/**
+ * @typedef TrackerConfig
+ * @property {string} appId
+ * @property {string} endpoint
+ * @property {number} flushIntervalMs
+ * @property {number} maxBatchSize
+ * @property {StringDict=} headers
+ * @property {boolean=} enabled
+ */
+
+/**
+ * @typedef UsageEvent
+ * @property {string} name
+ * @property {number} ts
+ * @property {{latencyMs?:number, ok?:boolean, model?:string, route?:string, tokensIn?:number, tokensOut?:number}=} meta
+ */
+
+/**
+ * @typedef FlushResult
+ * @property {boolean} ok
+ * @property {number} count
+ * @property {number} durationMs
+ * @property {string=} error
+ */
+
+
+Refactor targets (fix sources of TS2339/TS2345/TS7053):
+
+Replace all {} or object accumulators with NumDict or concrete structs.
+
+Initialize arrays with element type: /** @type {UsageEvent[]} */ const queue = [];
+
+Where indexing by string occurs, the target must be Record<string, T>; add if (!map[key]) map[key] = 0;.
+
+Guard optional meta reads: const m = ev.meta || {}; const latency = typeof m.latencyMs === 'number' ? m.latencyMs : 0;
+
+Type all functions via JSDoc:
+
+/** @param {UsageEvent} ev @returns {void} */
+function record(ev) { ... }
+
+/** @param {TrackerConfig} cfg @returns {void} */
+function configure(cfg) { ... }
+
+/** @returns {UsageMetrics} */
+function snapshot() { ... }
+
+/** @returns {Promise<FlushResult>} */
+async function flush() { ... }
+
+
+Replace magic numbers with named const if flagged.
+
+Ensure timer handles are typed:
+
+/** @type {ReturnType<typeof setInterval> | null} */
+let flushTimer = null;
+
+
+Export only documented API. Keep names identical.
+
+Logging:
+
+If client/src/lib/utils/message-logger.js exists, use it:
+
+// import { logger } from "@/lib/utils/message-logger";
+// logger.info(...); logger.error(...);
+
+
+Else keep console.info|warn|error where already used. No bare console.log if ESLint forbids it.
+
+Validation (must pass):
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/analytics/usage-tracker.js
+eslint client/src/lib/analytics/usage-tracker.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Deliverables:
+
+Unified diff patch.
+
+Full updated file content.
+
+Both commands return 0 issues.
