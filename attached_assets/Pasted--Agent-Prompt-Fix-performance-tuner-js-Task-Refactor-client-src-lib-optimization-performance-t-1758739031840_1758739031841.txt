@@ -1,0 +1,100 @@
+🔹 Agent Prompt — Fix performance-tuner.js
+
+Task:
+Refactor client/src/lib/optimization/performance-tuner.js to achieve TRIPLE-0 POLICY:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+No any, no unknown, no suppressions. Preserve all performance tuning functionality.
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/optimization/performance-tuner.js
+eslint client/src/lib/optimization/performance-tuner.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Refactor Rules
+
+JSDoc typedefs must match the actual performance tuning system.
+Adjust names to real code, not placeholders.
+
+Preserve all logic:
+
+Tuning loops (adaptive batch size, retry backoff, cache refresh).
+
+Resource monitoring (CPU load, memory usage, queue length).
+
+Config overrides for different environments (dev, staging, prod).
+
+Type safety & null checks:
+
+Replace {} with real typed structures (Record<string,number>, PerformanceMetrics).
+
+Guard all property access with if (obj && "field" in obj).
+
+Explicitly type accumulators and config maps.
+
+Logging:
+
+Replace raw console.log with structured logging:
+
+console.info → normal status updates
+
+console.warn → anomalies/throttling
+
+console.error → failures or tuning collapse
+
+Keep privacy compliance (no sensitive patient data).
+
+ESLint fixes:
+
+Remove unused vars.
+
+Prefer const over let.
+
+Ensure consistent return in all branches.
+
+Suggested JSDoc typedefs (adjust to match actual code)
+/**
+ * @typedef {Object} PerformanceMetrics
+ * @property {number} cpuLoad
+ * @property {number} memoryUsage
+ * @property {number} responseTimeMs
+ * @property {number} queueDepth
+ */
+
+/**
+ * @typedef {Object} TuningConfig
+ * @property {number} maxBatchSize
+ * @property {number} minBatchSize
+ * @property {number} retryBackoffMs
+ * @property {number} refreshIntervalMs
+ */
+
+/**
+ * @typedef {Object} TuningResult
+ * @property {boolean} success
+ * @property {string} strategy
+ * @property {PerformanceMetrics} metrics
+ */
+
+Core Functions to Refactor
+/** @param {PerformanceMetrics} metrics @param {TuningConfig} config @returns {TuningResult} */
+export function tunePerformance(metrics, config) { ... }
+
+/** @param {PerformanceMetrics[]} history @returns {PerformanceMetrics} */
+export function calculateAverages(history) { ... }
+
+/** @param {PerformanceMetrics} metrics @returns {boolean} */
+export function isOverloaded(metrics) { ... }
+
+Deliverables
+
+Full corrected file with JSDoc typedefs matching actual performance tuning code.
+
+TypeScript + ESLint validation return 0 errors.
+
+Functionality unchanged: adaptive performance tuning logic preserved.
+
+Structured logging for monitoring + audit trail.
