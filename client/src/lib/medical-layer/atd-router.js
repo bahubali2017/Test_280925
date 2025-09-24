@@ -85,25 +85,6 @@
  * @property {string} category
  */
 
-/**
- * Simple logger function
- * @param {string} level - Log level
- * @param {string} message - Log message
- * @param {...unknown} args - Additional arguments
- * @returns {void}
- */
-function log(level, message, ...args) {
-  const timestamp = new Date().toISOString();
-  const logMessage = `[${timestamp}] [ATD Router] ${message}`;
-  
-  if (level === 'error') {
-    console.error(logMessage, ...args);
-  } else if (level === 'warn') {
-    console.warn(logMessage, ...args);
-  } else {
-    console.info(logMessage, ...args);
-  }
-}
 
 /**
  * Determine if case should be routed to healthcare provider
@@ -245,13 +226,26 @@ export function routeToProvider(triageResult, emergencyDetection, originalQuery,
 }
 
 /**
+ * @typedef StructuredMedicalData
+ * @property {{age: number|null, sex: string|null, queryTimestamp: string, sessionId: string}} patient
+ * @property {{originalQuery: string, sanitizedQuery: string, queryLength: number, keySymptoms: string[]}} chiefComplaint
+ * @property {{level: string, reasons: string[], safetyFlags: string[], emergencyProtocol: boolean, mentalHealthCrisis: boolean, conservativeBiasApplied: boolean}} triage
+ * @property {{detected: DetectedSymptom[], severity: object|null, categories: StringDict, timeline: Array<{type: string, matches: string[]}>}} symptoms
+ * @property {{isEmergency: boolean, emergencyType: string, severity: string, triggeredPatterns: string[], requiresEmergencyServices: boolean}} emergency
+ * @property {string[]} clinicalFlags
+ * @property {string[]} recommendedActions
+ * @property {{overallRisk: string, specificRisks: string[], followUpUrgency: string}} riskAssessment
+ * @property {{aiTriageVersion: string, processingTimestamp: string, reliabilityScore: number}} systemContext
+ */
+
+/**
  * Generate structured medical data for healthcare provider interface
  * @param {TriageInput} triageResult - Triage result
  * @param {EmergencyDetectionInput} emergencyDetection - Emergency detection
  * @param {string} originalQuery - Original user query
  * @param {DemographicsInput} demographics - Patient demographics
  * @param {string[]} clinicalFlags - Clinical flags
- * @returns {object} Structured medical data
+ * @returns {StructuredMedicalData} Structured medical data
  */
 function generateStructuredMedicalData(triageResult, emergencyDetection, originalQuery, demographics, clinicalFlags) {
   const detectedSymptoms = triageResult && Array.isArray(triageResult.detectedSymptoms) ? triageResult.detectedSymptoms : [];
@@ -300,9 +294,9 @@ function generateStructuredMedicalData(triageResult, emergencyDetection, origina
     
     // Symptom Analysis
     symptoms: {
-      detected: detectedSymptoms,
+      detected: /** @type {DetectedSymptom[]} */ (detectedSymptoms),
       severity: severityAssessment,
-      categories: getCategorizedSymptoms(detectedSymptoms),
+      categories: getCategorizedSymptoms(/** @type {DetectedSymptom[]} */ (detectedSymptoms)),
       timeline: extractTimelineFromQuery(originalQuery)
     },
     
@@ -339,12 +333,16 @@ function generateStructuredMedicalData(triageResult, emergencyDetection, origina
 
 /**
  * Generate provider-facing message
- * @param {object} structuredData - Structured medical data
+ * @param {StructuredMedicalData} structuredData - Structured medical data
  * @param {string[]} clinicalFlags - Clinical flags
  * @returns {string} Formatted message for healthcare provider
  */
 function generateProviderMessage(structuredData, clinicalFlags) {
-  const { patient, triage, symptoms, emergency, riskAssessment } = structuredData;
+  const patient = structuredData.patient;
+  const triage = structuredData.triage;
+  const symptoms = structuredData.symptoms;
+  const emergency = structuredData.emergency;
+  const riskAssessment = structuredData.riskAssessment;
   
   let message = "**MEDICAL AI TRIAGE REFERRAL**\n\n";
   
@@ -390,9 +388,10 @@ function generateProviderMessage(structuredData, clinicalFlags) {
   message += "\n";
   
   // Recommended Actions
-  if (structuredData.recommendedActions.length > 0) {
+  const recommendedActions = structuredData.recommendedActions;
+  if (recommendedActions.length > 0) {
     message += "**RECOMMENDED ACTIONS:**\n";
-    for (const action of structuredData.recommendedActions) {
+    for (const action of recommendedActions) {
       message += `- ${action}\n`;
     }
     message += "\n";
@@ -465,22 +464,26 @@ function sanitizeQueryForProvider(query) {
  * @returns {StringDict} Categories mapping to symptom names
  */
 function getCategorizedSymptoms(symptoms) {
-  /** @type {StringDict} */
-  const categories = {};
+  /** @type {{[k: string]: string[]}} */
+  const categoriesArrays = {};
   for (const symptom of symptoms) {
     const symptomObj = symptom && typeof symptom === 'object' ? symptom : {};
     const category = 'category' in symptomObj && typeof symptomObj.category === 'string' ? symptomObj.category : 'unknown';
     const name = 'name' in symptomObj && typeof symptomObj.name === 'string' ? symptomObj.name : 'Unknown symptom';
     
-    if (!categories[category]) {
-      categories[category] = [];
+    if (!categoriesArrays[category]) {
+      categoriesArrays[category] = [];
     }
     
-    // Ensure we're working with array
-    const categoryArray = Array.isArray(categories[category]) ? categories[category] : [];
-    categoryArray.push(name);
-    categories[category] = categoryArray.join(', '); // Convert to string for StringDict
+    categoriesArrays[category].push(name);
   }
+  
+  /** @type {StringDict} */
+  const categories = {};
+  for (const [category, names] of Object.entries(categoriesArrays)) {
+    categories[category] = names.join(', ');
+  }
+  
   return categories;
 }
 
