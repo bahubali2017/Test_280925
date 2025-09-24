@@ -212,10 +212,13 @@ export function generateFallbackResponse(context) {
       response: "I'm experiencing technical difficulties and cannot provide reliable medical guidance at this time.",
       type: "technical_error",
       disclaimerPack: (() => {
+        console.log('[DISCLAIMER_DEBUG] fallback disclaimerPack - existingDisclaimers:', existingDisclaimers?.length || 0);
         console.log('[DISCLAIMER_FIX]', (existingDisclaimers && existingDisclaimers.length > 0) ? 'REUSED' : 'NEW');
-        return (existingDisclaimers && existingDisclaimers.length > 0)
+        const result = (existingDisclaimers && existingDisclaimers.length > 0)
           ? { disclaimers: existingDisclaimers, atdNotices: [] }
           : selectDisclaimers('non_urgent');
+        console.log('[DISCLAIMER_DEBUG] fallback returning disclaimerPack:', result.disclaimers?.length || 0, 'items');
+        return result;
       })(),
       requiresHumanIntervention: true,
       recommendedActions: [

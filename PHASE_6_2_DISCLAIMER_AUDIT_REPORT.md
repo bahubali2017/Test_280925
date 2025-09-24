@@ -1,0 +1,171 @@
+# PHASE 6.2 DISCLAIMER DUPLICATION FORENSIC AUDIT REPORT
+
+## Introduction & Objective
+
+**Mission:** Comprehensive forensic audit of disclaimer duplication for the query: `"what is the dosage of aspirin?"`
+
+**Evidence of Problem:** Screenshot from user showing **identical disclaimer blocks appearing twice**:
+- Block 1: "Symptoms described appear non-urgent based on limited information. This assistant is informational and not a diagnostic tool. Responses may include general medical information and should not replace a professional evaluation."
+- Block 2: **Exact same text repeated**
+
+**Audit Goal:** Identify the precise source of duplication through systematic tracing across all disclaimer injection points.
+
+## Disclaimer Injection Architecture Map
+
+### 1. **Primary Source: `client/src/lib/disclaimers.js`**
+- **Function:** `selectDisclaimers(level, symptomNames)`
+- **Role:** Single source of truth for disclaimer generation
+- **For non_urgent + medication:** Returns 3 disclaimers:
+  1. "Symptoms described appear non-urgent based on limited information."
+  2. "This assistant is informational and not a diagnostic tool." 
+  3. "Responses may include general medical information and should not replace a professional evaluation."
+
+### 2. **Consumer Points (Potential Duplication Sources):**
+
+#### A. `client/src/lib/prompt-enhancer.js`
+- **Function:** `buildConciseMedicationPrompt()`
+- **Action:** Calls `selectDisclaimers('non_urgent', ['medication'])`
+- **Returns:** `{ systemPrompt, disclaimers, atdNotices, responseMode, questionType }`
+- **Risk:** Primary legitimate use - should be the ONLY source
+
+#### B. `client/src/lib/router.js`
+- **Function:** `routeMedicalQuery()`
+- **Current State:** **FIXED** - Sets `disclaimers: []` (empty array)
+- **Risk:** Previously was passing through disclaimers from enhancer
+
+#### C. `client/src/lib/medical-layer/fallback-engine.js`
+- **Function:** `generateFallbackResponse()`
+- **Action:** May call `selectDisclaimers('non_urgent')` if no existing disclaimers
+- **Risk:** Could generate duplicate disclaimers if called incorrectly
+
+#### D. `client/src/components/MessageBubble.jsx`
+- **Function:** UI rendering with `dedupeDisclaimers()`
+- **Action:** Renders `metadata.queryIntent.disclaimers` after deduplication
+- **Risk:** Deduplication may be failing or metadata may contain duplicates
+
+#### E. `server/routes.js`
+- **Action:** Processes systemPrompt from client
+- **Risk:** Server could be injecting additional disclaimers in response processing
+
+## Comprehensive Tracing System Deployed
+
+### Debug Logs Added:
+
+1. **`[DISCLAIMER_DEBUG] selectDisclaimers`** - Central generation point
+2. **`[DISCLAIMER_DEBUG] enhancer disclaimers`** - Prompt enhancer injection  
+3. **`[DISCLAIMER_DEBUG] router setting disclaimers to: []`** - Router bypass confirmation
+4. **`[DISCLAIMER_DEBUG] fallback disclaimerPack`** - Fallback engine activity
+5. **`[DISCLAIMER_DEBUG] server finalSystemPrompt length`** - Server processing
+6. **`[DISCLAIMER_FINAL] UI rendering disclaimers`** - Final UI metadata before render
+
+## Flow Trace Analysis
+
+### Expected Normal Flow:
+1. **User Query:** `"what is the dosage of aspirin?"`
+2. **Router:** Calls `enhancePrompt()` → gets disclaimers but sets `disclaimers: []`
+3. **Prompt Enhancer:** Calls `selectDisclaimers('non_urgent', ['medication'])` → returns 3 disclaimers
+4. **SystemPrompt:** Contains disclaimers embedded (this was the bug)
+5. **Server:** Receives systemPrompt with embedded disclaimers
+6. **AI Response:** Previously included disclaimers in text (FIXED)
+7. **UI:** Also renders disclaimers from metadata (separate source)
+
+### Root Cause Hypothesis:
+
+**DUAL DISCLAIMER INJECTION CONFIRMED:**
+
+#### Source 1: **SystemPrompt Embedding** (FIXED)
+- **Location:** `buildConciseMedicationPrompt()` line 228
+- **Problem:** `Always end with: ${baseDisclaimer}` instructed AI to embed disclaimers
+- **Fix Applied:** Removed embedded disclaimer instruction
+- **Status:** **SHOULD BE FIXED**
+
+#### Source 2: **Metadata Passing** (POTENTIAL ONGOING ISSUE)
+- **Location:** Metadata flow from enhancer → router → server → client
+- **Problem:** Router was passing disclaimers despite setting empty array
+- **Status:** **NEEDS VERIFICATION**
+
+## Evidence Logs Analysis
+
+### From Previous Test (Build timestamp: 1758714205252):
+```
+[DISCLAIMER_DEBUG] server finalSystemPrompt length: 1199 chars
+[DISCLAIMER_DEBUG] server role: public enhancedPrompt available: true
+[PROMPT_SOURCE] CLIENT
+```
+
+### Missing Evidence (Need Fresh Test):
+- No `[DISCLAIMER_DEBUG] selectDisclaimers` calls logged
+- No `[DISCLAIMER_DEBUG] enhancer disclaimers` generation logs  
+- No `[DISCLAIMER_FINAL] UI rendering` evidence
+- **Conclusion:** Previous build may not have included all debug code
+
+## Suspected Root Cause
+
+**HYPOTHESIS: METADATA DUPLICATION IN SERVER PROCESSING**
+
+The duplication appears to occur because:
+
+1. **SystemPrompt contains disclaimers** (from enhancer) 
+2. **Metadata ALSO contains disclaimers** (separate path)
+3. **UI renders metadata disclaimers** independently of AI response
+4. **Result:** Same disclaimers appear twice - once from AI response content, once from UI metadata
+
+### Critical Investigation Points:
+
+#### 1. **Server Response Metadata**
+- `server/routes.js` may be attaching disclaimers to response metadata
+- Need to verify: Does server extract disclaimers from systemPrompt and add to metadata?
+
+#### 2. **Client Metadata Handling**
+- Does client receive disclaimers in BOTH response content AND metadata?
+- Is `dedupeDisclaimers()` working correctly?
+
+#### 3. **Router Disclaimer Bypass**
+- Is router fix actually working? (disclaimers: [])
+- Could disclaimers still be passed through other paths?
+
+## Proposed Fix Strategy
+
+### Phase 1: **Verification Test**
+1. Run aspirin query with full debug logging
+2. Capture complete trace from selectDisclaimers → UI render
+3. Identify exact duplication point
+
+### Phase 2: **Metadata Source Investigation**  
+1. Trace how disclaimers get into `metadata.queryIntent.disclaimers`
+2. Check if server is adding disclaimers to response metadata
+3. Verify router fix is actually preventing disclaimer pass-through
+
+### Phase 3: **Final Fix**
+Based on evidence:
+- **If server metadata injection:** Remove server disclaimer attachment
+- **If UI deduplication failure:** Fix dedupeDisclaimers logic
+- **If router bypass failure:** Strengthen router disclaimer blocking
+
+## Verification Plan
+
+### Test Protocol:
+1. **Query:** `"what is the dosage of aspirin?"`
+2. **Expected Debug Output:**
+   ```
+   [DISCLAIMER_DEBUG] selectDisclaimers called with level: non_urgent symptoms: 1
+   [DISCLAIMER_DEBUG] enhancer disclaimers: 3 items: [Symptoms described appear..., This assistant is informational..., Responses may include general...]
+   [DISCLAIMER_DEBUG] router setting disclaimers to: [] (empty array)
+   [DISCLAIMER_DEBUG] server finalSystemPrompt length: XXXX chars
+   [DISCLAIMER_FINAL] UI rendering disclaimers - original: X deduped: Y
+   ```
+
+3. **Success Criteria:**
+   - Only ONE disclaimer block visible in UI
+   - Debug logs show single selectDisclaimers call
+   - UI deduplication shows original:3, deduped:3 (no duplicates)
+
+### Expected Resolution:
+**Single disclaimer block with 3 lines:**
+1. "Symptoms described appear non-urgent based on limited information."
+2. "This assistant is informational and not a diagnostic tool."
+3. "Responses may include general medical information and should not replace a professional evaluation."
+
+## Status: **PENDING VERIFICATION TEST**
+
+**Next Action Required:** Run aspirin query to capture full forensic trace and identify exact duplication source with deployed tracing system.

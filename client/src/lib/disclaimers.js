@@ -20,6 +20,7 @@
  */
 export function selectDisclaimers(level, symptomNames = []) {
   const s = new Set(symptomNames.map((x) => String(x).toLowerCase()));
+  console.log('[DISCLAIMER_DEBUG] selectDisclaimers called with level:', level, 'symptoms:', symptomNames.length);
 
   /** @type {DisclaimerPack} */
   const base = {
@@ -93,6 +94,7 @@ export function selectDisclaimers(level, symptomNames = []) {
     nonUrgent.atdNotices.push("Consider speaking with a mental health professional if symptoms persist or worsen.");
   }
 
+  console.log('[DISCLAIMER_DEBUG] selectDisclaimers returning non_urgent:', nonUrgent.disclaimers.length, 'disclaimers:', nonUrgent.disclaimers.map(d => d.substring(0, 50)));
   return nonUrgent;
 }
 
