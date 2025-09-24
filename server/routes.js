@@ -1180,7 +1180,11 @@ router.get("/app-config.json", async (req, res) => {
             res.write(`event: done\ndata: ${JSON.stringify({
               completed: true,
               requestTime: requestDuration,
-              disclaimers: disclaimers // ✅ PHASE 6.4: Include disclaimers in final metadata
+              metadata: {
+                queryIntent: {
+                  disclaimers: disclaimers // ✅ PHASE 6.5: Wrap disclaimers under queryIntent for UI
+                }
+              }
             })}\n\n`);
           }
 
