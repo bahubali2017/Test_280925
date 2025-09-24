@@ -890,33 +890,28 @@ export default function ChatPage() {
   return (
     <div className="flex flex-col h-screen bg-background text-foreground">
       {/* Header */}
-      <header className="flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-        <div className="flex items-center space-x-3">
-          <div className="w-12 h-12 flex items-center justify-center">
-            <AnimatedNeuralLogo size={48} />
+      <header className="flex items-center justify-between px-6 py-4 border-b border-border bg-white dark:bg-gray-900 shadow-sm">
+        <div className="flex items-center space-x-4">
+          <div className="w-10 h-10 flex items-center justify-center">
+            <AnimatedNeuralLogo size={40} />
           </div>
-          <div>
-            <h1 className="text-lg font-semibold text-foreground">Anamnesis</h1>
+          <div className="border-l border-gray-200 dark:border-gray-700 pl-4">
+            <h1 className="text-lg font-semibold" style={{ color: '#06b6d4' }}>Anamnesis</h1>
             <p className="text-xs text-muted-foreground">Medical AI Assistant</p>
           </div>
         </div>
         
-        <div className="flex items-center space-x-3">
+        <div className="flex items-center space-x-4">
+          <span className="text-sm text-muted-foreground hidden sm:block">demo@example.com</span>
           <ThemeToggle />
           
           {user && (
-            <div className="flex items-center space-x-3">
-              <div className="text-right hidden sm:block">
-                <p className="text-sm font-medium text-foreground">{user.name || user.email}</p>
-                <p className="text-xs text-muted-foreground">Authenticated</p>
-              </div>
-              <button
-                onClick={logout}
-                className="text-sm px-3 py-1.5 rounded-md bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
-              >
-                Logout
-              </button>
-            </div>
+            <button
+              onClick={logout}
+              className="text-sm px-4 py-2 rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Log Out
+            </button>
           )}
         </div>
       </header>
