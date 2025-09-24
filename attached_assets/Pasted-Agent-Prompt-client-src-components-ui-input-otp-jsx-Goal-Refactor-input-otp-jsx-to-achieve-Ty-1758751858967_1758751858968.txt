@@ -1,0 +1,90 @@
+Agent Prompt — client/src/components/ui/input-otp.jsx
+
+Goal
+Refactor input-otp.jsx to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime functionality (OTP input handling, validation, UI rendering)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/components/ui/input-otp.jsx
+eslint client/src/components/ui/input-otp.jsx --ext .js,.jsx --max-warnings=0
+
+Rules
+
+❌ No any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all runtime semantics (OTP code input, focus switching, error states).
+
+Add precise JSDoc typedefs that match the actual file implementation (⚠️ must not mismatch).
+
+Use safe property access: guards for optional props, Array.isArray() for iterables, null checks.
+
+Replace console.log with structured logging (console.info, console.warn, console.error).
+
+Remove unused imports/variables; prefix unused params with _.
+
+Ensure accessibility: proper ARIA attributes, labels, focus handling.
+
+Suggested JSDoc Typedefs (⚠️ adjust to match actual code)
+/** @typedef {Object} InputOtpProps
+ * @property {number} length - Number of OTP digits required
+ * @property {(code: string) => void} onChange - Callback when OTP changes
+ * @property {boolean} [disabled] - Whether input fields are disabled
+ * @property {string} [error] - Error message to display
+ */
+
+/** @typedef {{
+ *   value: string;
+ *   index: number;
+ *   isActive: boolean;
+ * }} OtpInputState */
+
+Expected Fixes
+
+Type safety
+
+All props and state explicitly typed via JSDoc.
+
+Functions like handleChange, handleKeyDown, handlePaste must have typed parameters (e.g., React.KeyboardEvent<HTMLInputElement>).
+
+Accessibility
+
+Inputs should include aria-label="OTP digit X" and role="textbox".
+
+Add aria-invalid="true" if error state exists.
+
+Deduplication
+
+If logic for focus switching, validation, and state updates repeats → consolidate into helpers:
+
+updateOtpValue(index, value)
+
+moveFocus(index, direction)
+
+Error handling
+
+Ensure invalid OTP input is handled gracefully (digits only).
+
+Runtime preservation
+
+OTP validation, backspace handling, and paste handling must remain intact.
+
+Post-Fix Deliverables
+
+Updated input-otp.jsx — TRIPLE-0 compliant, runtime logic intact.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark file as ✅ FIXED.
+
+Adjust error + file counts.
+
+Add changelog: "input-otp.jsx fully refactored with TRIPLE-0 compliance, runtime preserved".
+
+⚠️ Reminder: The typedefs and helper names here are templates. Adjust them to match the actual code of input-otp.jsx. Never introduce mismatches.
