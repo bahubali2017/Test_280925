@@ -1,0 +1,97 @@
+🔹 Agent Prompt — Fix llm-preference-engine.js
+
+Task:
+Refactor client/src/lib/llm-integration/llm-preference-engine.js to achieve:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP: 0 diagnostics
+No suppressions, no any, no unknown, no eslint-disable.
+
+Validation commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/llm-integration/llm-preference-engine.js
+eslint client/src/lib/llm-integration/llm-preference-engine.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+JSDoc typedefs must match actual code, not placeholders. Adjust field names and structures based on implementation.
+
+Preserve all logic: this engine manages model preferences, fallback, weighting, and routing.
+
+Replace unsafe property access with proper type guards (in operator, null checks).
+
+Replace console.log with structured logging (console.info|warn|error) or logger utility.
+
+Remove unused variables/imports, use const over let.
+
+Explicitly type arrays, objects, and accumulators.
+
+Suggested JSDoc typedefs (adjust to actual file)
+/**
+ * @typedef {Object} ModelPreference
+ * @property {string} model - Model identifier
+ * @property {number} weight - Preference weight
+ * @property {boolean} [fallback] - Whether model is used as fallback
+ * @property {string[]} [features] - Supported features (streaming, functions, etc.)
+ */
+
+/**
+ * @typedef {Object} PreferenceConfig
+ * @property {string} defaultModel
+ * @property {ModelPreference[]} preferences
+ * @property {boolean} strictMode
+ */
+
+/**
+ * @typedef {Object} PreferenceDecision
+ * @property {string} selectedModel
+ * @property {ModelPreference[]} candidates
+ * @property {string[]} [warnings]
+ */
+
+Refactor targets
+
+Accumulators
+
+/** @type {ModelPreference[]} */
+const activePreferences = [];
+
+
+Functions (adjust names to actual code):
+
+/** @param {PreferenceConfig} config @returns {void} */
+export function configurePreferences(config) { ... }
+
+/** @param {string} feature @returns {PreferenceDecision} */
+export function selectModelForFeature(feature) { ... }
+
+/** @returns {PreferenceDecision} */
+export function getDefaultModel() { ... }
+
+
+Guard optional props before access:
+
+if (pref && typeof pref.weight === "number") { ... }
+
+
+Replace reduce() with explicit loop if type inference fails.
+
+Add instanceof Error checks for error handling.
+
+ESLint fixes
+
+Remove unused vars/imports.
+
+Use prefer-const.
+
+Ensure consistent return statements.
+
+Deliverables
+
+Full corrected file with accurate JSDoc typedefs matching actual implementation.
+
+TypeScript + ESLint validation must both return 0.
+
+File remains functionally identical while fully compliant with TRIPLE-0 error policy.
