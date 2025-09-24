@@ -1,0 +1,95 @@
+Agent Prompt — client/src/components/Toast.jsx
+
+Goal
+Refactor Toast.jsx to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime behavior (toast notifications, auto-dismiss, accessibility)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/components/Toast.jsx
+eslint client/src/components/Toast.jsx --ext .js,.jsx --max-warnings=0
+
+Rules
+
+❌ No any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all runtime semantics (toast rendering, timeout dismiss, actions).
+
+Add precise JSDoc typedefs that match the actual file implementation (⚠ adjust to real code).
+
+Use safe property access with null checks and in operator for optional props.
+
+Replace raw console.log with structured logging (console.info, console.warn, console.error).
+
+Remove unused imports/variables; prefix unused params with _.
+
+Ensure accessibility compliance: ARIA roles for alerts, live regions, and focus management.
+
+Suggested JSDoc Typedefs (⚠ adjust to actual code)
+/** @typedef {'info'|'success'|'warning'|'error'} ToastType */
+
+/** @typedef {Object} ToastMessage
+ * @property {string} id - Unique identifier
+ * @property {string} message - Text of the toast
+ * @property {ToastType} type - Type of toast (affects styling)
+ * @property {number} [duration] - Auto-dismiss timeout in ms
+ * @property {boolean} [dismissible] - Whether the toast can be dismissed manually
+ */
+
+/** @typedef {Object} ToastProps
+ * @property {ToastMessage[]} toasts - Array of active toast messages
+ * @property {(id: string) => void} onDismiss - Callback when toast is dismissed
+ */
+
+Expected Fixes
+
+Type safety
+
+Ensure props (toasts, onDismiss) are fully typed.
+
+Add typing for timers (ReturnType<typeof setTimeout>).
+
+Runtime preservation
+
+Keep auto-dismiss behavior with proper cleanup on unmount.
+
+Preserve manual dismiss buttons and callbacks.
+
+Keep transitions/animations intact (if present).
+
+Accessibility
+
+Add role="alert" and aria-live="assertive" for screen reader compliance.
+
+Ensure dismiss buttons have aria-label="Dismiss notification".
+
+Keyboard navigable: dismissible toasts should be focusable.
+
+Code quality
+
+Deduplicate repeated toast rendering logic into renderToast().
+
+Centralize type-to-style mapping in getToastClasses().
+
+Structured logging for dismiss events:
+console.info('[Toast] Dismissed', { id, type }).
+
+Post-Fix Deliverables
+
+Updated Toast.jsx — TRIPLE-0 compliant, runtime preserved.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark Toast.jsx as ✅ FIXED.
+
+Adjust error + file counts.
+
+Add changelog: "Toast.jsx fully refactored with TRIPLE-0 compliance, runtime preserved".
+
+⚠ Reminder: The typedefs and helpers above are templates. They MUST be adjusted to match the actual code in Toast.jsx, not enforced as-is.
