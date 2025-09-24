@@ -1,0 +1,117 @@
+Agent Prompt — client/src/lib/llm-integration/llm-adapter.js
+
+Goal
+Refactor llm-adapter.js to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime behavior (LLM routing, config, and adapter logic)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/llm-integration/llm-adapter.js
+eslint client/src/lib/llm-integration/llm-adapter.js --ext .js --max-warnings=0
+
+Rules
+
+❌ Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all existing exports and runtime logic (LLM adapter must remain fully functional).
+
+Add precise JSDoc typedefs that match the actual code structure (⚠ adjust them to the real file, don’t impose mismatches).
+
+Guard all object/array property access with null checks, in operator, or proper type narrowing.
+
+Replace console.log with structured logging (console.info, console.warn, console.error).
+
+Remove unused imports/variables and prefix unused params with _.
+
+Ensure adapter handles multiple LLMs (DeepSeek, OpenAI, fallback, etc.) consistently.
+
+Suggested JSDoc Typedefs (⚠ adjust to match actual implementation)
+/** @typedef {'deepseek'|'openai'|'anthropic'|'fallback'} LLMProvider */
+
+/** @typedef {Object} LLMConfig
+ * @property {string} apiKey
+ * @property {string} baseUrl
+ * @property {LLMProvider} provider
+ * @property {number} [timeout] - Optional request timeout in ms
+ */
+
+/** @typedef {Object} LLMRequest
+ * @property {string} prompt - User query text
+ * @property {number} [maxTokens]
+ * @property {number} [temperature]
+ * @property {string[]} [stopSequences]
+ */
+
+/** @typedef {Object} LLMResponse
+ * @property {string} text - Generated response
+ * @property {number} [tokensUsed]
+ * @property {number} [processingTimeMs]
+ * @property {boolean} [fromCache]
+ */
+
+/** @typedef {Object} LLMAdapter
+ * @property {(request: LLMRequest) => Promise<LLMResponse>} sendRequest
+ * @property {() => LLMProvider} getProvider
+ * @property {() => LLMConfig} getConfig
+ */
+
+Expected Fixes
+
+Type safety
+
+Add typedefs for LLMConfig, LLMRequest, LLMResponse, LLMAdapter.
+
+Explicitly type all function parameters and return values.
+
+Use Record<string, unknown> instead of untyped objects where needed.
+
+Runtime preservation
+
+Ensure adapter still correctly routes requests to the configured LLM.
+
+Preserve API compatibility for existing imports (no breaking changes).
+
+Maintain timeout handling, error propagation, and retry logic.
+
+Error handling
+
+Wrap network calls with try/catch and log structured error info.
+
+Use instanceof Error for safe error type checks.
+
+Code quality
+
+Deduplicate request construction (create buildRequest() helper).
+
+Deduplicate error logging (create logError() helper).
+
+Clean unused imports and variables.
+
+Ensure proper export style (module.exports or export depending on current project convention).
+
+Accessibility of API
+
+Structured logging for debugging:
+
+console.info('[LLM-Adapter] Sending request', { provider, maxTokens });
+console.error('[LLM-Adapter] Request failed', { error: error.message });
+
+Post-Fix Deliverables
+
+Updated llm-adapter.js with TRIPLE-0 compliance, runtime preserved.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark llm-adapter.js as ✅ FIXED.
+
+Adjust error + file counts.
+
+Add changelog entry: "llm-adapter.js fully refactored, TRIPLE-0 compliance achieved, runtime preserved."
+
+⚠ Reminder: The typedefs above are templates. You MUST adjust names, fields, and structures to match the actual implementation in llm-adapter.js. Never introduce mismatches between documentation and code.
