@@ -111,7 +111,7 @@ const CACHE_CONFIG = {
 
 /**
  * Performance tracking interval reference
- * @type {number|null}
+ * @type {NodeJS.Timeout|null}
  */
 let performanceCleanupInterval = null;
 
@@ -283,7 +283,7 @@ function cleanupExpiredCache() {
   const now = Date.now();
   let cleanedCount = 0;
   
-  for (const [key, cached] of enhancedCache.entries()) {
+  for (const [key, cached] of Array.from(enhancedCache.entries())) {
     if (now - cached.timestamp > cached.ttl) {
       enhancedCache.delete(key);
       cleanedCount++;
@@ -397,7 +397,7 @@ export function getPerformanceReport() {
   // Performance metrics summary
   /** @type {Record<string, PerformanceMetricReport>} */
   const metricsReport = {};
-  for (const [operation, metrics] of performanceMetrics.entries()) {
+  for (const [operation, metrics] of Array.from(performanceMetrics.entries())) {
     metricsReport[operation] = {
       avgTime: Math.round(metrics.avgTime * 100) / 100,
       maxTime: Math.round(metrics.maxTime * 100) / 100,
@@ -417,7 +417,7 @@ export function getPerformanceReport() {
   };
   
   // Cache entry details
-  for (const [key, cached] of enhancedCache.entries()) {
+  for (const [key, cached] of Array.from(enhancedCache.entries())) {
     const age = now - cached.timestamp;
     const timeSinceAccess = now - cached.lastAccessed;
     
