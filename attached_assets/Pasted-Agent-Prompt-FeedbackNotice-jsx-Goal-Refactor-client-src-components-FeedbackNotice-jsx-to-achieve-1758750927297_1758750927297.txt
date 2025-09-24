@@ -1,0 +1,104 @@
+Agent Prompt — FeedbackNotice.jsx
+
+Goal
+Refactor client/src/components/FeedbackNotice.jsx to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime behavior (feedback collection + safety integration)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/components/FeedbackNotice.jsx
+eslint client/src/components/FeedbackNotice.jsx --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+No shortcuts — ❌ no any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all runtime semantics exactly (feedback submission, safety notices, UI rendering).
+
+Add precise JSDoc typedefs — adjust them to match the actual code in FeedbackNotice.jsx. Never mismatch templates.
+
+Use safe property access (?., in checks, Array.isArray).
+
+Replace console.log with structured logging (console.info | warn | error).
+
+Ensure component props and state are fully typed.
+
+If unused imports or variables exist → remove or prefix _.
+
+Accessibility must be preserved (roles, aria attributes if buttons/alerts exist).
+
+Suggested JSDoc Typedefs (⚠️ must be adapted to actual code!)
+/** @typedef {"positive" | "neutral" | "negative"} FeedbackRating */
+
+/** @typedef {{
+  messageId: string;
+  rating: FeedbackRating;
+  comment?: string;
+  createdAt: string;
+}} FeedbackNoticeData */
+
+/** @typedef {{
+  onSubmit: (feedback: FeedbackNoticeData) => Promise<void>;
+  initialRating?: FeedbackRating;
+  showDisclaimer?: boolean;
+}} FeedbackNoticeProps */
+
+Expected Fixes
+
+Component Props
+
+Add full typedef for FeedbackNoticeProps.
+
+Validate onSubmit is always a function before calling.
+
+Guard optional props (initialRating, showDisclaimer).
+
+State & Handlers
+
+Type state with JSDoc: /** @type {FeedbackRating|null} */.
+
+Add error handling to feedback submission (catch + structured logging).
+
+Ensure all event handlers (onClick, onChange, onSubmit) have typed params.
+
+Deduplication
+
+Extract repeated disclaimer rendering into renderDisclaimer().
+
+Extract repeated button classes into getButtonClasses().
+
+UI/Accessibility
+
+Add ARIA attributes for buttons (aria-pressed, aria-label).
+
+Ensure disclaimers and alerts use semantic HTML (<p>, <div role="alert">).
+
+Integration Safety
+
+Ensure feedback is safely passed to database handler (feedback-handler.js) if connected.
+
+Add structured logging:
+
+console.info('[FeedbackNotice] Submitting feedback', feedback)
+
+console.error('[FeedbackNotice] Submission failed', error)
+
+Post-Fix Deliverables
+
+Updated FeedbackNotice.jsx — TRIPLE-0 compliant, runtime behavior unchanged.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark file as ✅ FIXED.
+
+Adjust error + file counts.
+
+Add changelog: "FeedbackNotice.jsx fully refactored with TRIPLE-0 compliance, runtime preserved".
+
+⚠️ Reminder: All typedefs, function signatures, and helpers here are templates. Adjust them to match the actual implementation inside FeedbackNotice.jsx.
