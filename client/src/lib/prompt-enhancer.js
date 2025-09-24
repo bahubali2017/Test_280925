@@ -231,6 +231,7 @@ CRITICAL: Keep response strictly to dosage information only. Expansion invitatio
   const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['medication']);
   
   console.log('📋 [PROMPT] buildConciseMedicationPrompt completed (isolated)');
+  console.log('🧪 [PROMPT_TEST_CAPTURE] Final Medication Concise Prompt:\n', systemPrompt);
   
   return {
     systemPrompt,
