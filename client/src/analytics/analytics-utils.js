@@ -10,14 +10,14 @@
 import { QueryCategory } from './enums.js';
 
 /**
- * @typedef {Object} AnalyticsMetadata
+ * @typedef {object} AnalyticsMetadata
  * @property {number} [processingTime] - Processing time in milliseconds
  * @property {number} [intentConfidence] - Intent confidence score
  * @property {string} [bodySystem] - Detected body system
  */
 
 /**
- * @typedef {Object} QueryResult
+ * @typedef {object} QueryResult
  * @property {AnalyticsMetadata} [metadata] - Analytics metadata
  * @property {string} [userInput] - User input text
  * @property {string} [enhancedPrompt] - Enhanced prompt text
@@ -26,21 +26,21 @@ import { QueryCategory } from './enums.js';
  */
 
 /**
- * @typedef {Object} OutlierResult
+ * @typedef {object} OutlierResult
  * @property {string[]} flags - Array of outlier flags
  * @property {number} score - Outlier score (0-1)
  * @property {Record<string, number>} details - Outlier details
  */
 
 /**
- * @typedef {Object} SymptomExtractedData
+ * @typedef {object} SymptomExtractedData
  * @property {string} [duration] - Symptom duration
  * @property {string} [severity] - Symptom severity
  * @property {string} [location] - Symptom location
  */
 
 /**
- * @typedef {Object} SymptomAnalysis
+ * @typedef {object} SymptomAnalysis
  * @property {boolean} hasPotentialSymptoms - Whether symptoms detected
  * @property {string[]} missingSymptomData - Missing symptom data flags
  * @property {string[]} suggestions - Suggestion messages
@@ -48,7 +48,7 @@ import { QueryCategory } from './enums.js';
  */
 
 /**
- * @typedef {Object} ComplexityFactors
+ * @typedef {object} ComplexityFactors
  * @property {number} inputLength - Input length complexity factor
  * @property {number} terminology - Medical terminology factor
  * @property {number} symptoms - Symptom count factor
@@ -57,14 +57,14 @@ import { QueryCategory } from './enums.js';
  */
 
 /**
- * @typedef {Object} ComplexityResult
+ * @typedef {object} ComplexityResult
  * @property {number} score - Complexity score (0-1)
  * @property {ComplexityFactors} factors - Complexity factor breakdown
  * @property {string} level - Complexity level classification
  */
 
 /**
- * @typedef {Object} PatternTrends
+ * @typedef {object} PatternTrends
  * @property {number} [avgProcessingTime] - Average processing time
  * @property {number} [avgConfidence] - Average confidence score
  * @property {Record<string, number>} [triageDistribution] - Triage distribution
@@ -72,14 +72,14 @@ import { QueryCategory } from './enums.js';
  */
 
 /**
- * @typedef {Object} PatternAnalysis
+ * @typedef {object} PatternAnalysis
  * @property {PatternTrends} trends - Pattern trends data
  * @property {string[]} insights - Analysis insights
  * @property {string[]} recommendations - Recommendations
  */
 
 /**
- * @typedef {Object} QueryContext
+ * @typedef {object} QueryContext
  * @property {string} triageLevel - Triage level
  * @property {boolean} isHighRisk - High risk flag
  */
@@ -92,7 +92,15 @@ import { QueryCategory } from './enums.js';
  */
 function log(level, message, ...args) {
   const timestamp = new Date().toISOString();
-  console[level](`[${timestamp}] [Analytics] ${message}`, ...args);
+  const logMessage = `[${timestamp}] [Analytics] ${message}`;
+  
+  if (level === 'error') {
+    console.error(logMessage, ...args);
+  } else if (level === 'warn') {
+    console.warn(logMessage, ...args);
+  } else {
+    console.log(logMessage, ...args);
+  }
 }
 
 /**
@@ -101,10 +109,15 @@ function log(level, message, ...args) {
  * @returns {OutlierResult} Outlier detection result with flags and scores
  */
 export function detectOutliers(queryResult) {
+  /** @type {string[]} */
+  const flags = [];
+  /** @type {Record<string, number>} */
+  const details = {};
+  
   const outliers = {
-    flags: [],
+    flags,
     score: 0, // 0 = normal, 1 = major outlier
-    details: {}
+    details
   };
 
   try {
@@ -173,7 +186,7 @@ export function detectOutliers(queryResult) {
   } catch (error) {
     outliers.flags.push('analysis_error');
     outliers.score = 0.5;
-    outliers.details.error = 'Analysis failed';
+    outliers.details.error = 1; // Use number instead of string for Record<string, number>
     log('error', 'Outlier detection failed', error);
   }
 
@@ -253,10 +266,15 @@ export function tagQueryCategory(userInput, context = { triageLevel: 'unknown', 
  * @returns {SymptomAnalysis} Analysis result with missing symptom flags
  */
 export function flagMissingSymptoms(userInput, extractedData = {}) {
+  /** @type {string[]} */
+  const missingSymptomData = [];
+  /** @type {string[]} */
+  const suggestions = [];
+  
   const analysis = {
     hasPotentialSymptoms: false,
-    missingSymptomData: [],
-    suggestions: [],
+    missingSymptomData,
+    suggestions,
     confidence: 0
   };
 
@@ -332,15 +350,18 @@ export function flagMissingSymptoms(userInput, extractedData = {}) {
  * @returns {ComplexityResult} Complexity analysis with score and breakdown
  */
 export function calculateQueryComplexity(queryResult) {
+  /** @type {ComplexityFactors} */
+  const factors = {
+    inputLength: 0,
+    terminology: 0,
+    symptoms: 0,
+    processing: 0,
+    risk: 0
+  };
+  
   const complexity = {
     score: 0, // 0 = simple, 1 = very complex
-    factors: {
-      inputLength: 0,
-      terminology: 0,
-      symptoms: 0,
-      processing: 0,
-      risk: 0
-    },
+    factors,
     level: 'simple' // simple, moderate, complex, very_complex
   };
 
@@ -438,10 +459,17 @@ function countSymptoms(text) {
  * @returns {PatternAnalysis} Pattern analysis with trends and insights
  */
 export function analyzeQueryPatterns(queryHistory) {
+  /** @type {PatternTrends} */
+  const trends = {};
+  /** @type {string[]} */
+  const insights = [];
+  /** @type {string[]} */
+  const recommendations = [];
+  
   const patterns = {
-    trends: {},
-    insights: [],
-    recommendations: []
+    trends,
+    insights,
+    recommendations
   };
 
   if (!Array.isArray(queryHistory) || queryHistory.length === 0) {
@@ -471,10 +499,12 @@ export function analyzeQueryPatterns(queryHistory) {
 
     // Analyze triage distribution
     const triageLevels = queryHistory.map(q => q?.triageLevel ?? 'unknown');
-    const triageDistribution = triageLevels.reduce((acc, level) => {
-      acc[level] = (acc[level] || 0) + 1;
-      return acc;
-    }, {});
+    /** @type {Record<string, number>} */
+    const triageDistribution = {};
+    
+    triageLevels.forEach(level => {
+      triageDistribution[level] = (triageDistribution[level] || 0) + 1;
+    });
     
     patterns.trends.triageDistribution = triageDistribution;
 
@@ -486,10 +516,12 @@ export function analyzeQueryPatterns(queryHistory) {
       })
     );
     
-    const categoryDistribution = categories.reduce((acc, category) => {
-      acc[category] = (acc[category] || 0) + 1;
-      return acc;
-    }, {});
+    /** @type {Record<string, number>} */
+    const categoryDistribution = {};
+    
+    categories.forEach(category => {
+      categoryDistribution[category] = (categoryDistribution[category] || 0) + 1;
+    });
     
     patterns.trends.categoryDistribution = categoryDistribution;
 
