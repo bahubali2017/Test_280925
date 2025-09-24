@@ -3,21 +3,69 @@
  * Phase 9: Medical Safety Guidelines - Triage-based warning system
  */
 
+import * as React from "react";
 import { AlertCircle, Clock, Zap, Dot } from "lucide-react";
 
 /**
+ * Triage level type definition
+ * @typedef {"EMERGENCY" | "URGENT" | "NON_URGENT"} TriageLevel
+ */
+
+/**
+ * Emergency contacts structure
+ * @typedef {{
+ *   emergency?: string;
+ *   crisis?: string;
+ * }} EmergencyContacts
+ */
+
+/**
+ * Triage configuration structure
+ * @typedef {{
+ *   icon: React.ComponentType<any>;
+ *   bgColor: string;
+ *   borderColor: string;
+ *   textColor: string;
+ *   iconColor: string;
+ *   title: string;
+ *   urgency: string;
+ *   buttonColor: string;
+ * }} TriageConfig
+ */
+
+/**
+ * TriageWarning component props
+ * @typedef {{
+ *   triageLevel: TriageLevel;
+ *   reasons?: string[];
+ *   safetyFlags?: string[];
+ *   emergencyProtocol?: boolean;
+ *   mentalHealthCrisis?: boolean;
+ *   recommendedActions?: string[];
+ *   emergencyContacts?: EmergencyContacts | null;
+ *   onEmergencyCall?: (() => void) | null;
+ *   showActions?: boolean;
+ * }} TriageWarningProps
+ */
+
+
+/**
+ * Render a list of items safely
+ * @param {string[] | undefined} items - Items to render
+ * @param {(item: string, index: number) => React.ReactNode} renderItem - Item render function
+ * @returns {React.ReactNode | null} List or null if no items
+ */
+function renderList(items, renderItem) {
+  if (!items || !Array.isArray(items) || items.length === 0) {
+    return null;
+  }
+  return items.map(renderItem);
+}
+
+/**
  * Triage warning component for medical escalations
- * @param {object} props
- * @param {'EMERGENCY'|'URGENT'|'NON_URGENT'} props.triageLevel - Triage level
- * @param {string[]} props.reasons - Triage reasons
- * @param {string[]} props.safetyFlags - Safety flags from triage
- * @param {boolean} props.emergencyProtocol - Whether emergency protocol is active
- * @param {boolean} props.mentalHealthCrisis - Whether mental health crisis detected
- * @param {string[]} [props.recommendedActions] - Recommended actions
- * @param {object} [props.emergencyContacts] - Emergency contact info
- * @param {() => void} [props.onEmergencyCall] - Emergency call handler
- * @param {boolean} [props.showActions] - Whether to show action buttons
- * @returns {JSX.Element} TriageWarning component
+ * @param {TriageWarningProps} props - Component props
+ * @returns {React.ReactElement | null} TriageWarning component
  */
 export default function TriageWarning({
   triageLevel,
@@ -30,10 +78,15 @@ export default function TriageWarning({
   onEmergencyCall = null,
   showActions = true
 }) {
+  // Early return for non-urgent cases without protocols
   if (triageLevel === "NON_URGENT" && !emergencyProtocol && !mentalHealthCrisis) {
     return null;
   }
 
+  /**
+   * Get triage configuration based on current state
+   * @returns {TriageConfig} Configuration object
+   */
   const getTriageConfig = () => {
     if (emergencyProtocol || triageLevel === "EMERGENCY") {
       return {
@@ -74,17 +127,26 @@ export default function TriageWarning({
   const config = getTriageConfig();
   const IconComponent = config.icon;
 
+  /**
+   * Handle emergency call action
+   * @returns {void}
+   */
   const handleEmergencyCall = () => {
-    if (onEmergencyCall) {
+    if (typeof onEmergencyCall === "function") {
       onEmergencyCall();
-    } else if (emergencyContacts?.emergency) {
+    } else if (emergencyContacts && typeof emergencyContacts === "object" && 'emergency' in emergencyContacts && emergencyContacts.emergency) {
       // Try to initiate call on mobile devices
       window.location.href = `tel:${emergencyContacts.emergency}`;
     }
   };
 
+  /**
+   * Get critical safety flags
+   * @returns {string[]} Array of critical flags
+   */
   const getCriticalFlags = () => {
-    const criticalFlags = safetyFlags.filter(flag => 
+    const safetyFlagsArray = Array.isArray(safetyFlags) ? safetyFlags : [];
+    const criticalFlags = safetyFlagsArray.filter(flag => 
       flag.includes('EMERGENCY') || 
       flag.includes('CRISIS') || 
       flag.includes('SUICIDE') ||
@@ -94,8 +156,17 @@ export default function TriageWarning({
     return criticalFlags;
   };
 
+  // Safe array access for props
+  const reasonsArray = Array.isArray(reasons) ? reasons : [];
+  const recommendedActionsArray = Array.isArray(recommendedActions) ? recommendedActions : [];
+  const criticalFlags = getCriticalFlags();
+
   return (
-    <div className={`${config.bgColor} ${config.borderColor} border-2 shadow-lg mb-6 p-4 rounded-md`}>
+    <div 
+      className={`${config.bgColor} ${config.borderColor} border-2 shadow-lg mb-6 p-4 rounded-md`}
+      role={emergencyProtocol || triageLevel === "EMERGENCY" ? "alert" : "region"}
+      aria-live={emergencyProtocol || triageLevel === "EMERGENCY" ? "assertive" : "polite"}
+    >
       <div className="flex items-start space-x-3">
         <IconComponent className={`h-6 w-6 mt-1 flex-shrink-0 ${config.iconColor} animate-pulse`} />
         
@@ -109,13 +180,13 @@ export default function TriageWarning({
           </div>
 
           {/* Critical Safety Flags */}
-          {getCriticalFlags().length > 0 && (
+          {criticalFlags.length > 0 && (
             <div className="mb-3">
               <div className={`text-sm font-medium mb-2 ${config.textColor}`}>
                 Critical Indicators:
               </div>
               <div className="flex flex-wrap gap-2">
-                {getCriticalFlags().map((flag, index) => (
+                {renderList(criticalFlags, (flag, index) => (
                   <span 
                     key={index}
                     className={`px-2 py-1 text-xs rounded-full ${config.borderColor} border ${config.textColor} bg-opacity-50`}
@@ -128,11 +199,11 @@ export default function TriageWarning({
           )}
 
           {/* Triage Reasons */}
-          {reasons.length > 0 && (
+          {reasonsArray.length > 0 && (
             <div className={`text-sm ${config.textColor} mb-4`}>
               <div className="font-medium mb-2">Assessment Reasoning:</div>
               <ul className="space-y-1">
-                {reasons.map((reason, index) => (
+                {renderList(reasonsArray, (reason, index) => (
                   <li key={index} className="flex items-start">
                     <Dot className="h-3 w-3 mt-1 mr-2 flex-shrink-0 opacity-60" />
                     {reason}
@@ -143,13 +214,13 @@ export default function TriageWarning({
           )}
 
           {/* Recommended Actions */}
-          {recommendedActions.length > 0 && (
+          {recommendedActionsArray.length > 0 && (
             <div className="mb-4">
               <div className={`text-sm font-medium mb-2 ${config.textColor}`}>
                 Immediate Actions:
               </div>
               <ol className={`text-sm space-y-2 ${config.textColor}`}>
-                {recommendedActions.map((action, index) => (
+                {renderList(recommendedActionsArray, (action, index) => (
                   <li key={index} className="flex items-start">
                     <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-bold rounded-full bg-current text-white mr-3 mt-0.5 flex-shrink-0 opacity-80">
                       {index + 1}
@@ -168,11 +239,12 @@ export default function TriageWarning({
                 <button
                   onClick={handleEmergencyCall}
                   className={`${config.buttonColor} text-white font-semibold flex-1 sm:flex-none py-2 px-4 rounded-md transition-all duration-200`}
+                  aria-label={mentalHealthCrisis ? "Call crisis hotline" : "Call emergency services"}
                 >
                   {mentalHealthCrisis ? (
-                    <>📞 Call Crisis Line {emergencyContacts?.crisis && `(${emergencyContacts.crisis})`}</>
+                    <>📞 Call Crisis Line {emergencyContacts && 'crisis' in emergencyContacts && emergencyContacts.crisis && `(${emergencyContacts.crisis})`}</>
                   ) : (
-                    <>🚨 Call Emergency {emergencyContacts?.emergency && `(${emergencyContacts.emergency})`}</>
+                    <>🚨 Call Emergency {emergencyContacts && 'emergency' in emergencyContacts && emergencyContacts.emergency && `(${emergencyContacts.emergency})`}</>
                   )}
                 </button>
               )}
@@ -180,6 +252,7 @@ export default function TriageWarning({
               {triageLevel === "URGENT" && (
                 <button
                   className={`${config.buttonColor} text-white font-semibold flex-1 sm:flex-none py-2 px-4 rounded-md transition-all duration-200 text-sm`}
+                  aria-label="Find urgent care facility"
                 >
                   🏥 Find Urgent Care
                 </button>
@@ -187,6 +260,7 @@ export default function TriageWarning({
               
               <button
                 className={`${config.textColor} border border-current flex-1 sm:flex-none py-2 px-4 rounded-md transition-all duration-200 text-sm hover:bg-gray-50`}
+                aria-label="Save current assessment"
               >
                 📋 Save Assessment
               </button>
@@ -200,26 +274,30 @@ export default function TriageWarning({
                 Emergency Contacts (Available 24/7):
               </div>
               <div className={`text-xs space-y-1 ${config.textColor}`}>
-                {mentalHealthCrisis && emergencyContacts.crisis && (
+                {mentalHealthCrisis && 'crisis' in emergencyContacts && emergencyContacts.crisis && (
                   <div className="flex justify-between items-center">
                     <span>Crisis Hotline:</span>
                     <a 
                       href={`tel:${emergencyContacts.crisis}`}
                       className="font-mono font-bold underline hover:no-underline"
+                      aria-label={`Call crisis hotline at ${emergencyContacts.crisis}`}
                     >
                       {emergencyContacts.crisis}
                     </a>
                   </div>
                 )}
-                <div className="flex justify-between items-center">
-                  <span>Emergency Services:</span>
-                  <a 
-                    href={`tel:${emergencyContacts.emergency}`}
-                    className="font-mono font-bold underline hover:no-underline"
-                  >
-                    {emergencyContacts.emergency}
-                  </a>
-                </div>
+                {'emergency' in emergencyContacts && emergencyContacts.emergency && (
+                  <div className="flex justify-between items-center">
+                    <span>Emergency Services:</span>
+                    <a 
+                      href={`tel:${emergencyContacts.emergency}`}
+                      className="font-mono font-bold underline hover:no-underline"
+                      aria-label={`Call emergency services at ${emergencyContacts.emergency}`}
+                    >
+                      {emergencyContacts.emergency}
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           )}

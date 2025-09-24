@@ -1,0 +1,120 @@
+Agent prompt — TriageWarning.jsx
+
+Goal:
+TypeScript strict: 0 errors. ESLint: 0 issues. LSP: 0 diagnostics. No suppressions. No any/unknown. Preserve all runtime behavior and UI.
+
+Run checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/components/TriageWarning.jsx
+eslint client/src/components/TriageWarning.jsx --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Keep current exports, JSX structure, and props semantics.
+
+Replace unsafe property access with guards and in checks.
+
+Prefer const. Remove unused imports/vars.
+
+Replace console.log with console.info|warn|error only if present.
+
+Accessibility: headings, roles, aria-live for urgent warnings.
+
+Add JSDoc typedefs (ADJUST TO MATCH ACTUAL CODE)
+
+⚠️ Templates below must be edited to the real props/fields used in this file. Do not leave mismatches.
+
+/** @typedef {"emergency"|"urgent"|"non_urgent"|"info"} TriageLevel */
+
+/** @typedef {{
+  level: TriageLevel;
+  isHighRisk?: boolean;
+  reasons?: string[];
+  codes?: string[];                 // e.g., ICD-like categories if present
+  emergencyProtocol?: string[];     // action steps if present
+  disclaimers?: string[];
+  region?: string;
+  onAcknowledge?: () => void;
+  onExpand?: () => void;
+  className?: string;
+}} TriageWarningProps */
+
+
+Component typing
+
+import * as React from "react";
+
+/** @param {TriageWarningProps} props */
+export function TriageWarning(props) { /* keep logic, add guards */ }
+
+
+Refactor targets
+
+Centralize class logic:
+
+/** @param {TriageLevel} level @param {boolean=} high @returns {string} */
+function getBannerClasses(level, high) { /* map to tailwind/shadcn classes */ }
+
+
+Safe rendering helpers:
+
+/** @param {string[]|undefined} items @returns {JSX.Element|null} */
+function renderList(items) { if (!items || !items.length) return null; return (<ul>{items.map((t,i)=><li key={i}>{t}</li>)}</ul>); }
+
+
+Guarded props usage:
+
+const level = props.level || "info";
+const reasons = Array.isArray(props.reasons) ? props.reasons : [];
+const disclaimers = Array.isArray(props.disclaimers) ? props.disclaimers : [];
+
+
+Buttons/handlers:
+
+const onAck = typeof props.onAcknowledge === "function" ? props.onAcknowledge : undefined;
+const onExp = typeof props.onExpand === "function" ? props.onExpand : undefined;
+
+
+Accessibility:
+
+role="alert" and aria-live="assertive" for emergency/urgent.
+
+Associate buttons with labels.
+
+Common TS fixes
+
+Explicit return types for helpers.
+
+Never index {}. Use Record<string,string> if dynamic.
+
+Ensure arrays are typed:
+
+/** @type {string[]} */ const msgs = [];
+
+
+ESLint fixes
+
+prefer-const, no-unused-vars, consistent returns.
+
+Remove dead branches and duplicate renders if present.
+
+Validation
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/components/TriageWarning.jsx
+eslint client/src/components/TriageWarning.jsx --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must be zero.
+
+Deliverables
+
+Updated file with accurate JSDoc matching the real implementation.
+
+No behavior change. Visual output and callbacks preserved.
+
+Deduplicated className and list rendering if repeated.
+
+Post-fix
+
+Update TS_ERROR_MASTER_AUDIT_v2.md: mark TriageWarning.jsx as ✅ FIXED, adjust totals and rankings.
