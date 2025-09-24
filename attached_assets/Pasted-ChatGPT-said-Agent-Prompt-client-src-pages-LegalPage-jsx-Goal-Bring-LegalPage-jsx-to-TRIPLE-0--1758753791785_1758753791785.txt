@@ -1,0 +1,109 @@
+ChatGPT said:
+Agent Prompt — client/src/pages/LegalPage.jsx
+
+Goal
+Bring LegalPage.jsx to TRIPLE-0:
+
+TypeScript strict: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP: 0 issues
+
+Preserve 100% runtime and content (legal copy, links, accordions, last-updated stamp)
+
+Validate
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/pages/LegalPage.jsx
+eslint client/src/pages/LegalPage.jsx --ext .js,.jsx --max-warnings=0
+
+Rules
+
+No any, unknown, @ts-ignore, or eslint-disable.
+
+Keep all exports, route names, and rendering intact.
+
+All JSDoc typedefs must match actual code, not templates.
+
+Guard every optional prop / object access.
+
+Replace console.log with console.info|warn|error.
+
+Remove unused imports; prefix unused params with _.
+
+Maintain accessibility and legal content verbatim.
+
+JSDoc (templates—adjust to file)
+/** @typedef {'privacy'|'terms'|'gdpr'|'hipaa'|'cookies'} LegalSectionId */
+
+/** @typedef {{
+  id: LegalSectionId;
+  title: string;
+  content: React.ReactNode;
+  collapsible?: boolean;
+  defaultOpen?: boolean;
+}} LegalSection */
+
+/** @typedef {{
+  sections: LegalSection[];
+  lastUpdatedISO?: string;
+  contactEmail?: string;
+}} LegalPageProps */
+
+Expected fixes
+
+Props & state typing
+
+Type props via LegalPageProps.
+
+State like openIds: Set<LegalSectionId> or string[] with explicit generics.
+
+Safe access
+
+Null-guard sections, lastUpdatedISO, contactEmail.
+
+Validate external links object before mapping.
+
+A11y
+
+Page landmark: <main role="main" aria-labelledby="legal-title">.
+
+Headings follow h1→h2 order.
+
+Collapsibles use button with aria-expanded, aria-controls, unique ids.
+
+External links: rel="noopener noreferrer", target="_blank" only where required.
+
+Email link uses mailto: and has aria-label.
+
+Helpers / dedup
+
+formatDate(iso: string): string.
+
+isExternal(href: string): boolean.
+
+renderSection(section: LegalSection).
+
+Centralize link rendering to enforce rel/target.
+
+Content integrity
+
+Do not change legal copy. Preserve GDPR/HIPAA disclaimers.
+
+Keep “Not medical advice” and region notices intact.
+
+Error handling
+
+If sections empty, render fallback notice with SR-only explanation and log warn.
+
+Post-fix
+
+File TRIPLE-0.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md: mark ✅ FIXED, decrement counts, add changelog “LegalPage.jsx TRIPLE-0; content preserved; a11y hardened”.
+
+Optional checks
+# ensure page is routed
+grep -R "LegalPage" client/src | sed 's/^/> /'
+
+
+⚠️ All typedefs and examples are templates. Adjust them to match the actual implementation in LegalPage.jsx exactly.
