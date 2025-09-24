@@ -1,0 +1,95 @@
+Agent Prompt — client/src/components/ui/tabs.jsx
+
+Goal
+Refactor tabs.jsx to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime behavior (tab switching, active state handling, accessibility)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/components/ui/tabs.jsx
+eslint client/src/components/ui/tabs.jsx --ext .js,.jsx --max-warnings=0
+
+Rules
+
+❌ No any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all runtime semantics (tab switching, active state management, keyboard navigation).
+
+Add precise JSDoc typedefs that match the actual file implementation (⚠️ adjust based on real code).
+
+Use safe property access: null checks, in operator for optional props, Array.isArray() for tab collections.
+
+Replace console.log with structured logging (console.info, console.warn, console.error).
+
+Remove unused imports/variables; prefix unused params with _.
+
+Ensure accessibility: ARIA attributes for tab roles and active states.
+
+Suggested JSDoc Typedefs (⚠️ adjust to match actual code)
+/** @typedef {Object} TabItem
+ * @property {string} id - Unique identifier for the tab
+ * @property {string} label - Display label for the tab
+ * @property {React.ReactNode} content - Content to render when tab is active
+ */
+
+/** @typedef {Object} TabsProps
+ * @property {TabItem[]} items - List of tab items
+ * @property {string} [defaultActiveId] - Initial active tab
+ * @property {(id: string) => void} [onChange] - Callback when active tab changes
+ */
+
+Expected Fixes
+
+Type safety
+
+Ensure all props (items, defaultActiveId, onChange) are properly typed.
+
+Add explicit typing for state (activeId).
+
+Runtime preservation
+
+Tab switching logic must remain identical.
+
+Active tab highlighting and rendering must remain unchanged.
+
+Accessibility
+
+Add role="tablist" to container.
+
+Add role="tab" for each tab with aria-selected and aria-controls.
+
+Add role="tabpanel" for active content.
+
+Code deduplication
+
+Consolidate duplicate rendering logic into helpers:
+
+renderTabs() for tab buttons
+
+renderActiveContent() for tab panels
+
+Error handling
+
+Validate tab IDs before switching.
+
+Safe fallback if defaultActiveId doesn’t match any tab.
+
+Post-Fix Deliverables
+
+Updated tabs.jsx — TRIPLE-0 compliant, runtime logic intact.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark file as ✅ FIXED.
+
+Adjust error + file counts.
+
+Add changelog: "tabs.jsx fully refactored with TRIPLE-0 compliance, runtime preserved".
+
+⚠️ Reminder: All typedefs, function signatures, and examples above are templates. They MUST be adjusted to match the actual code in tabs.jsx. Never introduce mismatches.
