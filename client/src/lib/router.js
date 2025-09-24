@@ -43,6 +43,9 @@ export async function routeMedicalQuery(userInput) {
     updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
 
     const processingTime = Math.max(0, Math.round(now() - t0));
+    console.log('[DISCLAIMER_DEBUG] router disclaimers from enhancer:', disclaimers?.length || 0, 'items');
+    console.log('[DISCLAIMER_DEBUG] router setting disclaimers to: [] (empty array)');
+    
     const normalized = normalizeRouterResult({
       userInput: ctx.userInput,
       enhancedPrompt,

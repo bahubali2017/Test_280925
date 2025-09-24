@@ -1,0 +1,78 @@
+🔍 PHASE 6.2 — DISCLAIMER DUPLICATION FORENSIC AUDIT PLAN
+1. Suspect Layers
+
+Based on all traces so far, duplication can only still come from:
+
+prompt-enhancer.js – already confirmed to inject selectDisclaimers() at buildConciseMedicationPrompt. (✅ required)
+
+router.js normalizeRouterResult() – we just patched to []. Should no longer inject. (⚠️ verify build took effect)
+
+fallback-engine.js – normally only in error flow, but may still run quietly in parallel (e.g. health check, safe-guard).
+
+MessageBubble.jsx – only dedupes; shouldn’t add new disclaimers.
+
+server/routes.js – may attach disclaimers again before sending response.
+
+2. Verification Logging (Targeted)
+
+We need precise length + source tracing at every injection point:
+
+// prompt-enhancer.js
+console.log("[DISCLAIMER_DEBUG] enhancer disclaimers:", disclaimers);
+
+// router.js
+console.log("[DISCLAIMER_DEBUG] router disclaimers:", ctx.disclaimers);
+
+// fallback-engine.js
+console.log("[DISCLAIMER_DEBUG] fallback disclaimers:", disclaimerPack);
+
+// server/routes.js
+console.log("[DISCLAIMER_DEBUG] server response disclaimers:", finalResult.disclaimers);
+
+
+This will let us trace exactly where the duplication occurs and whether it happens:
+
+before server response (so metadata has duplicates)
+
+or inside client rendering (disclaimers added again after server returns).
+
+3. Hypothesis
+
+Given your latest screenshot:
+
+The exact same block appears twice.
+
+That suggests two separate injections of the non-urgent disclaimer pack:
+
+From enhancer (normal)
+
+From fallback-engine (still called in parallel even though no error triggered)
+
+So the bug may be that fallback-engine is being called in all queries as a “safety injector,” instead of only on error.
+
+4. Next Step Fix Options
+
+Option A (Recommended Minimal)
+Guard fallback-engine:
+
+if (!existingDisclaimers?.length) {
+    disclaimerPack = selectDisclaimers('non_urgent');
+} else {
+    disclaimerPack = { disclaimers: existingDisclaimers, atdNotices: [] };
+}
+
+
+→ Prevents it from running if disclaimers already exist.
+
+Option B (Deeper Refactor)
+Centralize disclaimer injection only in enhancer, force router + fallback to pass through disclaimers untouched.
+
+5. Deliverable
+
+ PHASE_6_2_DISCLAIMER_DUPLICATION_AUDIT.md report that:
+
+Shows a side-by-side disclaimer injection map
+
+Includes full before/after code snippets
+
+Provides a step-by-step debug verification plan (so we can confirm which file is still injecting after router patch)

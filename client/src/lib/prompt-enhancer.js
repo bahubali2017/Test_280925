@@ -237,10 +237,12 @@ REINFORCEMENT RULES:
 
   // Get disclaimers using centralized system
   const { disclaimers, atdNotices } = selectDisclaimers('non_urgent', ['medication']);
-  console.log('[DISCLAIMER_DEBUG] buildConciseMedicationPrompt - Adding disclaimers:', disclaimers.length, 'items');
+  console.log('[DISCLAIMER_DEBUG] enhancer disclaimers:', disclaimers.length, 'items:', disclaimers.map(d => d.substring(0, 50)));
   
   console.log('📋 [PROMPT] buildConciseMedicationPrompt completed (isolated)');
   console.log('🧪 [PROMPT_TEST_CAPTURE] Final Medication Concise Prompt:\n', systemPrompt);
+  
+  console.log('[DISCLAIMER_DEBUG] enhancer returning disclaimers count:', disclaimers.length);
   
   return {
     systemPrompt,
