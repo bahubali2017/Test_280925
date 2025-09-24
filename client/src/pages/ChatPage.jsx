@@ -892,8 +892,8 @@ export default function ChatPage() {
       {/* Header */}
       <header className="flex items-center justify-between p-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
         <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 flex items-center justify-center">
-            <AnimatedNeuralLogo />
+          <div className="w-12 h-12 flex items-center justify-center">
+            <AnimatedNeuralLogo size={48} />
           </div>
           <div>
             <h1 className="text-lg font-semibold text-foreground">Anamnesis</h1>
@@ -961,9 +961,8 @@ export default function ChatPage() {
                       <button
                         key={index}
                         onClick={() => handleStarterClick(question)}
-                        className="rounded-full bg-cyan-100 px-4 py-2 text-cyan-800 hover:bg-cyan-200 transition-colors"
+                        className="rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-6 py-3 text-cyan-800 dark:text-cyan-200 hover:bg-cyan-200 dark:hover:bg-cyan-800/40 transition-colors text-sm font-medium shadow-sm border border-cyan-200 dark:border-cyan-700"
                       >
-                        <span className="text-primary mr-2">💬</span>
                         {question}
                       </button>
                     ))}
