@@ -229,7 +229,7 @@ function flagMissingFields(queryResult) {
   const requiredFields = ['userInput', 'enhancedPrompt', 'triageLevel', 'metadata'];
   
   for (const field of requiredFields) {
-    const fieldValue = queryResult[field as keyof QueryResult];
+    const fieldValue = /** @type {any} */ (queryResult)[field];
     if (!fieldValue) {
       validation.missingFields.push(field);
       validation.qualityScore -= 0.2;
@@ -241,7 +241,7 @@ function flagMissingFields(queryResult) {
     const metadataFields = ['processingTime', 'intentConfidence', 'bodySystem'];
     
     for (const field of metadataFields) {
-      const fieldValue = queryResult.metadata[field as keyof QueryMetadata];
+      const fieldValue = /** @type {any} */ (queryResult.metadata)[field];
       if (fieldValue === undefined || fieldValue === null) {
         validation.incompleteFields.push(`metadata.${field}`);
         validation.qualityScore -= 0.1;
