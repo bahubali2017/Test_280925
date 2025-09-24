@@ -225,9 +225,8 @@ ${userRole === 'doctor'
   : "Use patient-friendly language with simple dosage explanations."
 }
 
-Always end with: ${baseDisclaimer}
-
 CRITICAL: Keep response strictly to dosage information only. Expansion invitations are handled separately by UI.
+DO NOT include any disclaimers in your response - they are handled separately by the UI.
 
 REINFORCEMENT RULES:
 - MAXIMUM 3-5 sentences only
