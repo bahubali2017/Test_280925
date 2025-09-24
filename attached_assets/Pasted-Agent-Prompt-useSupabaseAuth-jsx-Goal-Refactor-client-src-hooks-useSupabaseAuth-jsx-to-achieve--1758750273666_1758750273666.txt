@@ -1,0 +1,97 @@
+Agent Prompt — useSupabaseAuth.jsx
+
+Goal
+Refactor client/src/hooks/useSupabaseAuth.jsx to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime behavior (Supabase authentication flow)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/hooks/useSupabaseAuth.jsx
+eslint client/src/hooks/useSupabaseAuth.jsx --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+No shortcuts — ❌ no any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all runtime semantics exactly (session handling, signIn, signOut, subscription).
+
+Add precise JSDoc typedefs — but adjust them to match the actual code structure in this file. Never mismatch templates.
+
+Replace unsafe property access with guards or optional chaining.
+
+Use structured logging (console.info | warn | error) instead of console.log.
+
+If unused imports or params exist → remove or prefix _.
+
+Ensure hook return type matches actual return object (user, session, loading, error, signIn, signOut).
+
+Suggested JSDoc Typedefs (⚠️ adjust to match actual code)
+/** @typedef {{
+  id: string;
+  email: string;
+  [key: string]: unknown;
+}} SupabaseUser */
+
+/** @typedef {{
+  access_token: string;
+  refresh_token?: string;
+  expires_at?: number;
+  [key: string]: unknown;
+}} SupabaseSession */
+
+/** @typedef {{
+  user: SupabaseUser|null;
+  session: SupabaseSession|null;
+  loading: boolean;
+  error: Error|null;
+  signIn: (email: string, password: string) => Promise<void>;
+  signOut: () => Promise<void>;
+}} UseSupabaseAuthResult */
+
+Expected Fixes
+
+Hook Initialization
+
+Add typing for useState (e.g., useState<SupabaseUser|null>(null)).
+
+Guard session access (session?.user ?? null).
+
+signIn / signOut
+
+Wrap Supabase calls in try/catch with proper error logging.
+
+Ensure correct error object type (instanceof Error).
+
+Auth Subscription
+
+Properly type onAuthStateChange callback params.
+
+Add cleanup function for subscription.
+
+Return Object
+
+Ensure returned object exactly matches UseSupabaseAuthResult.
+
+Deduplication
+
+Extract repetitive error handling into handleAuthError().
+
+Post-Fix Deliverables
+
+Updated useSupabaseAuth.jsx — TRIPLE-0 compliant, runtime behavior unchanged.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark file as ✅ FIXED.
+
+Adjust error + file counts accordingly.
+
+Add changelog: "useSupabaseAuth.jsx fully refactored with TRIPLE-0 compliance, runtime preserved".
+
+⚠️ Reminder: Typedefs, function signatures, and return shapes above are templates. Adjust to exactly match the actual code inside useSupabaseAuth.jsx.
