@@ -1,0 +1,112 @@
+Agent prompt — context-integration.test.js
+
+Goal:
+TypeScript strict: 0 errors. ESLint: 0 issues. LSP: 0 diagnostics. No suppressions. Preserve all test semantics.
+
+Run checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/layer-tests/context-integration.test.js
+eslint client/src/tests/layer-tests/context-integration.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Keep test names, assertions, and order identical.
+
+Import @jest/globals if globals are untyped (or use the Jest global comment).
+
+Replace top-level await with beforeAll/afterAll or async it.
+
+Prefer const. Remove unused imports/vars; prefix intentional unused with _.
+
+All typedefs must match the actual shapes in this file. Adjust templates to reality. No mismatches.
+
+JSDoc typedefs (EDIT TO MATCH ACTUAL CODE)
+
+import { describe, it, test, expect, beforeAll, afterAll, beforeEach, jest } from "@jest/globals";
+
+/** @typedef {"doctor"|"nurse"|"patient"|"guest"} UserRole */
+/** @typedef {{ age?: number; sex?: string; pregnant?: boolean; pediatric?: boolean }} Demographics */
+
+/** @typedef {{
+  userInput: string;
+  role?: UserRole;
+  region?: string;
+  demographics?: Demographics;
+  priorMessages?: Array<{ role:string; content:string }>;
+  flags?: Record<string, boolean>;
+  metadata?: Record<string, unknown>;
+}} LayerContextInput */
+
+/** @typedef {{
+  triageLevel: "EMERGENCY"|"URGENT"|"NON_URGENT";
+  isHighRisk: boolean;
+  safetyFlags?: string[];
+  disclaimers?: string[];
+  atd?: { shouldEscalate?: boolean; target?: string };
+  metadata?: Record<string, unknown>;
+}} LayerOutput */
+
+
+Type helpers/mocks
+
+/** @param {LayerContextInput} input @returns {Promise<LayerOutput>} */
+async function runContextPipeline(input) { /* call real pipeline with guards */ }
+
+/** @param {unknown} v @returns {v is LayerOutput} */
+function isLayerOutput(v) {
+  return !!v && typeof v === "object" && "triageLevel" in v && "isHighRisk" in v;
+}
+
+
+Fix targets
+
+Guard dynamic access:
+
+const dm = (input && input.demographics && typeof input.demographics === "object") ? input.demographics : {};
+const pm = Array.isArray(input?.priorMessages) ? input.priorMessages : [];
+
+
+Typed accumulators:
+
+/** @type {LayerOutput[]} */ const results = [];
+/** @type {Record<string, number>} */ const counts = {};
+
+
+Async tests:
+
+it("propagates demographics to triage", async () => {
+  const out = await runContextPipeline({ userInput: "fever", demographics:{ age:2, pediatric:true } });
+  expect(isLayerOutput(out)).toBe(true);
+  if (isLayerOutput(out)) expect(out.isHighRisk).toBe(true);
+});
+
+
+Timers/mocks:
+
+/** @type {ReturnType<typeof setTimeout>} */ let t;
+
+
+Replace console.log with console.info|warn|error only if present.
+
+Validation
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/layer-tests/context-integration.test.js
+eslint client/src/tests/layer-tests/context-integration.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must be zero.
+
+Deliverables
+
+Updated file with accurate JSDoc aligned to the real pipeline I/O.
+
+No change to test behavior or expectations.
+
+Post-fix
+
+Update TS_ERROR_MASTER_AUDIT_v2.md: mark this file ✅ FIXED, adjust totals/rankings.
+
+⚠️ Reminder: All typedefs, signatures, and examples are templates and MUST be adjusted to match the actual code in context-integration.test.js. Never introduce mismatches.
