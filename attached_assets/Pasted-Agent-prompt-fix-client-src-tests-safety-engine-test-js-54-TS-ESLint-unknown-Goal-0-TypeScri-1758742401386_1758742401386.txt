@@ -1,0 +1,93 @@
+Agent prompt — fix client/src/tests/safety-engine.test.js (54 TS + ESLint unknown)
+
+Goal: 0 TypeScript errors, 0 ESLint issues. No suppressions. Keep all test semantics.
+
+Run checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/safety-engine.test.js
+eslint client/src/tests/safety-engine.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Keep assertions, test names, and ordering identical.
+
+Import @jest/globals explicitly if globals are untyped.
+
+Convert top-level await to an async wrapper or beforeAll.
+
+Prefer const. Remove unused imports/vars.
+
+Adjust typedefs to match the actual code in this file. Do not leave placeholders.
+
+Add JSDoc typedefs at top (edit to match actual shapes)
+
+import { describe, it, test, expect, beforeAll, afterAll, beforeEach, jest } from "@jest/globals";
+
+/** @typedef {{ userRole: 'doctor'|'nurse'|'patient'|'guest', query: string, region?: string, demographics?: { age?: number; sex?: string } }} SafetyInput */
+
+/** @typedef {{ isEmergency: boolean, categories: string[], score: number }} EmergencyDetection */
+
+/** @typedef {{ shouldBlockAI: boolean, isEmergency: boolean, triggeredRules: string[], disclaimers: string[], fallbackResponse?: string, triageWarning?: string, safetyContext?: Record<string, unknown> }} SafetyResult */
+
+/** @typedef {{ requiresHumanReview: boolean, priorityScore: number } & SafetyResult} SafetyProcessingResult */
+
+
+Type fixes to apply
+
+Type all helpers:
+
+/** @param {SafetyInput} input @returns {Promise<SafetyProcessingResult>} */
+async function runSafety(input) { ... }
+
+/** @param {string} txt @returns {EmergencyDetection} */
+function parseEmergency(txt) { ... }
+
+
+When reading dynamic fields, guard with in and null checks.
+
+When indexing maps, use Record<string, number> or Record<string, string>.
+
+Initialize arrays with element types:
+
+/** @type {string[]} */ const errors = [];
+/** @type {SafetyProcessingResult[]} */ const cases = [];
+
+
+For timers/mocks:
+
+/** @type {ReturnType<typeof setTimeout>} */
+let t;
+
+
+Replace top-level awaits:
+
+beforeAll(async () => { /* setup */ });
+
+
+Jest-specific cleanups
+
+Use await expect(promise).resolves/rejects for async.
+
+Ensure all tests return a promise or use done.
+
+Replace console.log with console.info|warn|error only if present.
+
+Validation
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/safety-engine.test.js
+eslint client/src/tests/safety-engine.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must be zero.
+
+Deliverables
+
+Unified diff for this file.
+
+Full updated file content.
+
+Test behavior unchanged.
+update TS_ERROR_MASTER_AUDIT_v2.md
