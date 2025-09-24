@@ -28,17 +28,33 @@ import { isDebug, trace } from './debug-flag.js';
  */
 
 /**
+ * @typedef {object} MedicalSafetyMetadata
+ * @property {boolean} [blocked] - Whether AI was blocked
+ * @property {string} [reason] - Blocking reason
+ * @property {boolean} [hasWarnings] - Whether there are warnings
+ * @property {boolean} [emergencyProtocol] - Whether emergency protocol is active
+ */
+
+/**
+ * @typedef {object} APIMetadata
+ * @property {number} requestTime - Request time in milliseconds
+ * @property {string} modelName - Model name used
+ * @property {boolean} [isStreaming] - Whether response was streamed
+ * @property {MedicalSafetyMetadata} medicalSafety - Medical safety information
+ * @property {string} [triageLevel] - Triage level assessment
+ * @property {string} [triageWarning] - Triage warning message
+ * @property {string[]} [safetyNotices] - Safety notices
+ * @property {string[]} [followUpQuestions] - Follow-up questions
+ * @property {object} [queryIntent] - Query intent analysis
+ * @property {string} [responseMode] - Response mode (concise, detailed, etc.)
+ * @property {string} [questionType] - Question type classification
+ * @property {boolean} [canExpand] - Whether response can be expanded
+ */
+
+/**
  * @typedef {object} APIResponse
  * @property {string} content - The response content
- * @property {object} metadata - Response metadata
- * @property {number} metadata.requestTime - Request time in milliseconds
- * @property {string} metadata.modelName - Model name used
- * @property {boolean} [metadata.isStreaming] - Whether response was streamed
- * @property {object} metadata.medicalSafety - Medical safety information
- * @property {boolean} [metadata.medicalSafety.blocked] - Whether AI was blocked
- * @property {string} [metadata.medicalSafety.reason] - Blocking reason
- * @property {boolean} [metadata.medicalSafety.hasWarnings] - Whether there are warnings
- * @property {boolean} [metadata.medicalSafety.emergencyProtocol] - Whether emergency protocol is active
+ * @property {APIMetadata} metadata - Response metadata
  */
 
 /**
@@ -50,16 +66,74 @@ import { isDebug, trace } from './debug-flag.js';
  */
 
 /**
+ * @typedef {object} Demographics
+ * @property {string} [role] - User role (public, healthcare_professional, etc.)
+ */
+
+/**
  * @typedef {object} SendMessageOptions
  * @property {AbortSignal} [abortSignal] - Abort signal for cancellation
  * @property {Function} [onStreamingUpdate] - Callback for streaming updates
  * @property {string} [region] - User's region for medical safety processing
- * @property {object} [demographics] - User demographics for safety processing
+ * @property {Demographics} [demographics] - User demographics for safety processing
  * @property {string} [sessionId] - Session identifier
  */
 
 /**
+ * @typedef {object} StreamUpdateData
+ * @property {boolean} streaming - Whether currently streaming
+ * @property {string} fullContent - Full accumulated content
+ * @property {object} [metadata] - Optional metadata for final update
+ */
+
+/**
+ * @typedef {object} SafetyResult
+ * @property {boolean} shouldBlockAI - Whether AI should be blocked
+ * @property {object} [fallbackResponse] - Fallback response if blocked
+ * @property {object} safetyContext - Safety processing context
+ * @property {boolean} [emergencyProtocol] - Whether emergency protocol is active
+ * @property {boolean} [routeToProvider] - Whether to route to healthcare provider
+ * @property {string} [triageWarning] - Triage warning message
+ * @property {string[]} [safetyNotices] - Safety notices
+ */
+
+/**
+ * @typedef {object} FallbackResponse
+ * @property {string} response - Fallback response content
+ * @property {string} [reason] - Reason for fallback
+ * @property {object} [emergencyContext] - Emergency context information
+ * @property {string[]} [followUpQuestions] - Follow-up questions
+ */
+
+/**
+ * @typedef {object} PromptResult
+ * @property {string} systemPrompt - Generated system prompt
+ * @property {string} questionType - Question type classification
+ * @property {string} mode - Response mode
+ */
+
+/**
+ * @typedef {object} ExpansionPrompt
+ * @property {string} systemPrompt - System prompt for expansion
+ * @property {string} userPrompt - User prompt for expansion
+ */
+
+/**
+ * @typedef {object} LastExpandable
+ * @property {string} messageId - Message identifier
+ * @property {string} questionType - Question type
+ * @property {string} query - Original query
+ * @property {string} [role] - User role
+ */
+
+/**
+ * @typedef {object} ExpansionState
+ * @property {LastExpandable} [lastExpandable] - Last expandable message
+ */
+
+/**
  * High-risk medical terms that indicate emergencies
+ * @type {string[]}
  */
 const HIGH_RISK_TERMS = [
   "heart attack", "stroke", "seizure", "suicide", "emergency", 
@@ -70,6 +144,7 @@ const HIGH_RISK_TERMS = [
 
 /**
  * Emergency medical disclaimer
+ * @type {string}
  */
 const EMERGENCY_DISCLAIMER = 
   "⚠️ MEDICAL EMERGENCY: If you're experiencing a medical emergency, please seek immediate medical attention " +
@@ -133,6 +208,7 @@ function addMedicalDisclaimers(content, isHighRisk) {
  * @property {string} [content] - Content chunk
  * @property {string} [text] - Content chunk (alternative format)
  * @property {string} [error] - Error message if any
+ * @property {object} [metadata] - Optional metadata
  */
 
 /**
@@ -175,7 +251,7 @@ async function processStream(stream, onUpdate, abortSignal) {
   try {
     while (true) {
       // Check abort signal before each iteration for faster response
-      if (abortSignal?.aborted) {
+      if (abortSignal && abortSignal.aborted) {
         throw new Error('Stream aborted by user');
       }
       
@@ -184,7 +260,7 @@ async function processStream(stream, onUpdate, abortSignal) {
       if (done) break;
       
       // Check abort signal after reading data
-      if (abortSignal?.aborted) {
+      if (abortSignal && abortSignal.aborted) {
         throw new Error('Stream aborted by user');
       }
       
@@ -195,7 +271,7 @@ async function processStream(stream, onUpdate, abortSignal) {
         if (!line && line !== '') continue; // Only skip completely null/undefined lines, preserve empty strings
         
         // Check abort signal during line processing for immediate response
-        if (abortSignal?.aborted) {
+        if (abortSignal && abortSignal.aborted) {
           throw new Error('Stream aborted by user');
         }
         
@@ -203,16 +279,16 @@ async function processStream(stream, onUpdate, abortSignal) {
         if (!data) continue;
         
         if (data.done) {
-          if (data.metadata) {
-            onUpdate('', { streaming: false, fullContent, metadata: data.metadata });
-          } else {
-            onUpdate('', { streaming: false, fullContent });
-          }
+          /** @type {StreamUpdateData} */
+          const updateData = data.metadata ? 
+            { streaming: false, fullContent, metadata: data.metadata } :
+            { streaming: false, fullContent };
+          onUpdate('', updateData);
           
           // TRACE: Stream completion (non-intrusive)
           if (isDebug()) {
             trace('[TRACE] streamComplete', {
-              messageId, responseMode: 'streaming', length: fullContent?.length
+              messageId, responseMode: 'streaming', length: fullContent ? fullContent.length : 0
             });
           }
           return fullContent;
@@ -228,7 +304,9 @@ async function processStream(stream, onUpdate, abortSignal) {
           }
           
           fullContent += chunkContent;
-          onUpdate(chunkContent, { streaming: true, fullContent });
+          /** @type {StreamUpdateData} */
+          const updateData = { streaming: true, fullContent };
+          onUpdate(chunkContent, updateData);
         }
         
         if (data.error) {
@@ -273,6 +351,7 @@ export function makeAPIRequest(endpoint, requestBody, sessionId) {
   activeAbortController = new AbortController();
   const { signal } = activeAbortController;
   
+  /** @type {Record<string, string>} */
   const headers = {
     'Content-Type': 'application/json',
   };
@@ -289,7 +368,10 @@ export function makeAPIRequest(endpoint, requestBody, sessionId) {
     signal,
   });
 }
-    
+
+// Global session ID for current active session
+/** @type {string|null} */
+let currentSessionId = null;
 
 /**
  * Main function to send messages to the AI assistant
@@ -327,6 +409,7 @@ export async function sendMessage(message, history = [], options = {}) {
     const userRole = demographics.role || "public";
     
     // Filter and validate conversation history
+    /** @type {Message[]} */
     const conversationHistory = Array.isArray(history) ? history.filter(msg => 
       msg && 
       typeof msg === 'object' && 
@@ -336,6 +419,7 @@ export async function sendMessage(message, history = [], options = {}) {
     ) : [];
 
     // CRITICAL: Run medical safety processing FIRST before any AI processing
+    /** @type {SafetyResult} */
     const safetyResult = await processMedicalSafety(message, {
       region,
       demographics,
@@ -347,21 +431,26 @@ export async function sendMessage(message, history = [], options = {}) {
       // Extract content as string from fallback response
       const fallback = safetyResult.fallbackResponse;
       const content = typeof fallback === 'string' ? fallback : 
-                     (fallback?.response ?? 'Please seek emergency medical care immediately. Call your local emergency services.');
+                     (fallback && typeof fallback === 'object' && 'response' in fallback ? 
+                      String(fallback.response) : 'Please seek emergency medical care immediately. Call your local emergency services.');
       
       // Track emergency context for follow-up expansion if available
-      if (fallback?.emergencyContext) {
+      if (fallback && typeof fallback === 'object' && 'emergencyContext' in fallback && fallback.emergencyContext) {
         const responseId = `emergency_${currentSession}_${Date.now()}`;
         // Use new expansion state for emergency context tracking
-        setLastExpandable({
+        /** @type {LastExpandable} */
+        const expandableData = {
           messageId: responseId,
           questionType: 'emergency',
-          query: fallback.emergencyContext.originalQuery || message,
+          query: (fallback.emergencyContext && typeof fallback.emergencyContext === 'object' && 'originalQuery' in fallback.emergencyContext ? 
+                  String(fallback.emergencyContext.originalQuery) : null) || message,
           role: userRole
-        });
+        };
+        setLastExpandable(expandableData);
       }
       
-      return {
+      /** @type {APIResponse} */
+      const emergencyResponse = {
         content,
         metadata: {
           requestTime: Date.now() - startTime,
@@ -369,32 +458,52 @@ export async function sendMessage(message, history = [], options = {}) {
           isStreaming: false,
           medicalSafety: {
             blocked: true,
-            reason: safetyResult.safetyContext.emergencyDetection?.isEmergency ? 'emergency_detected' : 'safety_concern',
+            reason: (safetyResult.safetyContext && 
+                    typeof safetyResult.safetyContext === 'object' && 
+                    'emergencyDetection' in safetyResult.safetyContext &&
+                    safetyResult.safetyContext.emergencyDetection &&
+                    typeof safetyResult.safetyContext.emergencyDetection === 'object' &&
+                    'isEmergency' in safetyResult.safetyContext.emergencyDetection &&
+                    safetyResult.safetyContext.emergencyDetection.isEmergency) ? 'emergency_detected' : 'safety_concern',
             hasWarnings: true,
             emergencyProtocol: safetyResult.emergencyProtocol
           },
-          triageLevel: safetyResult.safetyContext.triageResult?.level,
+          triageLevel: (safetyResult.safetyContext && 
+                       typeof safetyResult.safetyContext === 'object' && 
+                       'triageResult' in safetyResult.safetyContext &&
+                       safetyResult.safetyContext.triageResult &&
+                       typeof safetyResult.safetyContext.triageResult === 'object' &&
+                       'level' in safetyResult.safetyContext.triageResult) ? 
+                       String(safetyResult.safetyContext.triageResult.level) : undefined,
           triageWarning: safetyResult.triageWarning,
           safetyNotices: safetyResult.safetyNotices,
-          followUpQuestions: fallback?.followUpQuestions || [],
+          followUpQuestions: (fallback && typeof fallback === 'object' && 'followUpQuestions' in fallback && Array.isArray(fallback.followUpQuestions)) ? 
+                            fallback.followUpQuestions.map(q => String(q)) : [],
           queryIntent: {
             isEmergency: safetyResult.emergencyProtocol,
-            emergencyContext: fallback?.emergencyContext,
-            atd: safetyResult.routeToProvider ? safetyResult.safetyContext.atdRouting : null
+            emergencyContext: (fallback && typeof fallback === 'object' && 'emergencyContext' in fallback) ? 
+                             fallback.emergencyContext : undefined,
+            atd: safetyResult.routeToProvider ? 
+                 (safetyResult.safetyContext && typeof safetyResult.safetyContext === 'object' && 'atdRouting' in safetyResult.safetyContext ? 
+                  safetyResult.safetyContext.atdRouting : null) : null
           }
         }
       };
+      return emergencyResponse;
     }
 
     // NEW EXPANSION STATE MACHINE LOGIC
-    const { lastExpandable } = getExpansionState();
+    /** @type {ExpansionState} */
+    const expansionState = getExpansionState();
+    const { lastExpandable } = expansionState;
     
     let systemPrompt, enhancedPrompt, questionType, mode;
-    let responseId = `response_${currentSession}_${Date.now()}`;
+    const responseId = `response_${currentSession}_${Date.now()}`;
     
     // 1) Handle pure expansion replies like "yes", "more", "expand"
     if (isAffirmativeExpansion(message) && lastExpandable) {
       // Build detailed expansion using the lastExpandable context
+      /** @type {ExpansionPrompt} */
       const expPrompt = buildExpansionPrompt({
         questionType: lastExpandable.questionType,
         query: lastExpandable.query,
@@ -413,6 +522,7 @@ export async function sendMessage(message, history = [], options = {}) {
       clearLastExpandable();
       
       // 3) Classify and build prompts using new routing system
+      /** @type {PromptResult} */
       const promptResult = buildPromptsForQuery({ 
         query: message, 
         userRole, 
@@ -424,13 +534,14 @@ export async function sendMessage(message, history = [], options = {}) {
       questionType = promptResult.questionType;
       mode = promptResult.mode;
       
-      console.log('🎯 [LLM-API] New system routing:', { message, questionType, mode, userRole });
+      console.info('🎯 [LLM-API] New system routing:', { message, questionType, mode, userRole });
       
       // For concise medication answers, we'll arm expansion after successful completion
     }
     
     
     // Prepare request body with enhanced prompts
+    /** @type {object} */
     const requestBody = {
       message: message.trim(),
       conversationHistory, // Use the already filtered conversation history
@@ -470,9 +581,9 @@ export async function sendMessage(message, history = [], options = {}) {
     
     // AUDIT TRACE: Capture final request payload before API call
     if (isDebug()) {
-      console.log('🚨 [FINAL_REQUEST_PAYLOAD] Complete systemPrompt before API call:\n', requestBody.systemPrompt);
-      console.log('🚨 [FINAL_REQUEST_PAYLOAD] mode:', requestBody.mode, 'questionType:', requestBody.questionType);
-      console.log('🚨 [FINAL_REQUEST_PAYLOAD] enhancedPrompt:', requestBody.enhancedPrompt);
+      console.info('🚨 [FINAL_REQUEST_PAYLOAD] Complete systemPrompt before API call:\n', requestBody.systemPrompt);
+      console.info('🚨 [FINAL_REQUEST_PAYLOAD] mode:', requestBody.mode, 'questionType:', requestBody.questionType);
+      console.info('🚨 [FINAL_REQUEST_PAYLOAD] enhancedPrompt:', requestBody.enhancedPrompt);
     }
     
     // Make API request using the global controller with session ID
@@ -484,7 +595,7 @@ export async function sendMessage(message, history = [], options = {}) {
     }
     
     // Check if aborted immediately after fetch
-    if (activeAbortController?.signal.aborted) {
+    if (activeAbortController && activeAbortController.signal.aborted) {
       throw new Error('Request was cancelled');
     }
     
@@ -492,7 +603,10 @@ export async function sendMessage(message, history = [], options = {}) {
       let errorMessage;
       try {
         const errorData = await response.json();
-        errorMessage = errorData.message || errorData.error || `HTTP ${response.status}`;
+        errorMessage = (errorData && typeof errorData === 'object' && 'message' in errorData && errorData.message) ? 
+                      String(errorData.message) : 
+                      (errorData && typeof errorData === 'object' && 'error' in errorData && errorData.error ? 
+                       String(errorData.error) : `HTTP ${response.status}`);
       } catch {
         errorMessage = `HTTP ${response.status}: ${response.statusText}`;
       }
@@ -505,6 +619,7 @@ export async function sendMessage(message, history = [], options = {}) {
     }
     
     let content;
+    /** @type {APIMetadata} */
     let metadata = {
       requestTime: Date.now() - startTime,
       modelName: 'deepseek-chat',
@@ -526,19 +641,24 @@ export async function sendMessage(message, history = [], options = {}) {
       content = await processStream(
         response.body,
         onStreamingUpdate,
-        activeAbortController?.signal
+        activeAbortController ? activeAbortController.signal : undefined
       );
       
     } else {
       // Handle regular response
       const data = await response.json();
       
-      if (!data.success) {
-        throw createAPIError('api', data.message || 'API request failed');
+      if (!data || typeof data !== 'object' || !data.success) {
+        const errorMsg = (data && typeof data === 'object' && 'message' in data && data.message) ? 
+                        String(data.message) : 'API request failed';
+        throw createAPIError('api', errorMsg);
       }
       
-      content = data.content || data.response || '';
-      metadata = { ...metadata, ...data.metadata };
+      content = (data && typeof data === 'object' && 'content' in data && data.content) ? 
+                String(data.content) : 
+                (data && typeof data === 'object' && 'response' in data && data.response ? 
+                 String(data.response) : '');
+      metadata = { ...metadata, ...(data && typeof data === 'object' && 'metadata' in data ? data.metadata : {}) };
     }
 
     // Add medical disclaimers if needed
@@ -559,8 +679,8 @@ export async function sendMessage(message, history = [], options = {}) {
               'response' in safetyData.fallbackResponse) {
             content = String(safetyData.fallbackResponse.response);
             metadata.medicalSafety.blocked = true;
-            metadata.medicalSafety.reason = 'reason' in safetyData.fallbackResponse ? 
-              String(safetyData.fallbackResponse.reason || 'Safety fallback') : 'Safety fallback';
+            metadata.medicalSafety.reason = ('reason' in safetyData.fallbackResponse && safetyData.fallbackResponse.reason) ? 
+              String(safetyData.fallbackResponse.reason) : 'Safety fallback';
           } else if (content) {
             try {
               const safetyContext = ('safetyContext' in safetyData && 
@@ -584,8 +704,8 @@ export async function sendMessage(message, history = [], options = {}) {
               console.warn('[Medical Safety] Post-processing failed:', postProcessError);
             }
             
-            metadata.medicalSafety.hasWarnings = 'triageWarning' in safetyData && !!safetyData.triageWarning;
-            metadata.medicalSafety.emergencyProtocol = 'emergencyProtocol' in safetyData ? 
+            metadata.medicalSafety.hasWarnings = ('triageWarning' in safetyData && !!safetyData.triageWarning);
+            metadata.medicalSafety.emergencyProtocol = ('emergencyProtocol' in safetyData) ? 
               Boolean(safetyData.emergencyProtocol) : false;
           }
         }
@@ -599,12 +719,14 @@ export async function sendMessage(message, history = [], options = {}) {
 
     // 5) If concise medication answer completed successfully → arm expansion
     if (mode === "concise" && content && content.trim() && !metadata.medicalSafety.blocked) {
-      setLastExpandable({
+      /** @type {LastExpandable} */
+      const expandableData = {
         messageId: responseId,
         questionType,
         query: message.trim(),
         role: userRole
-      });
+      };
+      setLastExpandable(expandableData);
       markPendingExpansion(true);
       
       // Add mode information to metadata for UI handling
@@ -612,17 +734,17 @@ export async function sendMessage(message, history = [], options = {}) {
       metadata.questionType = questionType;
       metadata.canExpand = true;
       
-      console.log('⚡ [LLM-API] Arming expansion:', { responseId, questionType, mode, canExpand: true });
-      console.log('🔵 [LLM-API] Expansion armed: true (but NOT injected into system prompt)');
-      console.log('🔵 [LLM-API] Final metadata for UI:', { responseMode: mode, questionType, canExpand: true });
+      console.info('⚡ [LLM-API] Arming expansion:', { responseId, questionType, mode, canExpand: true });
+      console.info('🔵 [LLM-API] Expansion armed: true (but NOT injected into system prompt)');
+      console.info('🔵 [LLM-API] Final metadata for UI:', { responseMode: mode, questionType, canExpand: true });
     } else {
       // For non-concise responses, don't arm expansion
       metadata.responseMode = mode;
       metadata.questionType = questionType;
       metadata.canExpand = false;
       
-      console.log('❌ [LLM-API] Not arming expansion:', { mode, hasContent: !!content, blocked: metadata.medicalSafety.blocked });
-      console.log('🔵 [LLM-API] Final metadata for UI:', { responseMode: mode, questionType, canExpand: false });
+      console.info('❌ [LLM-API] Not arming expansion:', { mode, hasContent: !!content, blocked: metadata.medicalSafety.blocked });
+      console.info('🔵 [LLM-API] Final metadata for UI:', { responseMode: mode, questionType, canExpand: false });
     }
 
     return {
@@ -646,7 +768,7 @@ export async function sendMessage(message, history = [], options = {}) {
       throw createAPIError('network', 'Network error - please check your connection', { originalError: error });
     }
     
-    const errorMessage = error instanceof Error && error.message ? 
+    const errorMessage = (error instanceof Error && error.message) ? 
       error.message : 'An unexpected error occurred';
     
     throw createAPIError('unknown', errorMessage, { originalError: error });
@@ -657,10 +779,6 @@ export async function sendMessage(message, history = [], options = {}) {
     }
   }
 }
-
-// Global session ID for current active session
-/** @type {string|null} */
-let currentSessionId = null;
 
 /**
  * Stops any active streaming request (both client and server)
