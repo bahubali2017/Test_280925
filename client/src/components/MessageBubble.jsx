@@ -735,14 +735,15 @@ export function MessageBubble({
             )}
 
             {/* NEW: Expansion invitation - show only when response can be expanded */}
-            {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && (() => {
+            {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && 
+             metadata?.responseMode !== 'concise_medication' && (() => {
               console.log('[TRACE] Expansion button gated by master flag', { enableExpansion: AI_FLAGS.ENABLE_EXPANSION_PROMPT });
               return true;
             })() &&
              (status === 'delivered' || status === 'completed' || status === 'stopped') && (() => {
                console.log('🔘 [MessageBubble] Expansion button conditions:', { 
                  isUser, isLast, canExpand: metadata?.canExpand, isStreaming, status,
-                 questionType: metadata?.questionType, userRole: metadata?.userRole 
+                 questionType: metadata?.questionType, userRole: metadata?.userRole, responseMode: metadata?.responseMode 
                });
                return true;
              })() && (
