@@ -87,14 +87,28 @@ import { isDebug, trace } from './debug-flag.js';
  */
 
 /**
+ * @typedef {object} TriageWarning
+ * @property {string} triageLevel - Triage level
+ * @property {string[]} reasons - Triage reasons
+ * @property {string[]} safetyFlags - Safety flags
+ * @property {boolean} emergencyProtocol - Emergency protocol status
+ * @property {boolean} mentalHealthCrisis - Mental health crisis status
+ * @property {string[]} recommendedActions - Recommended actions
+ * @property {object[]} emergencyContacts - Emergency contacts
+ * @property {boolean} showActions - Whether to show actions
+ */
+
+/**
  * @typedef {object} SafetyResult
  * @property {boolean} shouldBlockAI - Whether AI should be blocked
- * @property {object} [fallbackResponse] - Fallback response if blocked
- * @property {object} safetyContext - Safety processing context
+ * @property {FallbackResponse|null} [fallbackResponse] - Fallback response if blocked
+ * @property {object} safetyContext - Safety processing context (using imported SafetyContext type)
  * @property {boolean} [emergencyProtocol] - Whether emergency protocol is active
  * @property {boolean} [routeToProvider] - Whether to route to healthcare provider
  * @property {string} [triageWarning] - Triage warning message
  * @property {string[]} [safetyNotices] - Safety notices
+ * @property {boolean} [requiresHumanReview] - Whether human review required
+ * @property {number} [priorityScore] - Priority score for processing
  */
 
 /**
@@ -419,11 +433,29 @@ export async function sendMessage(message, history = [], options = {}) {
     ) : [];
 
     // CRITICAL: Run medical safety processing FIRST before any AI processing
-    const safetyResult = /** @type {SafetyResult} */ (await processMedicalSafety(message, {
+    const safetyProcessingResult = await processMedicalSafety(message, {
       region,
       demographics,
       sessionId: currentSession
-    }));
+    });
+    
+    // Convert SafetyProcessingResult to SafetyResult for compatibility
+    /** @type {SafetyResult} */
+    const safetyResult = {
+      shouldBlockAI: safetyProcessingResult.shouldBlockAI,
+      fallbackResponse: safetyProcessingResult.fallbackResponse,
+      safetyContext: safetyProcessingResult.safetyContext,
+      emergencyProtocol: safetyProcessingResult.emergencyProtocol,
+      routeToProvider: safetyProcessingResult.routeToProvider,
+      triageWarning: safetyProcessingResult.triageWarning && typeof safetyProcessingResult.triageWarning === 'object' 
+        ? JSON.stringify(safetyProcessingResult.triageWarning) 
+        : safetyProcessingResult.triageWarning ? String(safetyProcessingResult.triageWarning) : undefined,
+      safetyNotices: safetyProcessingResult.safetyNotices?.map(notice => 
+        typeof notice === 'object' && notice && 'message' in notice ? String(notice.message) : String(notice)
+      ) || [],
+      requiresHumanReview: safetyProcessingResult.requiresHumanReview,
+      priorityScore: safetyProcessingResult.priorityScore
+    };
 
     // If medical safety determines AI should be blocked (emergency/high-risk), return fallback immediately
     if (safetyResult.shouldBlockAI && safetyResult.fallbackResponse) {
@@ -472,7 +504,7 @@ export async function sendMessage(message, history = [], options = {}) {
                        typeof safetyResult.safetyContext.triageResult === 'object' &&
                        'level' in safetyResult.safetyContext.triageResult) ? 
                        String(safetyResult.safetyContext.triageResult.level) : undefined,
-          triageWarning: safetyResult.triageWarning,
+          triageWarning: typeof safetyResult.triageWarning === 'string' ? safetyResult.triageWarning : undefined,
           safetyNotices: safetyResult.safetyNotices,
           followUpQuestions: (fallback && typeof fallback === 'object' && 'followUpQuestions' in fallback && Array.isArray(fallback.followUpQuestions)) ? 
                             fallback.followUpQuestions.map(q => String(q)) : [],
@@ -664,9 +696,9 @@ export async function sendMessage(message, history = [], options = {}) {
     if (safetyResult) {
       try {
         // Post-process the AI response through safety filters
-        content = postProcessAIResponse(content, safetyResult.safetyContext);
+        content = postProcessAIResponse(content, /** @type {any} */ (safetyResult.safetyContext));
 
-        if (validateSafetyProcessing(safetyResult)) {
+        if (validateSafetyProcessing(safetyProcessingResult)) {
           const safetyData = safetyResult;
           if (safetyData && typeof safetyData === 'object' && 
               'shouldBlockAI' in safetyData && safetyData.shouldBlockAI &&
@@ -679,21 +711,21 @@ export async function sendMessage(message, history = [], options = {}) {
               String(safetyData.fallbackResponse.reason) : 'Safety fallback';
           } else if (content) {
             try {
-              const safetyContext = ('safetyContext' in safetyData && 
-                                   safetyData.safetyContext && 
-                                   typeof safetyData.safetyContext === 'object') ? 
-                                   safetyData.safetyContext : {};
-              const postProcessed = await postProcessAIResponse(content, safetyContext);
-              
-              if (postProcessed && typeof postProcessed === 'string') {
-                content = postProcessed;
-              } else if (postProcessed && 
-                        typeof postProcessed === 'object' && 
-                        postProcessed !== null && 
-                        'processedContent' in postProcessed) {
-                const processed = /** @type {{ processedContent: string }} */ (postProcessed);
-                if (typeof processed.processedContent === 'string') {
-                  content = processed.processedContent;
+              if ('safetyContext' in safetyData && 
+                  safetyData.safetyContext && 
+                  typeof safetyData.safetyContext === 'object') {
+                const postProcessed = await postProcessAIResponse(content, /** @type {any} */ (safetyData.safetyContext));
+                
+                if (postProcessed && typeof postProcessed === 'string') {
+                  content = postProcessed;
+                } else if (postProcessed && 
+                          typeof postProcessed === 'object' && 
+                          postProcessed !== null && 
+                          'processedContent' in postProcessed) {
+                  const processed = /** @type {{ processedContent: string }} */ (postProcessed);
+                  if (typeof processed.processedContent === 'string') {
+                    content = processed.processedContent;
+                  }
                 }
               }
             } catch (postProcessError) {
