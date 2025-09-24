@@ -123,7 +123,7 @@ import { isDebug, trace } from './debug-flag.js';
  * @property {string} messageId - Message identifier
  * @property {string} questionType - Question type
  * @property {string} query - Original query
- * @property {string} [role] - User role
+ * @property {string} role - User role
  */
 
 /**
@@ -419,12 +419,11 @@ export async function sendMessage(message, history = [], options = {}) {
     ) : [];
 
     // CRITICAL: Run medical safety processing FIRST before any AI processing
-    /** @type {SafetyResult} */
-    const safetyResult = await processMedicalSafety(message, {
+    const safetyResult = /** @type {SafetyResult} */ (await processMedicalSafety(message, {
       region,
       demographics,
       sessionId: currentSession
-    });
+    }));
 
     // If medical safety determines AI should be blocked (emergency/high-risk), return fallback immediately
     if (safetyResult.shouldBlockAI && safetyResult.fallbackResponse) {
@@ -438,15 +437,13 @@ export async function sendMessage(message, history = [], options = {}) {
       if (fallback && typeof fallback === 'object' && 'emergencyContext' in fallback && fallback.emergencyContext) {
         const responseId = `emergency_${currentSession}_${Date.now()}`;
         // Use new expansion state for emergency context tracking
-        /** @type {LastExpandable} */
-        const expandableData = {
+        setLastExpandable({
           messageId: responseId,
           questionType: 'emergency',
           query: (fallback.emergencyContext && typeof fallback.emergencyContext === 'object' && 'originalQuery' in fallback.emergencyContext ? 
                   String(fallback.emergencyContext.originalQuery) : null) || message,
           role: userRole
-        };
-        setLastExpandable(expandableData);
+        });
       }
       
       /** @type {APIResponse} */
@@ -503,12 +500,11 @@ export async function sendMessage(message, history = [], options = {}) {
     // 1) Handle pure expansion replies like "yes", "more", "expand"
     if (isAffirmativeExpansion(message) && lastExpandable) {
       // Build detailed expansion using the lastExpandable context
-      /** @type {ExpansionPrompt} */
-      const expPrompt = buildExpansionPrompt({
+      const expPrompt = /** @type {ExpansionPrompt} */ (buildExpansionPrompt({
         questionType: lastExpandable.questionType,
         query: lastExpandable.query,
         role: lastExpandable.role || userRole
-      });
+      }));
       
       systemPrompt = expPrompt.systemPrompt;
       enhancedPrompt = expPrompt.userPrompt;
@@ -522,12 +518,11 @@ export async function sendMessage(message, history = [], options = {}) {
       clearLastExpandable();
       
       // 3) Classify and build prompts using new routing system
-      /** @type {PromptResult} */
-      const promptResult = buildPromptsForQuery({ 
+      const promptResult = /** @type {PromptResult} */ (buildPromptsForQuery({ 
         query: message, 
         userRole, 
         flags: AI_FLAGS 
-      });
+      }));
       
       systemPrompt = promptResult.systemPrompt;
       enhancedPrompt = message.trim(); // Simple user prompt for fresh queries
@@ -581,9 +576,10 @@ export async function sendMessage(message, history = [], options = {}) {
     
     // AUDIT TRACE: Capture final request payload before API call
     if (isDebug()) {
-      console.info('🚨 [FINAL_REQUEST_PAYLOAD] Complete systemPrompt before API call:\n', requestBody.systemPrompt);
-      console.info('🚨 [FINAL_REQUEST_PAYLOAD] mode:', requestBody.mode, 'questionType:', requestBody.questionType);
-      console.info('🚨 [FINAL_REQUEST_PAYLOAD] enhancedPrompt:', requestBody.enhancedPrompt);
+      const typedBody = /** @type {{ systemPrompt?: string, mode?: string, questionType?: string, enhancedPrompt?: string }} */ (requestBody);
+      console.info('🚨 [FINAL_REQUEST_PAYLOAD] Complete systemPrompt before API call:\n', typedBody.systemPrompt);
+      console.info('🚨 [FINAL_REQUEST_PAYLOAD] mode:', typedBody.mode, 'questionType:', typedBody.questionType);
+      console.info('🚨 [FINAL_REQUEST_PAYLOAD] enhancedPrompt:', typedBody.enhancedPrompt);
     }
     
     // Make API request using the global controller with session ID
@@ -719,14 +715,12 @@ export async function sendMessage(message, history = [], options = {}) {
 
     // 5) If concise medication answer completed successfully → arm expansion
     if (mode === "concise" && content && content.trim() && !metadata.medicalSafety.blocked) {
-      /** @type {LastExpandable} */
-      const expandableData = {
+      setLastExpandable({
         messageId: responseId,
         questionType,
         query: message.trim(),
         role: userRole
-      };
-      setLastExpandable(expandableData);
+      });
       markPendingExpansion(true);
       
       // Add mode information to metadata for UI handling
