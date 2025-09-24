@@ -1,0 +1,106 @@
+Agent Prompt — metrics-evaluator.js
+
+Goal:
+Fix all 14 TypeScript + 1 ESLint errors in client/src/qa/metrics-evaluator.js.
+Final state must be:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 issues
+
+LSP diagnostics: 0
+
+Runtime logic: 100% preserved
+
+Run validation before and after fix
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/qa/metrics-evaluator.js
+eslint client/src/qa/metrics-evaluator.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Fix rules
+
+Preserve runtime logic
+
+Do not remove or change evaluation math (accuracy, recall, precision, safety).
+
+Keep existing exports and signatures.
+
+TypeScript strict compliance
+
+Replace implicit any with explicit typedefs.
+
+Guard all optional props with if (x && typeof x... ).
+
+If dynamic object keys exist, use Record<string,number> or Record<string,unknown>.
+
+Add JSDoc typedefs
+⚠️ These must be adapted to match actual code in this file. If actual structure differs, adjust.
+
+/** @typedef {"low"|"medium"|"high"|"critical"} SeverityLevel */
+
+/** @typedef {{
+ accuracy: number;
+ recall: number;
+ precision: number;
+ f1Score: number;
+ sampleSize: number;
+ severity: SeverityLevel;
+}} EvaluationMetrics */
+
+/** @typedef {{
+ totalTests: number;
+ passed: number;
+ failed: number;
+ metrics: EvaluationMetrics;
+ warnings?: string[];
+}} MetricsReport */
+
+/** @typedef {{
+ data: unknown[];
+ context?: Record<string,unknown>;
+ expected?: Record<string,unknown>;
+ actual?: Record<string,unknown>;
+}} EvaluationInput */
+
+
+Apply these to parameters, returns, and accumulators.
+
+Refactor helpers
+
+Ensure array reducers initialize with explicit types.
+
+Replace obj.prop on {} with proper casting or type guard.
+
+Provide return type annotations for all helpers.
+
+ESLint compliance
+
+Remove unused imports/variables.
+
+Add _ prefix for intentionally unused params.
+
+Replace let with const where possible.
+
+Keep logging, but use console.info, console.warn, console.error as appropriate.
+
+Post-fix validation
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/qa/metrics-evaluator.js
+eslint client/src/qa/metrics-evaluator.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must show 0 issues.
+
+Deliverables
+
+Updated metrics-evaluator.js with:
+
+Strict JSDoc typedefs aligned with real code
+
+No TypeScript or ESLint errors
+
+Runtime logic unchanged
+
+Updated TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark metrics-evaluator.js as ✅ FIXED
+
+Reduce total error/file counts accordingly
