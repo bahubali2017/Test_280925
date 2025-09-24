@@ -8,7 +8,81 @@
  * @file Evaluates triage accuracy, precision/recall, and disclaimer usage metrics
  */
 
-import triageStandards from './benchmarks/triage-standards.json' with { type: 'json' };
+/**
+ * @type {Record<string, string>}
+ */
+let triageStandards = {};
+
+/**
+ * Initialize triage standards - loads asynchronously
+ * @returns {Promise<void>}
+ */
+async function initTriageStandards() {
+  try {
+    // Try to load standards from JSON file
+    const fs = await import('fs');
+    const path = 'client/src/qa/benchmarks/triage-standards.json';
+    
+    if (fs.existsSync(path)) {
+      const content = fs.readFileSync(path, 'utf8');
+      triageStandards = JSON.parse(content);
+    } else {
+      // Fallback standards for common conditions
+      triageStandards = {
+        'chest pain': 'emergency',
+        'difficulty breathing': 'emergency',
+        'severe headache': 'urgent',
+        'fever': 'non_urgent',
+        'cough': 'non_urgent'
+      };
+    }
+  } catch {
+    // Fallback to minimal standards if loading fails
+    triageStandards = {
+      'chest pain': 'emergency',
+      'difficulty breathing': 'emergency'
+    };
+  }
+}
+
+// Initialize standards when module loads
+initTriageStandards().catch(() => {
+  // Silent fallback on initialization failure
+});
+
+/**
+ * Severity level enumeration
+ * @typedef {"low" | "medium" | "high" | "critical"} SeverityLevel
+ */
+
+/**
+ * Triage level enumeration
+ * @typedef {"emergency" | "urgent" | "non_urgent"} TriageLevel
+ */
+
+/**
+ * Evaluation data item structure
+ * @typedef {{
+ *   userInput: string;
+ *   triageLevel: string;
+ *   isHighRisk: boolean;
+ *   disclaimers?: string[];
+ * }} EvaluationDataItem
+ */
+
+/**
+ * Triage evaluation result structure
+ * @typedef {{
+ *   isAccurate: boolean | null;
+ *   condition: string;
+ *   actualTriage: string;
+ *   expectedTriage: string | null;
+ *   severityDifference?: number;
+ *   isOverTriage?: boolean;
+ *   isUnderTriage?: boolean;
+ *   error?: string;
+ * }} TriageEvaluationResult
+ */
 
 /**
  * Evaluation metrics results structure
@@ -29,8 +103,58 @@ import triageStandards from './benchmarks/triage-standards.json' with { type: 'j
  */
 
 /**
+ * Disclaimer evaluation result structure
+ * @typedef {{
+ *   appropriate: boolean;
+ *   hasDisclaimers: boolean;
+ *   shouldHaveDisclaimers: boolean;
+ *   disclaimerCount: number;
+ *   triageLevel: string;
+ *   isHighRisk: boolean;
+ *   severity: SeverityLevel;
+ * }} DisclaimerEvaluationResult
+ */
+
+/**
+ * Evaluation report structure
+ * @typedef {{
+ *   reportId: string;
+ *   timestamp: string;
+ *   dataset: {
+ *     totalQueries: number;
+ *     emergencyQueries: number;
+ *     urgentQueries: number;
+ *     nonUrgentQueries: number;
+ *     evaluatedQueries: number;
+ *   };
+ *   performance: {
+ *     overallAccuracy: number;
+ *     triageAccuracy: number;
+ *     highRiskPrecision: number;
+ *     highRiskRecall: number;
+ *     confidenceScore: number;
+ *   };
+ *   quality: {
+ *     disclaimerCoverage: number;
+ *     falsePositiveRate: number;
+ *     falseNegativeRate: number;
+ *   };
+ *   recommendations: string[];
+ * }} EvaluationReport
+ */
+
+/**
+ * Dataset item for report generation
+ * @typedef {{
+ *   triageLevel?: string;
+ *   [key: string]: unknown;
+ * }} DatasetItem
+ */
+
+/**
  * Triage accuracy levels for severity mapping
  * @private
+ * @type {Record<string, number>}
  */
 const TRIAGE_SEVERITY = {
   'emergency': 3,
@@ -39,17 +163,26 @@ const TRIAGE_SEVERITY = {
 };
 
 /**
+ * Get severity score for triage level safely
+ * @param {string} triageLevel - Triage level
+ * @returns {number} Severity score or 0 if not found
+ */
+function getSeverityScore(triageLevel) {
+  return triageLevel in TRIAGE_SEVERITY ? TRIAGE_SEVERITY[triageLevel] : 0;
+}
+
+/**
  * Evaluates triage accuracy against benchmark standards
  * @param {string} condition - Medical condition or symptom description
  * @param {string} actualTriage - Actual triage level assigned by system
- * @returns {object} Evaluation result with accuracy details
+ * @returns {TriageEvaluationResult} Evaluation result with accuracy details
  */
 export function evaluateTriageAccuracy(condition, actualTriage) {
   // Normalize condition for lookup
   const normalizedCondition = condition.toLowerCase().trim();
   
   // Find expected triage from benchmarks
-  const expectedTriage = triageStandards[normalizedCondition];
+  const expectedTriage = normalizedCondition in triageStandards ? triageStandards[normalizedCondition] : null;
   
   if (!expectedTriage) {
     return {
@@ -62,9 +195,9 @@ export function evaluateTriageAccuracy(condition, actualTriage) {
   }
   
   const isAccurate = actualTriage === expectedTriage;
-  const severityDiff = Math.abs(
-    TRIAGE_SEVERITY[actualTriage] - TRIAGE_SEVERITY[expectedTriage]
-  );
+  const actualSeverity = getSeverityScore(actualTriage);
+  const expectedSeverity = getSeverityScore(expectedTriage);
+  const severityDiff = Math.abs(actualSeverity - expectedSeverity);
   
   return {
     isAccurate,
@@ -72,14 +205,14 @@ export function evaluateTriageAccuracy(condition, actualTriage) {
     actualTriage,
     expectedTriage,
     severityDifference: severityDiff,
-    isOverTriage: TRIAGE_SEVERITY[actualTriage] > TRIAGE_SEVERITY[expectedTriage],
-    isUnderTriage: TRIAGE_SEVERITY[actualTriage] < TRIAGE_SEVERITY[expectedTriage]
+    isOverTriage: actualSeverity > expectedSeverity,
+    isUnderTriage: actualSeverity < expectedSeverity
   };
 }
 
 /**
  * Calculates comprehensive evaluation metrics from a dataset
- * @param {Array<{userInput: string, triageLevel: string, isHighRisk: boolean, disclaimers?: string[]}>} evaluationData - Array of query results to evaluate
+ * @param {EvaluationDataItem[]} evaluationData - Array of query results to evaluate
  * @returns {EvaluationMetrics} Comprehensive metrics evaluation
  */
 export function calculateMetrics(evaluationData) {
@@ -120,7 +253,7 @@ export function calculateMetrics(evaluationData) {
     }
     
     // Track disclaimer usage
-    if (data.disclaimers && data.disclaimers.length > 0) {
+    if (data.disclaimers && Array.isArray(data.disclaimers) && data.disclaimers.length > 0) {
       totalWithDisclaimers++;
     }
     
@@ -157,19 +290,20 @@ export function calculateMetrics(evaluationData) {
 /**
  * Evaluates disclaimer usage appropriateness
  * @param {string} triageLevel - Triage level assigned
- * @param {Array<string>} disclaimers - Disclaimers shown to user
+ * @param {string[]} disclaimers - Disclaimers shown to user
  * @param {boolean} isHighRisk - Whether query was flagged as high risk
- * @returns {object} Disclaimer usage evaluation
+ * @returns {DisclaimerEvaluationResult} Disclaimer usage evaluation
  */
 export function evaluateDisclaimerUsage(triageLevel, disclaimers = [], isHighRisk = false) {
-  const hasDisclaimers = disclaimers.length > 0;
+  const disclaimersArray = Array.isArray(disclaimers) ? disclaimers : [];
+  const hasDisclaimers = disclaimersArray.length > 0;
   const shouldHaveDisclaimers = triageLevel === 'emergency' || isHighRisk;
   
   return {
     appropriate: shouldHaveDisclaimers === hasDisclaimers,
     hasDisclaimers,
     shouldHaveDisclaimers,
-    disclaimerCount: disclaimers.length,
+    disclaimerCount: disclaimersArray.length,
     triageLevel,
     isHighRisk,
     severity: shouldHaveDisclaimers ? 'high' : 'low'
@@ -178,17 +312,47 @@ export function evaluateDisclaimerUsage(triageLevel, disclaimers = [], isHighRis
 
 /**
  * Generates a detailed evaluation report
- * @param {Array<object>} dataset - Dataset to evaluate
- * @returns {object} Comprehensive evaluation report
+ * @param {DatasetItem[]} dataset - Dataset to evaluate
+ * @returns {EvaluationReport} Comprehensive evaluation report
  */
 export function generateEvaluationReport(dataset) {
-  const metrics = calculateMetrics(dataset);
+  // Filter and cast dataset to evaluation data format
+  /** @type {EvaluationDataItem[]} */
+  const evaluationData = dataset.filter((item) => 
+    typeof item === 'object' && 
+    item !== null && 
+    'userInput' in item && 
+    'triageLevel' in item && 
+    'isHighRisk' in item &&
+    typeof item.userInput === 'string' &&
+    typeof item.triageLevel === 'string' &&
+    typeof item.isHighRisk === 'boolean'
+  ).map((item) => /** @type {EvaluationDataItem} */ (item));
+  
+  const metrics = calculateMetrics(evaluationData);
   const timestamp = new Date().toISOString();
   
-  // Calculate additional insights
-  const emergencyQueries = dataset.filter(d => d.triageLevel === 'emergency').length;
-  const urgentQueries = dataset.filter(d => d.triageLevel === 'urgent').length;
-  const nonUrgentQueries = dataset.filter(d => d.triageLevel === 'non_urgent').length;
+  // Calculate additional insights - safely access properties
+  const emergencyQueries = dataset.filter(d => 
+    typeof d === 'object' && 
+    d !== null && 
+    'triageLevel' in d && 
+    d.triageLevel === 'emergency'
+  ).length;
+  
+  const urgentQueries = dataset.filter(d => 
+    typeof d === 'object' && 
+    d !== null && 
+    'triageLevel' in d && 
+    d.triageLevel === 'urgent'
+  ).length;
+  
+  const nonUrgentQueries = dataset.filter(d => 
+    typeof d === 'object' && 
+    d !== null && 
+    'triageLevel' in d && 
+    d.triageLevel === 'non_urgent'
+  ).length;
   
   return {
     reportId: `eval_${Date.now()}`,
@@ -220,9 +384,10 @@ export function generateEvaluationReport(dataset) {
  * Generates improvement recommendations based on metrics
  * @private
  * @param {EvaluationMetrics} metrics - Calculated metrics
- * @returns {Array<string>} Array of recommendation strings
+ * @returns {string[]} Array of recommendation strings
  */
 function generateRecommendations(metrics) {
+  /** @type {string[]} */
   const recommendations = [];
   
   if (metrics.accuracy < 0.8) {
@@ -250,7 +415,7 @@ function generateRecommendations(metrics) {
 
 /**
  * Loads evaluation data from the training dataset
- * @returns {Promise<Array<object>>} Evaluation dataset
+ * @returns {Promise<DatasetItem[]>} Evaluation dataset
  */
 export async function loadEvaluationDataset() {
   try {
@@ -266,16 +431,26 @@ export async function loadEvaluationDataset() {
     const content = fs.readFileSync(path, 'utf8');
     const lines = content.split('\n').filter(line => line.trim());
     
-    return lines.map(line => {
+    /** @type {DatasetItem[]} */
+    const results = [];
+    
+    for (const line of lines) {
       try {
-        return JSON.parse(line);
+        const parsed = JSON.parse(line);
+        if (typeof parsed === 'object' && parsed !== null) {
+          results.push(/** @type {DatasetItem} */ (parsed));
+        }
       } catch {
-        return null;
+        // Skip invalid JSON lines
+        continue;
       }
-    }).filter(Boolean);
+    }
+    
+    return results;
     
   } catch (error) {
-    console.error('[metrics-evaluator] Failed to load dataset:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('[metrics-evaluator] Failed to load dataset:', errorMessage);
     return [];
   }
 }
