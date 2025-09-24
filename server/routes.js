@@ -673,7 +673,6 @@ router.get("/app-config.json", async (req, res) => {
       // PHASE 5 FIX: Use client systemPrompt if provided, fallback to server medicalContext
       const finalSystemPrompt = systemPrompt || medicalContext;
       console.log('[PROMPT_SOURCE]', systemPrompt ? 'CLIENT' : 'SERVER');
-      console.error('[PROMPT_SOURCE_VERIFY]', systemPrompt ? 'CLIENT' : 'SERVER', finalSystemPrompt.slice(0,150));
 
       const messages = [
         { role: "system", content: finalSystemPrompt }
@@ -965,7 +964,6 @@ router.get("/app-config.json", async (req, res) => {
       // PHASE 5 FIX: Use client systemPrompt if provided, fallback to server defaultMedicalContext
       const finalSystemPrompt = systemPrompt || defaultMedicalContext;
       console.log('[PROMPT_SOURCE]', systemPrompt ? 'CLIENT' : 'SERVER');
-      console.error('[PROMPT_SOURCE_VERIFY]', systemPrompt ? 'CLIENT' : 'SERVER', finalSystemPrompt.slice(0,150));
 
       promptMessages.push({
         role: "system",
