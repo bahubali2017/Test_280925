@@ -1,0 +1,39 @@
+[DEBUG-TRACE] 2025-09-24T13:24:28.116Z [client] [TRACE] renderBubble { status: 'sent' }
+[DEBUG-TRACE] 2025-09-24T13:24:28.139Z [client] [TRACE] beforeRequestEnvelope {
+  endpoint: '/api/chat/stream',
+  requestBodyKeys: [
+    'message',
+    'conversationHistory',
+    'isHighRisk',
+    'systemPrompt',
+    'enhancedPrompt',
+    'userRole',
+    'mode',
+    'questionType',
+    'sessionId'
+  ]
+}
+[DEBUG-TRACE] 2025-09-24T13:24:28.141Z [client] [TRACE] aboutToMakeRequest {
+  endpoint: '/api/chat/stream',
+  currentSession: 'user_test-user-id_aa6f2cc0-905a-40de-a14c-a998ce11f0ad'
+}
+[DEBUG-TRACE] 2025-09-24T13:24:28.140Z [client] [TRACE] requestEnvelopeError { error: "ReferenceError: Cannot access 'L' before initialization" }
+[RATE-LIMIT] [BETA-MODE] BYPASS: Chat endpoint /chat/stream from IP 172.31.75.66 - Beta testing mode (unlimited AI access)
+DeepSeek API Key validation: { exists: true, length: 35, preview: 'sk-06c9d...' }
+[user_test-user-id_aa6f2cc0-905a-40de-a14c-a998ce11f0ad] Processing streaming chat request [GENERAL_PUBLIC]: what is the dosage of aspirin?
+[SESSION-TRACKER] Started session user_test-user-id_aa6f2cc0-905a-40de-a14c-a998ce11f0ad for general_public
+[PROMPT_SOURCE] CLIENT
+[user_test-user-id_aa6f2cc0-905a-40de-a14c-a998ce11f0ad] [SSE] STREAM_STARTED - 2025-09-24T13:24:27.733Z
+[DEBUG-TRACE] 2025-09-24T13:24:28.144Z [client] [TRACE] renderBubble { status: 'sent' }
+[DEBUG-TRACE] 2025-09-24T13:24:28.147Z [client] [TRACE] renderBubble { status: 'pending' }
+[user_test-user-id_aa6f2cc0-905a-40de-a14c-a998ce11f0ad] [SSE] STREAM_ENDED - completed in 5715ms - 2025-09-24T13:24:33.445Z
+[user_test-user-id_aa6f2cc0-905a-40de-a14c-a998ce11f0ad] [SSE] Response finished normally
+[DEBUG-TRACE] 2025-09-24T13:24:34.197Z [client] [TRACE] apiRequestComplete { status: 200, ok: true }
+[DEBUG-TRACE] 2025-09-24T13:24:34.199Z [client] [TRACE] streamStart { messageId: 'msg_1758720274198_khjscki', ts: 1758720274199 }
+[DEBUG-TRACE] 2025-09-24T13:24:34.203Z [client] [TRACE] renderBubble { status: 'sent' }
+[DEBUG-TRACE] 2025-09-24T13:24:34.208Z [client] [TRACE] renderBubble {
+  status: 'delivered',
+  canExpand: false,
+  questionType: 'medication',
+  responseMode: 'concise_medication'
+}

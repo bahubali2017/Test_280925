@@ -17,6 +17,7 @@ const log = createLogger("layer:router");
  * @returns {Promise<import("./output-spec.js").LayeredResponse>}
  */
 export async function routeMedicalQuery(userInput) {
+  console.log('[DISCLAIMER_DEBUG] Router called with input:', userInput?.substring(0, 50) + '...');
   const t0 = now();
   const t = new StageTimer();
   const ctx = createLayerContext(userInput);
