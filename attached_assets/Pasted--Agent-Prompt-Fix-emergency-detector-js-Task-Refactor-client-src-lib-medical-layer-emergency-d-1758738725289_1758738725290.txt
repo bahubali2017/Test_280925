@@ -1,0 +1,87 @@
+🔹 Agent Prompt — Fix emergency-detector.js
+
+Task:
+Refactor client/src/lib/medical-layer/emergency-detector.js to achieve TRIPLE-0 POLICY:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+No any, no unknown, no suppressions. Preserve all emergency detection logic.
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/medical-layer/emergency-detector.js
+eslint client/src/lib/medical-layer/emergency-detector.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Refactor Rules
+
+JSDoc typedefs must match the real emergency detection system.
+Adjust field names to match actual code — do not leave placeholders.
+
+Preserve all logic:
+
+Emergency categorization (e.g., cardiac, trauma, mental health, pediatric, surgical).
+
+Detection of high-risk keywords, symptom patterns, and contextual factors.
+
+Clinical escalation (urgent → emergency).
+
+Type safety & null checks:
+
+Guard all property access with if (obj && "field" in obj).
+
+Replace {} with real typed objects.
+
+Explicitly type accumulators, maps, and arrays.
+
+Logging:
+
+Replace console.log with structured medical logging: console.info, console.warn, console.error.
+
+Keep privacy compliance: no raw patient data in logs.
+
+ESLint fixes:
+
+Remove unused vars/imports.
+
+Prefer const over let.
+
+Ensure consistent returns in all branches.
+
+Suggested JSDoc typedefs (adjust to match actual code)
+/**
+ * @typedef {Object} EmergencyDetection
+ * @property {boolean} isEmergency
+ * @property {string} category - e.g. "cardiac", "trauma", "psychiatric", "pediatric"
+ * @property {string[]} triggers - matched keywords/patterns
+ * @property {string} severity - "critical" | "high" | "moderate" | "low"
+ * @property {string[]} [recommendedActions]
+ */
+
+/**
+ * @typedef {Object} DetectionContext
+ * @property {string} userInput
+ * @property {string} [region]
+ * @property {import("./types").Demographics} [demographics]
+ */
+
+Core Functions to Refactor
+/** @param {DetectionContext} context @returns {EmergencyDetection} */
+export function detectEmergency(context) { ... }
+
+/** @param {string} text @returns {string[]} */
+function extractTriggers(text) { ... }
+
+/** @param {string[]} triggers @returns {"critical"|"high"|"moderate"|"low"} */
+function calculateSeverity(triggers) { ... }
+
+Deliverables
+
+Full corrected file with JSDoc typedefs matching actual emergency detection code.
+
+TypeScript + ESLint validation return 0 errors.
+
+Functionality unchanged: all categories, triage scoring, and emergency detection preserved.
+
+Clean structured logging for medical audit trail.
