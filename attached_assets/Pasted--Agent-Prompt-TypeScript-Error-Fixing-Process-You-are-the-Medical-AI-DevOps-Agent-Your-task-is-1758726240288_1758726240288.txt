@@ -1,0 +1,89 @@
+🔧 Agent Prompt — TypeScript Error Fixing Process
+
+You are the Medical AI DevOps Agent.
+Your task is to perform a strict TypeScript error audit and redundancy analysis across the client/ codebase.
+⚠️ This is a separate technical debt cleanup process — do not mix with functional development phases (e.g., PHASE 6.x).
+
+Objectives
+
+Generate Master Audit File
+
+Create a root-level markdown file:
+TS_ERROR_MASTER_AUDIT.md
+
+For each file with errors (from the compiler list), create an entry with:
+
+File path
+
+Number of errors
+
+Short summary of error types (e.g., “implicit any”, “JSX type mismatch”, “undefined variable”, “missing props”)
+
+Status column: ❌ Needs Fix, 🕒 Review Redundancy, ✅ Fixed
+
+Redundancy Check
+
+For each file, determine:
+
+LIVE – must fix (actively imported/used at runtime)
+
+REDUNDANT – candidate for deletion (backups, duplicates, dead code)
+
+TEST/QA – deprioritize (only for regression, not required for production build)
+
+Mark each file accordingly in the audit.
+
+Batch Fixing Workflow
+
+Create per-batch fix documents for manageable groups of files:
+
+Example: TS_FIX_BATCH_1__analytics.md, TS_FIX_BATCH_2__components.md
+
+Each batch doc should include:
+
+List of files in scope
+
+Error types per file with representative code snippets
+
+Proposed concrete fixes (proper typing, prop interfaces, import adjustments, or deletion if redundant)
+
+Progress tracker with ✅ after each resolved file
+
+Prioritization
+
+Sort files into three tiers:
+
+Tier 1 – High impact: analytics/, lib/, pages/, core components (ChatPage.jsx, MessageBubble.jsx, llm-api.jsx, etc.)
+
+Tier 2 – Medium impact: hooks, ui/ subcomponents, contexts
+
+Tier 3 – Low impact: tests/, experimental QA modules, non-critical UI widgets
+
+Begin with Tier 1 files since they block runtime functionality.
+
+Output Requirements
+
+Generate TS_ERROR_MASTER_AUDIT.md at root with a full index of all 94 files and their errors.
+
+Generate the first batch document automatically:
+TS_FIX_BATCH_1__analytics.md → covering:
+
+client/src/analytics/analytics-utils.js
+
+client/src/analytics/metadata-logger.js
+
+client/src/lib/analytics/usage-tracker.js
+
+Do not apply fixes yet → only prepare structured audit + batch fix plan.
+
+✅ Expected Deliverables
+
+TS_ERROR_MASTER_AUDIT.md
+
+Master index of all TypeScript errors with redundancy flags.
+
+TS_FIX_BATCH_1__analytics.md
+
+Deep dive into analytics-related files.
+
+Fix proposals for every error in those files.
