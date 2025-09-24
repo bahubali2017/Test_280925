@@ -3,7 +3,7 @@
  * Loads test cases and runs them through the complete QA pipeline
  */
 
-import fs from 'fs';
+import * as fs from 'fs';
 import { routeMedicalQuery } from '../../lib/router.js';
 import { anonymizeText } from '../../analytics/anonymizer.js';
 
@@ -394,6 +394,15 @@ export async function runAllTests(options = {}) {
 }
 
 /**
+ * @typedef {object} TestResultsSummary
+ * @property {object} executionSummary - Execution summary
+ * @property {string} executionSummary.passRate - Pass rate percentage
+ * @property {object} medicalSafetyMetrics - Medical safety metrics
+ * @property {string} medicalSafetyMetrics.emergencyDetectionRate - Emergency detection rate
+ * @property {number} medicalSafetyMetrics.averageProcessingTimeMs - Average processing time
+ */
+
+/**
  * Runs regression tests against baseline metrics
  * @param {ExecutionOptions} [options={}] - Regression test options
  * @returns {Promise<object>} Regression analysis results
@@ -401,7 +410,7 @@ export async function runAllTests(options = {}) {
 export async function runRegressionTests(options = {}) {
   console.info('\n🔄 Starting Regression Test Suite...');
   
-  const testResults = await runAllTests({ ...options, verbose: false });
+  const testResults = /** @type {TestResultsSummary} */ (await runAllTests({ ...options, verbose: false }));
   const testConfig = await loadTestCases();
   const baselines = testConfig.regressionBaselines || {};
   
