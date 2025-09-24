@@ -1,0 +1,47 @@
+[DEBUG-TRACE] 2025-09-24T13:32:36.417Z [client] [TRACE] renderBubble { status: 'sent' }
+[DEBUG-TRACE] 2025-09-24T13:32:36.445Z [client] [TRACE] requestEnvelopeError { error: "ReferenceError: Cannot access 'L' before initialization" }
+[DEBUG-TRACE] 2025-09-24T13:32:36.444Z [client] [TRACE] beforeRequestEnvelope {
+  endpoint: '/api/chat/stream',
+  requestBodyKeys: [
+    'message',
+    'conversationHistory',
+    'isHighRisk',
+    'systemPrompt',
+    'enhancedPrompt',
+    'userRole',
+    'mode',
+    'questionType',
+    'sessionId'
+  ]
+}
+[DEBUG-TRACE] 2025-09-24T13:32:36.446Z [client] [TRACE] aboutToMakeRequest {
+  endpoint: '/api/chat/stream',
+  currentSession: 'user_test-user-id_08474113-75dc-47fa-9a95-9241908b5e5b'
+}
+[RATE-LIMIT] [BETA-MODE] BYPASS: Chat endpoint /chat/stream from IP 172.31.75.66 - Beta testing mode (unlimited AI access)
+[DISCLAIMER_DEBUG] Server generating disclaimers for message: the is the dosage of aspirin ?...
+[DISCLAIMER_DEBUG] Generated disclaimers count: 3 disclaimers: [
+  'Symptoms described appear non-urgent based on limited information.',
+  'This assistant is informational and not a diagnostic tool.',
+  'Responses may include general medical information and should not replace a professional evaluation.'
+]
+DeepSeek API Key validation: { exists: true, length: 35, preview: 'sk-06c9d...' }
+[user_test-user-id_08474113-75dc-47fa-9a95-9241908b5e5b] Processing streaming chat request [GENERAL_PUBLIC]: the is the dosage of aspirin ?
+[SESSION-TRACKER] Started session user_test-user-id_08474113-75dc-47fa-9a95-9241908b5e5b for general_public
+[PROMPT_SOURCE] CLIENT
+[user_test-user-id_08474113-75dc-47fa-9a95-9241908b5e5b] [SSE] STREAM_STARTED - 2025-09-24T13:32:36.039Z
+[DEBUG-TRACE] 2025-09-24T13:32:36.449Z [client] [TRACE] renderBubble { status: 'sent' }
+[DEBUG-TRACE] 2025-09-24T13:32:36.453Z [client] [TRACE] renderBubble { status: 'pending' }
+[user_test-user-id_08474113-75dc-47fa-9a95-9241908b5e5b] [SSE] STREAM_ENDED - completed in 6507ms - 2025-09-24T13:32:42.540Z
+[user_test-user-id_08474113-75dc-47fa-9a95-9241908b5e5b] [SSE] Response finished normally
+[DEBUG-TRACE] 2025-09-24T13:32:43.292Z [client] [TRACE] apiRequestComplete { status: 200, ok: true }
+[DEBUG-TRACE] 2025-09-24T13:32:43.293Z [client] [TRACE] streamStart { messageId: 'msg_1758720763293_8qpvdxh', ts: 1758720763293 }
+[DEBUG-TRACE] 2025-09-24T13:32:43.298Z [client] [TRACE] renderBubble { status: 'sent' }
+[DEBUG-TRACE] 2025-09-24T13:32:43.303Z [client] [TRACE] renderBubble {
+  status: 'delivered',
+  canExpand: false,
+  questionType: 'medication',
+  responseMode: 'concise_medication'
+}
+🔄 Supabase state: DOWN→UP (health-api)
+[ADMIN-REMOTE-ACCESS] Supabase state change: DOWN→UP at 2025-09-24T13:32:50.391Z
