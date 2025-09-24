@@ -71,12 +71,12 @@
 
 /**
  * @typedef EvaluationDataItem
- * @property {string=} userInput
- * @property {string=} triageLevel
+ * @property {string} userInput
+ * @property {string} triageLevel
+ * @property {boolean} isHighRisk
+ * @property {Array<string>=} disclaimers
  * @property {string=} responseCategory
  * @property {string=} llmResponse
- * @property {boolean=} isHighRisk
- * @property {Array<string>=} disclaimers
  */
 
 /**
@@ -118,8 +118,6 @@ export const ImprovementCategory = {
   DISCLAIMER_COVERAGE: 'disclaimer_coverage'
 };
 
-/** @type {Severity} */
-const DEFAULT_MIN_SEVERITY = 'low';
 
 /**
  * Simple logger function
@@ -163,16 +161,16 @@ export async function generateImprovementSuggestions(options = { feedbackDays: 3
     
     // Perform analysis
     const feedbackAnalysis = analyzeFeedbackTrends(feedbackData);
-    const metricsAnalysis = calculateMetrics(evaluationData);
+    const metricsAnalysis = calculateMetrics(/** @type {Array<EvaluationDataItem>} */ (evaluationData));
     
     // Generate suggestions from different analysis paths
     /** @type {LegacyImprovementSuggestion[]} */
     const suggestions = [
-      ...analyzeTriageDisagreements(evaluationData, minOccurrences),
-      ...analyzeFeedbackPatterns(feedbackData, feedbackAnalysis, minOccurrences),
-      ...analyzePerformanceMetrics(metricsAnalysis),
-      ...analyzeFallbackPatterns(evaluationData, minOccurrences),
-      ...analyzeDisclaimerGaps(evaluationData, metricsAnalysis)
+      ...analyzeTriageDisagreements(/** @type {Array<EvaluationDataItem>} */ (evaluationData), minOccurrences),
+      ...analyzeFeedbackPatterns(feedbackData, /** @type {FeedbackAnalysis} */ (feedbackAnalysis), minOccurrences),
+      ...analyzePerformanceMetrics(/** @type {MetricsAnalysis} */ (metricsAnalysis)),
+      ...analyzeFallbackPatterns(/** @type {Array<EvaluationDataItem>} */ (evaluationData), minOccurrences),
+      ...analyzeDisclaimerGaps(/** @type {Array<EvaluationDataItem>} */ (evaluationData), /** @type {MetricsAnalysis} */ (metricsAnalysis))
     ];
     
     // Sort by priority and impact
@@ -552,12 +550,12 @@ export async function generateImprovementReport(options = {}) {
     
     // Group suggestions by category
     /** @type {{[k: string]: LegacyImprovementSuggestion[]}} */
-    const suggestionsByCategory = suggestions.reduce((acc, suggestion) => {
+    const suggestionsByCategory = {};
+    for (const suggestion of suggestions) {
       const category = suggestion.category;
-      if (!acc[category]) acc[category] = [];
-      acc[category].push(suggestion);
-      return acc;
-    }, {});
+      if (!suggestionsByCategory[category]) suggestionsByCategory[category] = [];
+      suggestionsByCategory[category].push(suggestion);
+    }
     
     // Calculate urgency metrics
     /** @type {NumDict} */
