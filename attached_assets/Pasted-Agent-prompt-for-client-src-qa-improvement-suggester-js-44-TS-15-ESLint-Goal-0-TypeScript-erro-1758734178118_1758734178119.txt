@@ -1,0 +1,147 @@
+Agent prompt for client/src/qa/improvement-suggester.js (44 TS + 15 ESLint)
+
+Goal: 0 TypeScript errors. 0 ESLint issues. No suppressions. No behavior change.
+
+Per-file checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/qa/improvement-suggester.js
+eslint client/src/qa/improvement-suggester.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve exports and runtime semantics.
+
+Remove unused imports/vars. Prefer const.
+
+Use project logger if available; otherwise console.debug|info|warn|error only.
+
+Guard all optional fields before access.
+
+All functions fully typed via JSDoc.
+
+Add JSDoc typedefs at top
+
+/** @typedef {{[k: string]: number}} NumDict */
+/** @typedef {{[k: string]: string}} StringDict */
+
+/**
+ * @typedef {'low'|'medium'|'high'|'critical'} Severity
+ */
+
+/**
+ * @typedef SuggestionContext
+ * @property {string} sessionId
+ * @property {string} userId
+ * @property {{ model?: string, route?: string, locale?: string }=} meta
+ * @property {{ processingTime?: number, confidence?: number, triageLevel?: string, isHighRisk?: boolean }=} metrics
+ * @property {{ userInput?: string, enhancedPrompt?: string, symptoms?: string[] }=} text
+ */
+
+/**
+ * @typedef SuggestionRule
+ * @property {string} id
+ * @property {string} description
+ * @property {(ctx: SuggestionContext) => boolean} predicate
+ * @property {Severity} severity
+ * @property {string} recommendation
+ * @property {StringDict=} tags
+ */
+
+/**
+ * @typedef ImprovementSuggestion
+ * @property {string} id
+ * @property {string} title
+ * @property {string} message
+ * @property {Severity} severity
+ * @property {StringDict=} tags
+ */
+
+/**
+ * @typedef SuggesterConfig
+ * @property {number} maxPerRun
+ * @property {Severity=} minSeverity
+ * @property {StringDict=} defaults
+ */
+
+/**
+ * @typedef SuggesterReport
+ * @property {ImprovementSuggestion[]} suggestions
+ * @property {NumDict} countsBySeverity
+ */
+
+
+Refactor targets (fix sources of TS2339/TS2345/TS7053)
+
+Replace {}/object accumulators with typed shapes (NumDict, arrays of ImprovementSuggestion).
+
+Initialize arrays with element types:
+
+/** @type {ImprovementSuggestion[]} */
+const results = [];
+
+
+Indexing maps must be typed:
+
+/** @type {NumDict} */
+const countsBySeverity = { low:0, medium:0, high:0, critical:0 };
+countsBySeverity[sev] = (countsBySeverity[sev] ?? 0) + 1;
+
+
+Guard optional properties before access:
+
+const m = ctx.metrics || {};
+const t = ctx.text || {};
+const confidence = typeof m.confidence === 'number' ? m.confidence : 0;
+const input = typeof t.userInput === 'string' ? t.userInput : '';
+
+
+Ensure every function is typed:
+
+/** @param {SuggestionContext} ctx @param {SuggesterConfig} cfg @returns {SuggesterReport} */
+export function suggestImprovements(ctx, cfg) { ... }
+
+/** @param {SuggestionRule[]} rules @param {SuggestionContext} ctx @returns {ImprovementSuggestion[]} */
+function runRules(rules, ctx) { ... }
+
+
+Validate predicates:
+
+/** @param {SuggestionRule} r @param {SuggestionContext} ctx */
+function ruleApplies(r, ctx) { return !!r && typeof r.predicate === 'function' && r.predicate(ctx); }
+
+
+Replace magic strings with constants if flagged:
+
+const DEFAULT_MIN_SEVERITY = 'low';
+
+
+Logging:
+
+// import { logger } from "@/lib/utils/message-logger";
+// logger.debug("suggester", { count: results.length });
+
+
+ESLint cleanups
+
+Remove unused rule variables.
+
+let→const where no reassignment.
+
+Consistent return types and early returns to satisfy complexity rules if flagged.
+
+Validation (must pass)
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/qa/improvement-suggester.js
+eslint client/src/qa/improvement-suggester.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Deliverables
+
+Unified diff patch.
+
+Full updated file.
+
+Both commands return 0.
