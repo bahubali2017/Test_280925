@@ -512,7 +512,11 @@ export async function runRegressionTests(options = {}) {
 }
 
 // CLI execution support
-if (import.meta.url === `file://${process.argv[1]}`) {
+/**
+ * Main CLI execution function
+ * @returns {Promise<void>}
+ */
+async function main() {
   const args = process.argv.slice(2);
   const isRegressionTest = args.includes('--regression');
   const categoriesArg = args.find(arg => arg.startsWith('--categories='));
@@ -529,4 +533,14 @@ if (import.meta.url === `file://${process.argv[1]}`) {
     console.error('Test execution failed:', errorMessage);
     process.exit(1);
   }
+}
+
+// Check if this module is being run directly
+const isMainModule = process.argv[1] && process.argv[1].endsWith('test-executor.js');
+if (isMainModule) {
+  main().catch(error => {
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('Main execution failed:', errorMessage);
+    process.exit(1);
+  });
 }

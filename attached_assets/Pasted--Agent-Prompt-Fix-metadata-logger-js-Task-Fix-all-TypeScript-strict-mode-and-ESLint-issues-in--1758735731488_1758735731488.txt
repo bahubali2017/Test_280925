@@ -1,0 +1,106 @@
+🔹 Agent Prompt — Fix metadata-logger.js
+
+Task:
+Fix all TypeScript strict mode and ESLint issues in
+client/src/analytics/metadata-logger.js.
+Target = 0 errors, 0 warnings. No suppressions. No regressions.
+
+Run per-file checks
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/analytics/metadata-logger.js
+eslint client/src/analytics/metadata-logger.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve logging behavior and exports.
+
+Remove unused vars/imports, prefer const.
+
+Replace console.log with structured logger (logger from lib/utils/message-logger) or console.info|warn|error if no logger.
+
+Add full JSDoc typedefs at the top. Adjust to match the actual code.
+
+Suggested JSDoc typedefs (adjust to actual implementation)
+/** @typedef {{[k: string]: string|number|boolean|null|undefined}} MetadataRecord */
+
+/**
+ * @typedef MetadataEntry
+ * @property {string} key
+ * @property {string} source
+ * @property {string|number|boolean|null} value
+ * @property {number} ts
+ */
+
+/**
+ * @typedef MetadataLog
+ * @property {string} sessionId
+ * @property {MetadataEntry[]} entries
+ */
+
+/**
+ * @typedef LogConfig
+ * @property {boolean} enabled
+ * @property {string=} destination
+ * @property {Record<string,string>=} headers
+ */
+
+Refactor targets
+
+Accumulators:
+
+/** @type {MetadataEntry[]} */
+const entries = [];
+
+
+Maps/dictionaries:
+
+/** @type {Record<string, MetadataRecord>} */
+const metadataCache = {};
+
+
+Functions:
+
+/** @param {string} key @param {MetadataRecord} record @returns {void} */
+export function logMetadata(key, record) { ... }
+
+/** @param {string} sessionId @returns {MetadataLog} */
+export function getMetadataLog(sessionId) { ... }
+
+/** @param {LogConfig} cfg @returns {void} */
+export function configureLogger(cfg) { ... }
+
+
+Guard optional props before access:
+
+if (record && typeof record.value !== "undefined") { ... }
+
+
+Replace object.property on {} with typed Record<string, MetadataRecord> and checks.
+
+Replace reduce() with explicit loop if type inference fails.
+
+Add instanceof Error checks for error handling.
+
+ESLint cleanups
+
+Remove unused variables.
+
+Convert let → const when immutable.
+
+Ensure consistent return paths.
+
+Validation
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/analytics/metadata-logger.js
+eslint client/src/analytics/metadata-logger.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must return 0 errors/warnings.
+
+Deliverables
+
+Unified diff patch.
+
+Full corrected file.
+
+File remains logically identical, but with strict typing, ESLint compliance, and null safety.
