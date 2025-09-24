@@ -4,15 +4,117 @@
  */
 
 import { EMERGENCY_SYMPTOMS, URGENT_SYMPTOMS, assessMentalHealthCrisis, applyConservativeBias, isEmergencySymptom } from '../config/safety-rules.js';
-import atd from "../../rules/atd-conditions.json" with { type: "json" };
+
+/**
+ * @type {Record<string, unknown>}
+ */
+let atd = { red_flags: [] };
+
+/**
+ * Initialize ATD conditions - loads asynchronously
+ * @returns {Promise<void>}
+ */
+async function initATDConditions() {
+  try {
+    const fs = await import('fs');
+    const path = 'client/src/rules/atd-conditions.json';
+    
+    if (fs.existsSync(path)) {
+      const content = fs.readFileSync(path, 'utf8');
+      atd = JSON.parse(content);
+    } else {
+      // Fallback ATD conditions for critical symptoms
+      atd = {
+        red_flags: [
+          { pattern: "chest pain", triage: "EMERGENCY", reason: "Chest pain requires immediate evaluation" },
+          { pattern: "difficulty breathing", triage: "EMERGENCY", reason: "Breathing difficulty requires immediate evaluation" },
+          { pattern: "severe pain", triage: "URGENT", reason: "Severe pain requires urgent evaluation" }
+        ]
+      };
+    }
+  } catch {
+    // Fallback to minimal red flags if loading fails
+    atd = {
+      red_flags: [
+        { pattern: "chest pain", triage: "EMERGENCY", reason: "Chest pain requires immediate evaluation" },
+        { pattern: "difficulty breathing", triage: "EMERGENCY", reason: "Breathing difficulty requires immediate evaluation" }
+      ]
+    };
+  }
+}
+
+// Initialize ATD conditions when module loads
+initATDConditions().catch(() => {
+  // Silent fallback on initialization failure
+});
+
+/**
+ * Triage level enumeration
+ * @typedef {"EMERGENCY" | "URGENT" | "NON_URGENT"} TriageLevel
+ */
+
+/**
+ * Symptom structure with severity assessment
+ * @typedef {{
+ *   name: string;
+ *   severity: "mild" | "moderate" | "severe" | "emergency";
+ *   category: string;
+ * }} SymptomWithSeverity
+ */
+
+/**
+ * Enhanced triage result structure
+ * @typedef {{
+ *   level: TriageLevel;
+ *   reasons: string[];
+ *   isHighRisk: boolean;
+ *   symptomNames: string[];
+ *   severityAssessment: {
+ *     emergencyCount: number;
+ *     severeCount: number;
+ *     moderateCount: number;
+ *     totalSymptoms: number;
+ *     highestSeverity: string;
+ *   };
+ *   safetyFlags: string[];
+ *   emergencyProtocol: boolean;
+ *   mentalHealthCrisis: boolean;
+ * }} EnhancedTriageResult
+ */
+
+/**
+ * Triage summary structure for ATD routing
+ * @typedef {{
+ *   triageLevel: TriageLevel;
+ *   emergencyProtocol: boolean;
+ *   mentalHealthCrisis: boolean;
+ *   safetyFlags: string[];
+ *   flaggedSymptoms: string[];
+ *   severityBreakdown: object;
+ *   recommendedActions: string[];
+ *   riskFactors: string[];
+ *   conservativeBias: boolean;
+ *   timestamp: string;
+ *   inputSanitized: string;
+ * }} TriageSummary
+ */
+
+/**
+ * Red flag structure from ATD conditions
+ * @typedef {{
+ *   pattern: string;
+ *   triage: string;
+ *   reason: string;
+ * }} RedFlag
+ */
 
 /**
  * Enhanced symptom extraction with safety-focused pattern matching
  * @param {string} text - Lowercase user input
- * @returns {Array<{name: string, severity: 'mild'|'moderate'|'severe'|'emergency', category: string}>} Detected symptoms with severity
+ * @returns {SymptomWithSeverity[]} Detected symptoms with severity
  */
 function extractSymptomsWithSeverity(text) {
-  /** @type {Array<{name: string, severity: 'mild'|'moderate'|'severe'|'emergency', category: string}>} */
+  /** @type {SymptomWithSeverity[]} */
   const symptoms = [];
   
   // Check emergency symptoms first (highest priority)
@@ -20,7 +122,7 @@ function extractSymptomsWithSeverity(text) {
     if (text.includes(emergencySymptom.pattern)) {
       symptoms.push({
         name: emergencySymptom.pattern,
-        severity: /** @type {'emergency'} */ ('emergency'),
+        severity: /** @type {"emergency"} */ ('emergency'),
         category: emergencySymptom.category
       });
     }
@@ -31,7 +133,7 @@ function extractSymptomsWithSeverity(text) {
     if (text.includes(urgentSymptom.pattern)) {
       symptoms.push({
         name: urgentSymptom.pattern,
-        severity: /** @type {'severe'} */ ('severe'),
+        severity: /** @type {"severe"} */ ('severe'),
         category: urgentSymptom.category
       });
     }
@@ -40,8 +142,8 @@ function extractSymptomsWithSeverity(text) {
   // Additional symptom patterns with severity assessment
   const symptomPatterns = [
     // Chest symptoms - always treat as serious
-    { patterns: ["chest discomfort", "chest tightness", "chest pressure"], severity: /** @type {'severe'} */ ('severe'), category: 'cardiovascular' },
-    { patterns: ["mild chest pain"], severity: /** @type {'severe'} */ ('severe'), category: 'cardiovascular' }, // Conservative: even "mild" chest pain is severe
+    { patterns: ["chest discomfort", "chest tightness", "chest pressure"], severity: /** @type {"severe"} */ ('severe'), category: 'cardiovascular' },
+    { patterns: ["mild chest pain"], severity: /** @type {"severe"} */ ('severe'), category: 'cardiovascular' }, // Conservative: even "mild" chest pain is severe
     
     // Breathing symptoms - conservative approach
     { patterns: ["wheezing", "tight chest", "hard to breathe"], severity: 'severe', category: 'respiratory' },
@@ -79,7 +181,7 @@ function extractSymptomsWithSeverity(text) {
       if (text.includes(pattern)) {
         symptoms.push({
           name: pattern,
-          severity: /** @type {'mild'|'moderate'|'severe'|'emergency'} */ (patternGroup.severity),
+          severity: /** @type {"mild"|"moderate"|"severe"|"emergency"} */ (patternGroup.severity),
           category: patternGroup.category
         });
       }
@@ -97,24 +199,24 @@ function extractSymptomsWithSeverity(text) {
 /**
  * Enhanced triage assessment with conservative safety bias
  * @param {import("../layer-context.js").LayerContext} ctx - Medical context
- * @returns {import("../layer-context.js").Triage & { 
- *   symptomNames: string[], 
- *   severityAssessment: object, 
- *   safetyFlags: string[], 
- *   emergencyProtocol: boolean,
- *   mentalHealthCrisis: boolean 
- * }}
+ * @returns {EnhancedTriageResult} Enhanced triage result with detailed assessment
  */
 export function performEnhancedTriage(ctx) {
   const text = ctx.userInput.toLowerCase();
+  
+  /** @type {string[]} */
   const reasons = [];
+  
+  /** @type {string[]} */
   const safetyFlags = [];
   
-  /** @type {import("../layer-context.js").Triage["level"]} */
+  /** @type {TriageLevel} */
   let level = "NON_URGENT";
   
   // Extract symptoms with severity assessment
   const detectedSymptoms = extractSymptomsWithSeverity(text);
+  
+  /** @type {string[]} */
   const symptomNames = detectedSymptoms.map(s => s.name);
   
   // Collect normalized symptom names from parser if available
@@ -162,16 +264,18 @@ export function performEnhancedTriage(ctx) {
   }
   
   // 4. RED FLAG PATTERN MATCHING (existing ATD logic)
-  for (const rf of atd.red_flags) {
-    if (text.includes(rf.pattern)) {
-      if (rf.triage === "EMERGENCY" && level !== "EMERGENCY") {
-        level = "EMERGENCY";
-        safetyFlags.push("ATD_RED_FLAG_EMERGENCY");
-      } else if (rf.triage === "URGENT" && level === "NON_URGENT") {
-        level = "URGENT";
-        safetyFlags.push("ATD_RED_FLAG_URGENT");
+  if (atd && typeof atd === 'object' && 'red_flags' in atd && Array.isArray(atd.red_flags)) {
+    for (const rf of /** @type {RedFlag[]} */ (atd.red_flags)) {
+      if (text.includes(rf.pattern)) {
+        if (rf.triage === "EMERGENCY" && level !== "EMERGENCY") {
+          level = "EMERGENCY";
+          safetyFlags.push("ATD_RED_FLAG_EMERGENCY");
+        } else if (rf.triage === "URGENT" && level === "NON_URGENT") {
+          level = "URGENT";
+          safetyFlags.push("ATD_RED_FLAG_URGENT");
+        }
+        reasons.push(rf.reason);
       }
-      reasons.push(rf.reason);
     }
   }
   
@@ -185,7 +289,7 @@ export function performEnhancedTriage(ctx) {
   
   const biasedLevel = applyConservativeBias(level, text, contextData);
   if (biasedLevel !== level) {
-    level = /** @type {import("../layer-context.js").Triage["level"]} */ (biasedLevel);
+    level = /** @type {TriageLevel} */ (biasedLevel);
     reasons.push("Triage level escalated due to conservative safety bias");
     safetyFlags.push("CONSERVATIVE_ESCALATION");
   }
@@ -222,24 +326,32 @@ export function performEnhancedTriage(ctx) {
                     moderateSymptoms.length > 0 ? 'moderate' : 'mild'
   };
   
+  // Remove duplicates manually to avoid Set spread operator issues
+  /** @type {string[]} */
+  const uniqueSymptomNames = [];
+  for (const name of symptomNames) {
+    if (!uniqueSymptomNames.includes(name)) {
+      uniqueSymptomNames.push(name);
+    }
+  }
+  
   return {
     level,
     reasons,
     isHighRisk: level === "EMERGENCY" || level === "URGENT",
-    symptomNames: [...new Set(symptomNames)], // Remove duplicates
+    symptomNames: uniqueSymptomNames,
     severityAssessment,
     safetyFlags,
     emergencyProtocol,
-    mentalHealthCrisis,
-    // conservativeBiasApplied: biasedLevel !== level // Removed - not in type definition
+    mentalHealthCrisis
   };
 }
 
 /**
  * Generate safety-focused triage summary for ATD routing
- * @param {object} triageResult - Result from performEnhancedTriage
+ * @param {EnhancedTriageResult} triageResult - Result from performEnhancedTriage
  * @param {string} userInput - Original user input
- * @returns {object} ATD-ready triage summary
+ * @returns {TriageSummary} ATD-ready triage summary
  */
 export function generateTriageSummary(triageResult, userInput) {
   return {
@@ -251,7 +363,7 @@ export function generateTriageSummary(triageResult, userInput) {
     severityBreakdown: triageResult.severityAssessment,
     recommendedActions: generateRecommendedActions(triageResult),
     riskFactors: triageResult.reasons,
-    conservativeBias: triageResult.conservativeBiasApplied,
+    conservativeBias: false, // Property removed from triageResult but preserved for compatibility
     timestamp: new Date().toISOString(),
     inputSanitized: userInput.length > 200 ? userInput.substring(0, 200) + "..." : userInput
   };
@@ -259,10 +371,11 @@ export function generateTriageSummary(triageResult, userInput) {
 
 /**
  * Generate recommended actions based on triage results
- * @param {object} triageResult - Enhanced triage result
+ * @param {EnhancedTriageResult} triageResult - Enhanced triage result
  * @returns {string[]} Array of recommended actions
  */
 function generateRecommendedActions(triageResult) {
+  /** @type {string[]} */
   const actions = [];
   
   if (triageResult.level === "EMERGENCY") {

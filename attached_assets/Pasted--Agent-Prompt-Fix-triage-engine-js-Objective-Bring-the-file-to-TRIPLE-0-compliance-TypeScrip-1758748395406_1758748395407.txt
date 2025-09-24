@@ -1,0 +1,107 @@
+🟢 Agent Prompt — Fix triage-engine.js
+
+Objective:
+Bring the file to TRIPLE-0 compliance:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+
+Preserve all triage logic, exports, and runtime behavior
+
+1. Validation
+
+Run baseline checks before starting:
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/medical-layer/triage-engine.js
+eslint client/src/lib/medical-layer/triage-engine.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+2. Fix Rules
+
+✅ Do not alter clinical logic: emergency detection, risk scoring, routing must stay intact.
+
+✅ Keep all exports and function signatures intact.
+
+✅ Add JSDoc typedefs matching the actual runtime structures (adjust them to real code — no templates left unaligned).
+
+✅ Replace unsafe object.property access with in checks and null guards.
+
+✅ Add explicit array/object typing (e.g., /** @type {Symptom[]} */ const symptoms = []).
+
+✅ Replace raw console.log with structured logging (console.info, console.warn, console.error).
+
+✅ Prefix unused parameters with _ to satisfy ESLint.
+
+3. JSDoc Typedef Templates (⚠️ adjust to match actual code!)
+/** @typedef {"EMERGENCY"|"URGENT"|"NON_URGENT"} TriageLevel */
+
+/** @typedef {{
+  name: string;
+  severity?: string;
+  duration?: string;
+  location?: string;
+  isHighRisk?: boolean;
+}} Symptom */
+
+/** @typedef {{
+  triageLevel: TriageLevel;
+  reasons: string[];
+  isHighRisk: boolean;
+  emergencyProtocol?: boolean;
+  atdReferral?: boolean;
+}} TriageResult */
+
+/** @typedef {{
+  demographics?: { age?: number; sex?: string };
+  context?: Record<string, unknown>;
+  symptoms?: Symptom[];
+}} TriageContext */
+
+4. Fix Targets
+
+Guard all property access:
+
+if (symptom && "severity" in symptom && symptom.severity === "severe") { … }
+
+
+Ensure array initializations are typed:
+
+/** @type {string[]} */ const reasons = [];
+
+
+Add return type JSDoc to all functions:
+
+/**
+ * @param {TriageContext} context
+ * @returns {TriageResult}
+ */
+function evaluateTriage(context) { … }
+
+
+Fix missing exports: ensure evaluateTriage, calculateRiskScore, and routeTriage remain exported exactly as before.
+
+Replace default object usage with precise typedefs (TriageContext, TriageResult).
+
+5. Post-Fix Validation
+
+Re-run validation:
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/medical-layer/triage-engine.js
+eslint client/src/lib/medical-layer/triage-engine.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must pass clean.
+
+6. Documentation Update
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark triage-engine.js as ✅ FIXED.
+
+Adjust project error/file counts.
+
+Add changelog entry: “All triage logic preserved, TRIPLE-0 compliance achieved.”
+
+⚠️ Reminder: All typedefs and examples must be aligned to actual implementation in triage-engine.js. Do not introduce mismatches or generic placeholders.
