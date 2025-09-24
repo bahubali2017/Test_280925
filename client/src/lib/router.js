@@ -40,11 +40,18 @@ export async function routeMedicalQuery(userInput) {
 
     t.start("enhancePrompt");
     const { systemPrompt, enhancedPrompt, atdNotices } = enhancePrompt(ctx);
-    // PHASE 6.4: Re-enable disclaimers from centralized source only
-    const disclaimers = selectDisclaimers(
-      ctx.triage?.level || 'non_urgent', 
-      ctx.triage?.symptomNames || []
-    ).disclaimers;
+    // ✅ Phase 6.4 Reinjection: single centralized disclaimer source
+    const disclaimerPack = selectDisclaimers(
+      ctx.triage?.level || 'non_urgent',
+      ctx.triage?.symptomNames || ['general']
+    );
+    const disclaimers = disclaimerPack.disclaimers;
+    console.log('[DISCLAIMER-DEBUG]', 'selectDisclaimers result:', { 
+      level: ctx.triage?.level || 'non_urgent', 
+      symptoms: ctx.triage?.symptomNames || ['general'],
+      disclaimerCount: disclaimers.length,
+      disclaimers 
+    });
     t.stop("enhancePrompt");
     updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
 
@@ -54,7 +61,7 @@ export async function routeMedicalQuery(userInput) {
       userInput: ctx.userInput,
       enhancedPrompt,
       isHighRisk: !!ctx.triage?.isHighRisk,
-      disclaimers, // ✅ Reinjected only once, from centralized source
+      disclaimers, // reinjected only once, centralized
       atd: atdNotices && atdNotices.length ? atdNotices : null,
       suggestions: ctx.triage?.isHighRisk
         ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
