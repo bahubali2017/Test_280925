@@ -1,0 +1,92 @@
+🔹 Agent Prompt — Fix client/src/qa/version-tracker.js
+
+Task:
+Refactor client/src/qa/version-tracker.js to achieve:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP: 0 diagnostics
+No suppressions, no any, no unknown, no eslint-disable.
+
+Run per-file validation
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/qa/version-tracker.js
+eslint client/src/qa/version-tracker.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+All JSDoc typedefs must match the actual implementation. Adjust property names and structures to what the file really uses.
+
+Preserve all exports and runtime logic.
+
+Replace console.log with console.info, console.warn, or console.error depending on context, or use your structured logger.
+
+Remove unused vars/imports, prefer const where possible.
+
+Guard all dynamic property access with null checks or in operator.
+
+Suggested typedefs (adjust to match actual code)
+/**
+ * @typedef VersionEntry
+ * @property {string} id - Unique test run ID
+ * @property {string} version - Current AI/system version string
+ * @property {string} date - ISO timestamp
+ * @property {string[]} [tags] - Optional labels for this version
+ */
+
+/**
+ * @typedef VersionReport
+ * @property {string} currentVersion
+ * @property {string[]} previousVersions
+ * @property {number} totalRuns
+ * @property {Record<string, number>} versionFrequency
+ */
+
+Refactor Targets
+
+Accumulators
+
+/** @type {VersionEntry[]} */
+const history = [];
+
+
+Dictionaries
+
+/** @type {Record<string, number>} */
+const versionFrequency = {};
+
+
+Functions (adjust names to actual file code):
+
+/** @param {string} version @returns {void} */
+export function trackVersion(version) { ... }
+
+/** @returns {VersionReport} */
+export function getVersionReport() { ... }
+
+/** @returns {string} */
+export function getCurrentVersion() { ... }
+
+
+Ensure explicit return types everywhere.
+
+Replace reduce() if TypeScript cannot infer array accumulator types.
+
+Handle errors with instanceof Error.
+
+ESLint cleanups
+
+Remove unused variables/imports.
+
+Prefer const over let.
+
+Consistent return paths in all functions.
+
+Deliverables
+
+Full corrected file with accurate JSDoc typedefs.
+
+Validation commands return 0 errors.
+
+Functionality unchanged: version tracking, reporting, QA audit continuity.
