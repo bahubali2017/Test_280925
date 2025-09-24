@@ -943,25 +943,34 @@ export default function ChatPage() {
             
             {/* Welcome message with starter questions */}
             {messages.length === 0 && !isFetchingHistory && (
-              <div className="text-center py-12 space-y-6">
-                <div className="mb-6">
-                  <h2 className="text-2xl font-bold text-foreground mb-2">
-                    Hello, {user?.name ? user.name.split(' ')[0] : 'there'}!
-                  </h2>
-                  <p className="text-muted-foreground max-w-md mx-auto">
-                    I'm your AI medical assistant. Ask me about symptoms, conditions, medications, or general health questions.
+              <div className="text-center py-16 space-y-8">
+                {/* Main Welcome Section */}
+                <div className="space-y-4">
+                  <h1 className="text-3xl font-bold text-foreground">
+                    Welcome to Anamnesis Medical AI Assistant
+                  </h1>
+                  <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
+                    Ask me anything about medical symptoms, conditions, or general health questions.
                   </p>
                 </div>
 
+                {/* Privacy Badge */}
+                <div className="inline-flex items-center gap-2 px-4 py-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+                  <svg className="w-4 h-4 text-blue-600 dark:text-blue-400" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                  </svg>
+                  <span className="text-sm font-medium text-blue-700 dark:text-blue-300">Your chat is private and secure</span>
+                </div>
+
                 {/* Starter Questions */}
-                <div className="max-w-2xl mx-auto">
-                  <h3 className="text-lg font-medium text-foreground mb-4">Popular questions to get started:</h3>
-                  <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-4">
+                  <h3 className="text-lg font-medium text-foreground">Try asking:</h3>
+                  <div className="flex flex-wrap justify-center gap-3 max-w-4xl mx-auto">
                     {starterQuestions.map((question, index) => (
                       <button
                         key={index}
                         onClick={() => handleStarterClick(question)}
-                        className="rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-6 py-3 text-cyan-800 dark:text-cyan-200 hover:bg-cyan-200 dark:hover:bg-cyan-800/40 transition-colors text-sm font-medium shadow-sm border border-cyan-200 dark:border-cyan-700"
+                        className="rounded-full bg-cyan-100 dark:bg-cyan-900/30 px-6 py-3 text-cyan-800 dark:text-cyan-200 hover:bg-cyan-200 dark:hover:bg-cyan-800/40 transition-colors text-sm font-medium border border-cyan-200/50 dark:border-cyan-700/50"
                       >
                         {question}
                       </button>
