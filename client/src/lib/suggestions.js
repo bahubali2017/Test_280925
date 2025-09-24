@@ -3,6 +3,34 @@
  * Provides varied, contextual medical questions with smart randomization
  */
 
+/**
+ * Medical context categories for suggestion grouping
+ * @typedef {'pain'|'digestive'|'mental'|'cardiovascular'|'respiratory'|'skin'|'womens'|'mens'|'infection'|'emergency'|'addiction'|'neurological'|'endocrine'|'musculoskeletal'|'vision'|'hearing'|'urinary'|'hematology'|'oncology'|'allergy'} MedicalContext
+ */
+
+/**
+ * Question intent types for analysis
+ * @typedef {'general'|'prevention'|'treatment'|'symptoms'|'causes'|'diagnosis'} QuestionIntent
+ */
+
+/**
+ * Extracted question context structure
+ * @typedef {{
+ *   medicalTerms: string[];
+ *   symptoms: string[];
+ *   bodyParts: string[];
+ *   intent: QuestionIntent;
+ * }} QuestionContext
+ */
+
+/**
+ * Conversation message structure for context analysis
+ * @typedef {{
+ *   role: string;
+ *   content: string;
+ * }} ConversationMessage
+ */
+
 // Large pool of starter questions organized by category
 const STARTER_QUESTIONS = {
   symptoms: [
@@ -99,6 +127,7 @@ const STARTER_QUESTIONS = {
 };
 
 // Context-aware follow-up questions based on topic analysis
+/** @type {Record<MedicalContext, string[]>} */
 const CONTEXTUAL_FOLLOWUPS = {
   // Pain-related topics
   pain: [
@@ -362,6 +391,38 @@ const DEFAULT_FOLLOWUPS = [
 ];
 
 /**
+ * Type guard to check if a medical context is valid
+ * @param {string} context - The context to validate
+ * @returns {context is MedicalContext}
+ */
+function isValidMedicalContext(context) {
+  return context in CONTEXTUAL_FOLLOWUPS;
+}
+
+/**
+ * Safely shuffle array using Fisher-Yates algorithm
+ * @param {string[]} array - Array to shuffle
+ * @returns {string[]} New shuffled array
+ */
+function shuffleArray(array) {
+  const shuffled = [...array];
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
+}
+
+/**
+ * Remove duplicate suggestions from array
+ * @param {string[]} suggestions - Array of suggestion strings
+ * @returns {string[]} Deduplicated array
+ */
+function deduplicateSuggestions(suggestions) {
+  return Array.from(new Set(suggestions));
+}
+
+/**
  * Get random starter questions for the welcome screen
  * @param {number} count - Number of questions to return (default: 4)
  * @returns {string[]} Array of starter questions
@@ -371,16 +432,21 @@ export function getRandomStarterQuestions(count = 4) {
   const allQuestions = allCategories.flat();
   
   // Shuffle and select random questions
-  const shuffled = [...allQuestions].sort(() => 0.5 - Math.random());
+  const shuffled = shuffleArray(allQuestions);
   return shuffled.slice(0, count);
 }
 
 /**
  * Analyze question content to determine context
  * @param {string} question - The user's question
- * @returns {string|null} Context category or null
+ * @returns {MedicalContext | null} Context category or null
  */
 function analyzeQuestionContext(question) {
+  if (typeof question !== 'string' || !question.trim()) {
+    console.warn('[Suggestions] Invalid question provided for context analysis');
+    return null;
+  }
+
   const lowerQuestion = question.toLowerCase();
   
   // Neurological keywords (headaches, migraines, brain-related)
@@ -487,18 +553,21 @@ function analyzeQuestionContext(question) {
 }
 
 /**
- * Get contextual follow-up suggestions based on the user's question and conversation history
- * @param {string} userQuestion - The user's original question
- * @param {Array} conversationHistory - Previous messages for context
- * @param {number} count - Number of suggestions to return (default: 4)
- * @returns {string[]} Array of follow-up suggestions
- */
-/**
  * Extract key medical terms and concepts from user question
  * @param {string} question - The user's question
- * @returns {object} Object with extracted terms and question type
+ * @returns {QuestionContext} Object with extracted terms and question type
  */
 function extractQuestionContext(question) {
+  if (typeof question !== 'string' || !question.trim()) {
+    console.warn('[Suggestions] Invalid question provided for context extraction');
+    return {
+      medicalTerms: [],
+      symptoms: [],
+      bodyParts: [],
+      intent: 'general'
+    };
+  }
+
   const lowerQuestion = question.toLowerCase();
   
   // Extract specific medical terms
@@ -519,7 +588,7 @@ function extractQuestionContext(question) {
   if (symptomMatches) symptoms.push(...symptomMatches);
   
   // Question intent
-  let intent = 'general';
+  let intent = /** @type {QuestionIntent} */ ('general');
   if (/prevent|prevention|avoid|reduce risk/.test(lowerQuestion)) intent = 'prevention';
   else if (/treatment|treat|cure|heal|fix|help/.test(lowerQuestion)) intent = 'treatment';
   else if (/symptom|sign|warning|indication|know if/.test(lowerQuestion)) intent = 'symptoms';
@@ -532,7 +601,7 @@ function extractQuestionContext(question) {
 /**
  * Generate intelligent follow-up questions based on specific question analysis
  * @param {string} userQuestion - The user's original question
- * @param {string} _context - Medical context category (unused but kept for API compatibility)
+ * @param {MedicalContext | null} _context - Medical context category (unused but kept for API compatibility)
  * @returns {string[]} Array of tailored follow-up suggestions
  */
 function generateIntelligentFollowups(userQuestion, _context) {
@@ -582,48 +651,73 @@ function generateIntelligentFollowups(userQuestion, _context) {
     suggestions.push("How can I monitor symptoms at home?");
   }
   
-  return [...new Set(suggestions)].slice(0, 4); // Remove duplicates and limit to 4
+  return deduplicateSuggestions(suggestions).slice(0, 4); // Remove duplicates and limit to 4
+}
+
+/**
+ * Check if two questions are similar by comparing key words
+ * @param {string} question1 - First question
+ * @param {string} question2 - Second question
+ * @returns {boolean} True if questions are similar
+ */
+function areQuestionsSimilar(question1, question2) {
+  if (typeof question1 !== 'string' || typeof question2 !== 'string') {
+    return false;
+  }
+
+  const words1 = question1.toLowerCase().split(' ').filter(word => word.length > 2);
+  const words2 = question2.toLowerCase().split(' ').filter(word => word.length > 2);
+  
+  // Check if any significant words overlap
+  return words1.some(word => words2.includes(word)) || words2.some(word => words1.includes(word));
 }
 
 /**
  * Get contextual follow-up suggestions based on the user's question and conversation history
  * @param {string} userQuestion - The user's original question
- * @param {Array} _conversationHistory - Previous messages for context (unused but kept for API compatibility)
+ * @param {ConversationMessage[]} _conversationHistory - Previous messages for context (unused but kept for API compatibility)
  * @param {number} count - Number of suggestions to return (default: 4)
  * @returns {string[]} Array of follow-up suggestions
  */
 export function getContextualFollowups(userQuestion, _conversationHistory = [], count = 4) {
-  // Generate intelligent, specific follow-ups first
-  const context = analyzeQuestionContext(userQuestion);
-  const intelligentSuggestions = generateIntelligentFollowups(userQuestion, context);
-  
-  if (intelligentSuggestions.length >= count) {
-    return intelligentSuggestions.slice(0, count);
+  if (typeof userQuestion !== 'string' || !userQuestion.trim()) {
+    console.warn('[Suggestions] Invalid user question provided');
+    return shuffleArray(DEFAULT_FOLLOWUPS).slice(0, count);
   }
-  
-  // Fill remaining slots with context-appropriate questions
-  const remaining = count - intelligentSuggestions.length;
-  if (context && CONTEXTUAL_FOLLOWUPS[context] && remaining > 0) {
-    const contextQuestions = CONTEXTUAL_FOLLOWUPS[context];
-    // Filter out questions that are too similar to what we already have
-    const filtered = contextQuestions.filter(q => 
-      !intelligentSuggestions.some(existing => 
-        existing.toLowerCase().includes(q.toLowerCase().split(' ')[2]) ||
-        q.toLowerCase().includes(existing.toLowerCase().split(' ')[2])
-      )
-    );
-    const shuffled = [...filtered].sort(() => 0.5 - Math.random());
-    return [...intelligentSuggestions, ...shuffled.slice(0, remaining)];
-  }
-  
-  // Final fallback to default general follow-ups
-  if (intelligentSuggestions.length < count) {
+
+  try {
+    // Generate intelligent, specific follow-ups first
+    const context = analyzeQuestionContext(userQuestion);
+    const intelligentSuggestions = generateIntelligentFollowups(userQuestion, context);
+    
+    if (intelligentSuggestions.length >= count) {
+      return intelligentSuggestions.slice(0, count);
+    }
+    
+    // Fill remaining slots with context-appropriate questions
     const remaining = count - intelligentSuggestions.length;
-    const shuffled = [...DEFAULT_FOLLOWUPS].sort(() => 0.5 - Math.random());
-    return [...intelligentSuggestions, ...shuffled.slice(0, remaining)];
+    if (context && isValidMedicalContext(context) && remaining > 0) {
+      const contextQuestions = CONTEXTUAL_FOLLOWUPS[context];
+      // Filter out questions that are too similar to what we already have
+      const filtered = contextQuestions.filter(q => 
+        !intelligentSuggestions.some(existing => areQuestionsSimilar(existing, q))
+      );
+      const shuffled = shuffleArray(filtered);
+      return [...intelligentSuggestions, ...shuffled.slice(0, remaining)];
+    }
+    
+    // Final fallback to default general follow-ups
+    if (intelligentSuggestions.length < count) {
+      const remaining = count - intelligentSuggestions.length;
+      const shuffled = shuffleArray(DEFAULT_FOLLOWUPS);
+      return [...intelligentSuggestions, ...shuffled.slice(0, remaining)];
+    }
+    
+    return intelligentSuggestions;
+  } catch (error) {
+    console.error('[Suggestions] Error generating contextual followups:', error);
+    return shuffleArray(DEFAULT_FOLLOWUPS).slice(0, count);
   }
-  
-  return intelligentSuggestions;
 }
 
 /**
@@ -633,20 +727,55 @@ export function getContextualFollowups(userQuestion, _conversationHistory = [], 
  */
 export function getProfessionalFollowups(count = 4) {
   const professionalQuestions = [
-    "What are the diagnostic criteria?",
-    "Are there any recent treatment guideline updates?",
-    "What's the typical prognosis?",
-    "Are there any significant drug interactions?",
-    "What are the differential diagnoses?",
-    "What's the standard of care protocol?",
-    "Are there any contraindications?",
-    "What monitoring is required?",
-    "What are the risk factors?",
-    "How do you rule out complications?",
-    "What's the evidence base for treatment?",
-    "Are there any specialty referral criteria?"
+    "What additional history should I obtain?",
+    "What physical examination findings should I look for?",
+    "What diagnostic tests would be most appropriate?",
+    "What are the differential diagnoses to consider?",
+    "What are the treatment options and their evidence base?",
+    "What are the potential complications or red flags?",
+    "When should I refer to a specialist?",
+    "What patient education is most important?",
+    "How should I monitor treatment response?",
+    "What are the follow-up recommendations?",
+    "Are there any contraindications I should consider?",
+    "What are the current clinical guidelines?",
+    "How does this patient's comorbidities affect management?",
+    "What lifestyle modifications should I recommend?",
+    "Are there any drug interactions to consider?",
+    "What are the quality indicators for this condition?"
   ];
   
-  const shuffled = [...professionalQuestions].sort(() => 0.5 - Math.random());
+  const shuffled = shuffleArray(professionalQuestions);
   return shuffled.slice(0, count);
 }
+
+/**
+ * Get emergency-focused follow-up suggestions
+ * @param {number} count - Number of suggestions to return (default: 4)
+ * @returns {string[]} Array of emergency-focused follow-up suggestions
+ */
+export function getEmergencyFollowups(count = 4) {
+  const emergencyQuestions = [
+    "When should I call 911 immediately?",
+    "What are the warning signs of a medical emergency?",
+    "Should I go to the ER or urgent care?",
+    "What should I do while waiting for medical help?",
+    "How can I tell if this is life-threatening?",
+    "What information should I have ready for emergency services?",
+    "Are there any first aid measures I should take?",
+    "When is it safe to wait and see?",
+    "What symptoms would require immediate attention?",
+    "Should I take any medications while waiting?",
+    "How do I know if someone is having a heart attack?",
+    "What are the signs of a stroke?",
+    "When should I call poison control?",
+    "How do I handle severe allergic reactions?",
+    "What are signs of severe infection?",
+    "When is breathing difficulty an emergency?"
+  ];
+  
+  const shuffled = shuffleArray(emergencyQuestions);
+  return shuffled.slice(0, count);
+}
+
+console.info('[Suggestions] Medical suggestion system loaded with', Object.keys(CONTEXTUAL_FOLLOWUPS).length, 'medical contexts');

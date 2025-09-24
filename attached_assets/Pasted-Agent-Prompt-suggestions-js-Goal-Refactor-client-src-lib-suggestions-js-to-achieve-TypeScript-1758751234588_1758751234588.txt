@@ -1,0 +1,90 @@
+Agent Prompt — suggestions.js
+
+Goal
+Refactor client/src/lib/suggestions.js to achieve:
+
+✅ TypeScript strict mode: 0 errors
+
+✅ ESLint compliance: 0 warnings/errors
+
+✅ LSP diagnostics: 0 issues
+
+✅ Preserve 100% runtime behavior (suggestion generation + medical AI integration)
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/suggestions.js
+eslint client/src/lib/suggestions.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+No shortcuts — ❌ no any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve all runtime semantics exactly (AI follow-up suggestion generation, deduplication, display ordering).
+
+Add precise JSDoc typedefs — ⚠️ must be aligned with the actual file implementation, not just templates.
+
+Use safe property access: in checks, Array.isArray(), and null guards.
+
+Replace console.log with structured logging (console.info, console.warn, console.error).
+
+Remove unused imports/variables; prefix unused params with _.
+
+Ensure accessibility if suggestions are rendered into UI (labels, roles).
+
+Suggested JSDoc Typedefs (⚠️ adjust to match actual code)
+/** @typedef {"question" | "followup" | "clarification"} SuggestionType */
+
+/** @typedef {{
+  id: string;
+  type: SuggestionType;
+  text: string;
+  relatedSymptoms?: string[];
+  priority?: number;
+}} Suggestion */
+
+/** @typedef {{
+  userInput: string;
+  context?: Record<string, unknown>;
+  maxSuggestions?: number;
+}} SuggestionOptions */
+
+Expected Fixes
+
+Type safety
+
+Fully type all functions:
+generateSuggestions(input, options): Suggestion[]
+filterSuggestions(list, options): Suggestion[]
+rankSuggestions(list): Suggestion[]
+
+Add guards for all optional fields (relatedSymptoms, priority).
+
+Deduplication
+
+Replace repeated filtering/deduplication logic with a helper:
+deduplicateSuggestions(suggestions): Suggestion[].
+
+Runtime preservation
+
+Preserve all existing logic for ranking, deduplication, and filtering.
+
+Ensure medical suggestion safety is preserved (no overconfident unsafe suggestions).
+
+Error handling
+
+Catch unexpected inputs with clear logging:
+console.error('[Suggestions] Invalid suggestion input', error)
+
+Post-Fix Deliverables
+
+Updated suggestions.js — TRIPLE-0 compliant, runtime logic unchanged.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark file as ✅ FIXED.
+
+Adjust error + file counts.
+
+Add changelog: "suggestions.js fully refactored with TRIPLE-0 compliance, runtime preserved".
+
+⚠️ Reminder: All typedefs, helpers, and signatures here are templates. Adjust them to match the actual file content of suggestions.js. Never leave mismatches.
