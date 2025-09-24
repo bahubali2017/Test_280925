@@ -610,7 +610,7 @@ router.get("/app-config.json", async (req, res) => {
         });
       }
 
-      const { message, conversationHistory, isHighRisk } = validation.data;
+      const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
       
 
       const config = getDeepSeekConfig();
@@ -670,8 +670,12 @@ router.get("/app-config.json", async (req, res) => {
 
         Format: Brief answer, key points, recommendations.`;
 
+      // PHASE 5 FIX: Use client systemPrompt if provided, fallback to server medicalContext
+      const finalSystemPrompt = systemPrompt || medicalContext;
+      console.log('[PROMPT_SOURCE]', systemPrompt ? 'CLIENT' : 'SERVER');
+
       const messages = [
-        { role: "system", content: medicalContext }
+        { role: "system", content: finalSystemPrompt }
       ];
 
       // Add conversation history if available
@@ -884,7 +888,7 @@ router.get("/app-config.json", async (req, res) => {
         });
       }
 
-      const { message, conversationHistory, isHighRisk } = validation.data;
+      const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
       
 
       const config = getDeepSeekConfig();
@@ -941,10 +945,8 @@ router.get("/app-config.json", async (req, res) => {
       // Prepare messages for the LLM
       let promptMessages = [];
 
-      // Use default system message with safety instructions and role information
-      promptMessages.push({
-        role: "system",
-        content: `You are MAIA (Medical AI Assistant) from Anamnesis. Provide complete medical information in plain text format.
+      // Default system message with safety instructions and role information
+      const defaultMedicalContext = `You are MAIA (Medical AI Assistant) from Anamnesis. Provide complete medical information in plain text format.
         ${isHighRisk ? 'IMPORTANT: The user may describe an urgent medical situation. Emphasize the importance of seeking immediate professional medical attention for emergencies.' : ''}
 
         USER TYPE: ${roleAnalysis.role} (confidence: ${roleAnalysis.confidence}%)
@@ -957,7 +959,15 @@ router.get("/app-config.json", async (req, res) => {
         4. Educational information only
         5. If response is getting long, prioritize the most important information first
 
-        CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`
+        CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`;
+
+      // PHASE 5 FIX: Use client systemPrompt if provided, fallback to server defaultMedicalContext
+      const finalSystemPrompt = systemPrompt || defaultMedicalContext;
+      console.log('[PROMPT_SOURCE]', systemPrompt ? 'CLIENT' : 'SERVER');
+
+      promptMessages.push({
+        role: "system",
+        content: finalSystemPrompt
       });
 
       // Add conversation history for context
