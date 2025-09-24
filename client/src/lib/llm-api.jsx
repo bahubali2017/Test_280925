@@ -463,6 +463,13 @@ export async function sendMessage(message, history = [], options = {}) {
       trace('[TRACE] aboutToMakeRequest', { endpoint, currentSession });
     }
     
+    // AUDIT TRACE: Capture final request payload before API call
+    if (isDebug()) {
+      console.log('🚨 [FINAL_REQUEST_PAYLOAD] Complete systemPrompt before API call:\n', requestBody.systemPrompt);
+      console.log('🚨 [FINAL_REQUEST_PAYLOAD] mode:', requestBody.mode, 'questionType:', requestBody.questionType);
+      console.log('🚨 [FINAL_REQUEST_PAYLOAD] enhancedPrompt:', requestBody.enhancedPrompt);
+    }
+    
     // Make API request using the global controller with session ID
     const response = await makeAPIRequest(endpoint, requestBody, currentSession);
     

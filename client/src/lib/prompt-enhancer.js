@@ -397,6 +397,12 @@ export function buildPromptsForQuery({ query, userRole = 'public', ctx = null })
   const systemPromptHead = builderResult.systemPrompt.substring(0, 300);
   console.log('[TRACE] systemPrompt(head) →', systemPromptHead);
   
+  // AUDIT TRACE: Capture complete buildPromptsForQuery return object
+  if (typeof window !== 'undefined' && window.console) {
+    console.log('🔍 [BUILDER_OUTPUT] Full systemPrompt from buildPromptsForQuery:\n', builderResult.systemPrompt);
+    console.log('🔍 [BUILDER_OUTPUT] responseMode:', builderResult.responseMode, 'questionType:', builderResult.questionType);
+  }
+
   return {
     systemPrompt: builderResult.systemPrompt,
     questionType: builderResult.questionType,
