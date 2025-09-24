@@ -203,6 +203,18 @@ async function processStream(stream, onUpdate, abortSignal) {
         if (!data) continue;
         
         if (data.done) {
+          // ✅ PHASE 6.4: Extract disclaimers from server metadata in "done" event
+          if (data.disclaimers && Array.isArray(data.disclaimers)) {
+            console.log('[DISCLAIMER_DEBUG] Client received disclaimers from server:', data.disclaimers);
+            // Pass disclaimers to UI via final update
+            onUpdate('', { 
+              streaming: false, 
+              fullContent,
+              disclaimers: data.disclaimers,
+              metadata: { queryIntent: { disclaimers: data.disclaimers } }
+            });
+          }
+          
           // TRACE: Stream completion (non-intrusive)
           if (isDebug()) {
             trace('[TRACE] streamComplete', {
