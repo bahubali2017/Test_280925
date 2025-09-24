@@ -73,7 +73,7 @@ export async function routeMedicalQuery(userInput) {
       userInput: String(userInput || ""),
       enhancedPrompt: "System fallback: Provide general, low‑risk educational guidance and suggest appropriate next steps. Include red‑flag checklist and advise contacting a clinician if concerned.",
       isHighRisk: false,
-      disclaimers: ["The enhanced AI layer encountered an issue. This is a general response and not a diagnosis."],
+      disclaimers: [], // Let fallback-engine handle disclaimers via selectDisclaimers()
       suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
       metadata: { processingTime, stageTimings: t.toJSON() }
     });
