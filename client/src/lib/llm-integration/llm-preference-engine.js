@@ -8,6 +8,92 @@
 import { selectOptimalModel, determineFallbackStrategy, recordModelPerformance } from "./llm-adapter.js";
 
 /**
+ * @typedef {object} ModelPerformanceMetrics
+ * @property {number} avgResponseTime - Average response time in milliseconds
+ * @property {number} accuracyScore - Accuracy score from 1-10
+ * @property {number} successRate - Success rate from 0-1
+ * @property {Date} lastUsed - Last time model was used
+ */
+
+/**
+ * @typedef {object} CircuitBreakerState
+ * @property {"closed"|"open"|"half_open"} state - Current circuit breaker state
+ * @property {number} failureCount - Number of consecutive failures
+ * @property {Date|null} lastFailure - Last failure timestamp
+ * @property {Date} nextAttempt - Next retry attempt time
+ */
+
+/**
+ * @typedef {object} ModelScore
+ * @property {string} modelId - Model identifier
+ * @property {number} score - Calculated selection score
+ */
+
+/**
+ * @typedef {object} ModelSelectionResult
+ * @property {string} modelId - Selected model identifier
+ * @property {number} confidence - Selection confidence 0-1
+ * @property {string} reasoning - Selection reasoning explanation
+ * @property {string[]} fallbacks - Fallback model identifiers
+ */
+
+/**
+ * @typedef {object} QueryExecutionResult
+ * @property {string} response - Model response text
+ * @property {string} modelUsed - Model that was actually used
+ * @property {number} responseTime - Total response time in milliseconds
+ * @property {boolean} successful - Whether execution succeeded
+ * @property {string[]} fallbacksUsed - Models that failed and were tried
+ * @property {string} [error] - Error message if failed
+ */
+
+/**
+ * @typedef {object} UserPreferences
+ * @property {string[]} [preferredModels] - Preferred model identifiers
+ * @property {string[]} [avoidModels] - Models to avoid
+ */
+
+/**
+ * @typedef {object} QueryOptions
+ * @property {string[]} [availableModels] - Available model identifiers
+ * @property {UserPreferences} [preferences] - User preferences
+ */
+
+/**
+ * @typedef {object} FallbackStrategy
+ * @property {boolean} shouldRetry - Whether to retry with fallback
+ * @property {"immediate"|"exponential_backoff"} [retryStrategy] - Retry strategy type
+ */
+
+/**
+ * @typedef {object} ErrorWithType
+ * @property {string} message - Error message
+ * @property {string} [type] - Error type classification
+ */
+
+/**
+ * @typedef {object} ModelDashboardMetrics
+ * @property {number} avgResponseTime - Average response time (rounded)
+ * @property {number} accuracyScore - Accuracy score (1 decimal)
+ * @property {number} successRate - Success rate as percentage
+ * @property {string} lastUsed - Last used timestamp ISO string
+ */
+
+/**
+ * @typedef {object} CircuitBreakerDashboard
+ * @property {"closed"|"open"|"half_open"} state - Circuit breaker state
+ * @property {number} failureCount - Number of failures
+ * @property {boolean} available - Whether model is available
+ */
+
+/**
+ * @typedef {object} PerformanceDashboard
+ * @property {Record<string, ModelDashboardMetrics>} models - Model performance data
+ * @property {Record<string, CircuitBreakerDashboard>} circuitBreakers - Circuit breaker states
+ * @property {string} timestamp - Dashboard generation timestamp
+ */
+
+/**
  * Preference weights for model selection criteria
  * @type {Record<string, number>}
  */
@@ -21,19 +107,20 @@ const SELECTION_WEIGHTS = {
 
 /**
  * Model performance history tracking
- * @type {Map<string, {avgResponseTime: number, accuracyScore: number, successRate: number, lastUsed: Date}>}
+ * @type {Map<string, ModelPerformanceMetrics>}
  */
 const modelPerformanceCache = new Map();
 
 /**
  * Circuit breaker states for model availability
- * @type {Map<string, {state: 'closed'|'open'|'half_open', failureCount: number, lastFailure: Date, nextAttempt: Date}>}
+ * @type {Map<string, CircuitBreakerState>}
  */
 const circuitBreakerStates = new Map();
 
 /**
  * Initialize model performance tracking
  * @param {string} modelId - Model identifier
+ * @returns {void}
  */
 function initializeModelPerformance(modelId) {
   if (!modelPerformanceCache.has(modelId)) {
@@ -52,10 +139,13 @@ function initializeModelPerformance(modelId) {
  * @param {number} responseTime - Response time in milliseconds
  * @param {number} accuracyScore - Quality score 1-10
  * @param {boolean} successful - Whether the request succeeded
+ * @returns {void}
  */
 function updateModelPerformance(modelId, responseTime, accuracyScore, successful) {
   initializeModelPerformance(modelId);
   const current = modelPerformanceCache.get(modelId);
+  
+  if (!current) return; // Type guard, should not happen after initialization
   
   // Exponential weighted moving average for response time
   const alpha = 0.2;
@@ -93,6 +183,8 @@ function updateCircuitBreaker(modelId, requestSuccessful) {
   }
   
   const breaker = circuitBreakerStates.get(modelId);
+  if (!breaker) return false; // Type guard
+  
   const now = new Date();
   
   if (requestSuccessful) {
@@ -126,6 +218,8 @@ function isModelAvailable(modelId) {
   }
   
   const breaker = circuitBreakerStates.get(modelId);
+  if (!breaker) return true; // Type guard
+  
   const now = new Date();
   
   switch (breaker.state) {
@@ -148,13 +242,15 @@ function isModelAvailable(modelId) {
  * Calculate model selection score based on multiple criteria
  * @param {string} modelId - Model identifier
  * @param {string} queryType - Type of medical query
- * @param {'emergency'|'urgent'|'non_urgent'} urgencyLevel - Query urgency
- * @param {object} preferences - User/system preferences
+ * @param {"emergency"|"urgent"|"non_urgent"} urgencyLevel - Query urgency
+ * @param {UserPreferences} [preferences] - User/system preferences
  * @returns {number} Selection score (higher is better)
  */
 function calculateModelScore(modelId, queryType, urgencyLevel, preferences = {}) {
   initializeModelPerformance(modelId);
   const performance = modelPerformanceCache.get(modelId);
+  
+  if (!performance) return 0; // Type guard
   
   let score = 0;
   
@@ -199,16 +295,17 @@ function calculateModelScore(modelId, queryType, urgencyLevel, preferences = {})
 /**
  * Intelligent model selection with preference learning
  * @param {string} queryType - Type of medical query
- * @param {'emergency'|'urgent'|'non_urgent'} urgencyLevel - Query urgency  
- * @param {string[]} availableModels - Currently available models
- * @param {object} preferences - Selection preferences
- * @returns {Promise<{modelId: string, confidence: number, reasoning: string, fallbacks: string[]}>}
+ * @param {"emergency"|"urgent"|"non_urgent"} urgencyLevel - Query urgency  
+ * @param {string[]} [availableModels] - Currently available models
+ * @param {UserPreferences} [preferences] - Selection preferences
+ * @returns {Promise<ModelSelectionResult>} Model selection result
  */
 export async function selectModelWithPreferences(queryType, urgencyLevel, availableModels = [], preferences = {}) {
   // Get base model selection
   const baseSelection = selectOptimalModel(queryType, urgencyLevel, availableModels, preferences);
   
   // Calculate scores for all available models
+  /** @type {ModelScore[]} */
   const modelScores = [];
   const modelsToEvaluate = availableModels.length > 0 ? availableModels : ["deepseek"];
   
@@ -253,17 +350,18 @@ export async function selectModelWithPreferences(queryType, urgencyLevel, availa
 /**
  * Execute query with automatic fallback and performance tracking
  * @param {string} queryType - Type of medical query
- * @param {'emergency'|'urgent'|'non_urgent'} urgencyLevel - Query urgency
+ * @param {"emergency"|"urgent"|"non_urgent"} urgencyLevel - Query urgency
  * @param {string} prompt - The prompt to send to the model
- * @param {object} options - Query options and preferences
- * @returns {Promise<{response: string, modelUsed: string, responseTime: number, successful: boolean, fallbacksUsed: string[]}>}
+ * @param {QueryOptions} [options] - Query options and preferences
+ * @returns {Promise<QueryExecutionResult>} Query execution result
  */
 export async function executeQueryWithFallback(queryType, urgencyLevel, prompt, options = {}) {
   const startTime = Date.now();
   const selection = await selectModelWithPreferences(queryType, urgencyLevel, options.availableModels, options.preferences);
   
-  let attempts = [selection.modelId, ...selection.fallbacks];
+  const attempts = [selection.modelId, ...selection.fallbacks];
   let lastError = null;
+  /** @type {string[]} */
   const fallbacksUsed = [];
   
   for (let i = 0; i < attempts.length; i++) {
@@ -296,7 +394,8 @@ export async function executeQueryWithFallback(queryType, urgencyLevel, prompt, 
       };
       
     } catch (error) {
-      lastError = error;
+      const errorTyped = /** @type {ErrorWithType} */ (error);
+      lastError = errorTyped;
       fallbacksUsed.push(modelId);
       
       // Update performance metrics for failure
@@ -305,7 +404,7 @@ export async function executeQueryWithFallback(queryType, urgencyLevel, prompt, 
       updateCircuitBreaker(modelId, false);
       
       // Determine if we should continue with fallbacks
-      const fallbackStrategy = determineFallbackStrategy(modelId, error.type || "api_error", queryType, urgencyLevel);
+      const fallbackStrategy = determineFallbackStrategy(modelId, errorTyped.type || "api_error", queryType, urgencyLevel);
       
       if (!fallbackStrategy.shouldRetry) {
         break;
@@ -320,6 +419,7 @@ export async function executeQueryWithFallback(queryType, urgencyLevel, prompt, 
   
   // All models failed
   const totalTime = Date.now() - startTime;
+  /** @type {QueryExecutionResult} */
   const result = {
     response: "I apologize, but I'm experiencing technical difficulties. Please try again in a moment or seek direct medical attention if this is urgent.",
     modelUsed: "none",
@@ -329,8 +429,8 @@ export async function executeQueryWithFallback(queryType, urgencyLevel, prompt, 
   };
   
   // Add error information if available
-  if (lastError?.message) {
-    /** @type {any} */ (result).error = lastError.message;
+  if (lastError && lastError.message) {
+    result.error = lastError.message;
   }
   
   return result;
@@ -340,7 +440,7 @@ export async function executeQueryWithFallback(queryType, urgencyLevel, prompt, 
  * Simulate model API call (would be replaced with actual API integration)
  * @param {string} modelId - Model to call
  * @param {string} prompt - Prompt to send
- * @param {object} _options - Call options (unused)
+ * @param {QueryOptions} _options - Call options (unused)
  * @returns {Promise<string>} Model response
  */
 async function simulateModelCall(modelId, prompt, _options) {
@@ -357,9 +457,10 @@ async function simulateModelCall(modelId, prompt, _options) {
 
 /**
  * Get model performance dashboard data
- * @returns {object} Performance metrics for all models
+ * @returns {PerformanceDashboard} Performance metrics for all models
  */
 export function getModelPerformanceDashboard() {
+  /** @type {PerformanceDashboard} */
   const dashboard = {
     models: {},
     circuitBreakers: {},
@@ -390,7 +491,8 @@ export function getModelPerformanceDashboard() {
 
 /**
  * Reset model performance metrics (for testing or maintenance)
- * @param {string} modelId - Model to reset, or null for all models
+ * @param {string|null} [modelId] - Model to reset, or null for all models
+ * @returns {void}
  */
 export function resetModelMetrics(modelId = null) {
   if (modelId) {
