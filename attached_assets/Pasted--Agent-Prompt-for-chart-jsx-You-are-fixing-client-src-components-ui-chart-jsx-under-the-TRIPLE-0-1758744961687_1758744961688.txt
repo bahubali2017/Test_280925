@@ -1,0 +1,49 @@
+🔧 Agent Prompt for chart.jsx
+You are fixing `client/src/components/ui/chart.jsx` under the TRIPLE-0 ERROR POLICY:
+- TypeScript strict mode: must be reduced to 0 errors
+- ESLint: must be reduced to 0 warnings/errors
+- LSP diagnostics: must be reduced to 0 issues
+
+⚖️ Key Instructions:
+1. **Preserve actual file structure**
+   - Do NOT overwrite with a generic template.
+   - Keep existing imports (likely Recharts or other charting libraries).
+   - Maintain all current props, components, and exports exactly as implemented.
+
+2. **JSDoc typedefs**
+   - Add JSDoc typedefs that describe the **actual data structures** used by this chart.
+   - Examples may include:
+     - ChartProps (input data, labels, options)
+     - ChartDataItem (x/y values, categories, series)
+     - TooltipProps, LegendProps
+   - ⚠️ Reminder: All typedefs, function signatures, and examples you add are **templates** and MUST be adjusted to match the actual code in `chart.jsx`. Never introduce mismatches between documentation and implementation.
+
+3. **TypeScript strict mode compliance**
+   - Fix all implicit any errors, unsafe object access, and never[] issues.
+   - Add explicit parameter and return types for all components and helpers.
+   - Guard optional props and optional chaining with null checks.
+
+4. **ESLint compliance**
+   - Remove unused imports and variables.
+   - Replace console.log with structured logging (`console.info`, `console.warn`, `console.error`) where necessary.
+   - Ensure consistent naming, spacing, and hook rules compliance.
+
+5. **Runtime behavior**
+   - Preserve chart rendering functionality (data visualization must remain intact).
+   - Keep tooltip, legend, axis, and responsive behavior unchanged.
+   - Ensure medical data visualization integrity (if the chart is used for patient metrics or analytics).
+
+6. **Code Quality Enhancements**
+   - Factor out duplicated chart configuration logic into helpers if necessary.
+   - Add default props where applicable for resilience.
+   - Ensure responsive layout and accessibility attributes are preserved.
+
+7. **Documentation**
+   - Add JSDoc for all exported components and typedefs.
+   - Include a high-level comment describing the chart’s role in the system (analytics visualization, safety dashboard, etc.).
+
+8. **Tracking**
+   - After completing the fix, update `TS_ERROR_MASTER_AUDIT_v2.md`:
+     - Reduce the error count for `chart.jsx` to 0.
+     - Update total project error count and file count.
+     - Mark this file as ✅ TRIPLE-0 COMPLIANT.
