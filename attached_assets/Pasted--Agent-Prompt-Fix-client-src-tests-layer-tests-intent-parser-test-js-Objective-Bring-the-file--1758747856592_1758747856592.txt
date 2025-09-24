@@ -1,0 +1,94 @@
+🟢 Agent Prompt — Fix client/src/tests/layer-tests/intent-parser.test.js
+
+Objective:
+Bring the file to TRIPLE-0 compliance:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+
+Preserve all test semantics and assertions
+
+1. Validation
+
+Run baseline checks first:
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/layer-tests/intent-parser.test.js
+eslint client/src/tests/layer-tests/intent-parser.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+2. Fix Rules
+
+✅ Do not remove or alter test cases, assertions, or behavior.
+
+✅ Replace top-level await with proper Jest async it() or beforeAll blocks.
+
+✅ Import Jest globals (describe, it, expect, etc.) explicitly if needed.
+
+✅ Add JSDoc typedefs that match the actual data shapes used in the tests. If unsure, infer from real test calls. Never leave generic templates.
+
+3. JSDoc Typedef Templates (adjust to actual code!)
+/** @typedef {"diagnosis"|"triage"|"question"|"other"} IntentType */
+
+/** @typedef {{
+  userInput: string;
+  region?: string;
+  demographics?: { age?: number; sex?: string };
+  metadata?: Record<string, unknown>;
+}} IntentParserInput */
+
+/** @typedef {{
+  intent: IntentType;
+  confidence: number;
+  reasons?: string[];
+  disclaimers?: string[];
+  metadata?: Record<string, unknown>;
+}} IntentParserOutput */
+
+4. Fix Targets
+
+Add async handling in tests:
+
+it("detects triage intent", async () => {
+  const out = await parseIntent({ userInput: "chest pain" });
+  expect(out.intent).toBe("triage");
+  expect(out.confidence).toBeGreaterThan(0.7);
+});
+
+
+Guard property access in expectations:
+
+expect(out && "intent" in out ? out.intent : null).toBe("diagnosis");
+
+
+Use explicit array typing for accumulators:
+
+/** @type {IntentParserOutput[]} */ const results = [];
+
+
+Replace unused variables with _ prefix.
+
+Replace all raw console.log with console.info, console.warn, or console.error as appropriate.
+
+5. Post-Fix Validation
+
+Re-run checks:
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/layer-tests/intent-parser.test.js
+eslint client/src/tests/layer-tests/intent-parser.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must return clean (0).
+
+6. Documentation Update
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark intent-parser.test.js as ✅ FIXED.
+
+Adjust total error count and file count.
+
+Add changelog entry: “All test semantics preserved, TRIPLE-0 compliance achieved.”
+
+⚠️ Reminder: JSDoc typedefs must match the actual test data and parser output. Do not leave mismatched or generic placeholders.
