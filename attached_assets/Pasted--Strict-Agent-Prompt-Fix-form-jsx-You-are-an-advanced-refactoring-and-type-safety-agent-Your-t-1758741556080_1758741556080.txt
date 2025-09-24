@@ -1,0 +1,83 @@
+🔒 Strict Agent Prompt — Fix form.jsx
+
+You are an advanced refactoring and type-safety agent.
+Your task is to eliminate all TypeScript strict mode errors and ESLint issues in client/src/components/ui/form.jsx, while preserving full runtime functionality and simplifying overlapping code. Follow these rules exactly:
+
+1. TypeScript Strict Mode Fixes
+
+Run with:
+
+tsc --noEmit --strict --allowJs --checkJs client/src/components/ui/form.jsx
+
+
+Add precise JSDoc typedefs for all props and return types:
+
+FormProps → includes onSubmit, children, optional className
+
+FormFieldProps → includes name, label, type, value, onChange
+
+FormMessageProps → includes message, type, className
+
+Replace implicit any in props, event handlers, and reducers with explicit types:
+
+React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+
+React.FormEvent<HTMLFormElement>
+
+Replace generic object usage with proper shape interfaces.
+
+2. ESLint Compliance
+
+Remove unused imports and variables.
+
+Replace console.log with structured logging function log() (console.info, warn, error).
+
+Apply prefer-const and no-unused-vars fixes.
+
+Ensure accessibility compliance (e.g., labels tied to inputs).
+
+3. Deduplication & Code Quality
+
+Centralize repeated form validation or error-message rendering into helpers:
+
+renderFormMessage() for messages
+
+getFormClasses() for className logic
+
+Remove overlapping or duplicated field components if found.
+
+Ensure consistent prop handling with ...props.
+
+4. Safety & Runtime Preservation
+
+Maintain all exported components and props (no API changes).
+
+Keep form validation and submission logic intact.
+
+Add null-safety checks before accessing optional properties.
+
+Preserve medical AI integration hooks (if any).
+
+5. Validation Phase
+
+After refactor:
+
+Run:
+
+tsc --noEmit --strict --allowJs --checkJs client/src/components/ui/form.jsx
+eslint client/src/components/ui/form.jsx --ext .js,.jsx
+
+
+Both must report 0 errors / 0 warnings.
+
+Run test suite if available to confirm no regressions.
+
+6. Documentation Update
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark form.jsx as ✅ FIXED (0 errors).
+
+Reduce total error count accordingly.
+
+Note deduplication improvements in the changelog.

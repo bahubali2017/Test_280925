@@ -13,24 +13,128 @@ import { cn } from "../../lib/utils"
 import { Label } from "./label"
 
 /**
+ * @typedef {object} FormFieldContext
+ * @property {string} name - Field name
+ */
+
+/**
+ * @typedef {object} FormItemContext
+ * @property {string} id - Item ID
+ */
+
+/**
+ * @typedef {object} FormFieldProps
+ * @property {string} name - Field name
+ * @property {(renderProps: any) => React.ReactNode} [render] - Render function
+ * @property {any} [control] - Form control
+ * @property {any} [rules] - Validation rules
+ */
+
+/**
+ * @typedef {object} FormProps
+ * @property {(event: React.FormEvent<HTMLFormElement>) => void} [onSubmit] - Submit handler
+ * @property {React.ReactNode} [children] - Child elements
+ * @property {string} [className] - CSS classes
+ */
+
+/**
+ * @typedef {object} FormMessageProps
+ * @property {string} [message] - Message text
+ * @property {'error'|'warning'|'info'} [type] - Message type
+ * @property {string} [className] - CSS classes
+ * @property {React.ReactNode} [children] - Child elements
+ */
+
+/**
+ * @typedef {object} FormItemProps
+ * @property {string} [className] - CSS classes
+ * @property {React.ReactNode} [children] - Child elements
+ */
+
+/**
+ * @typedef {object} FormLabelProps
+ * @property {string} [className] - CSS classes
+ * @property {React.ReactNode} [children] - Child elements
+ * @property {string} [htmlFor] - Associated input ID
+ */
+
+/**
+ * @typedef {object} FormControlProps
+ * @property {React.ReactNode} [children] - Child elements
+ */
+
+/**
+ * @typedef {object} FormDescriptionProps
+ * @property {string} [className] - CSS classes
+ * @property {React.ReactNode} [children] - Child elements
+ */
+
+/**
+ * @typedef {object} FieldState
+ * @property {any} [error] - Field error
+ * @property {boolean} [invalid] - Whether field is invalid
+ * @property {boolean} [isTouched] - Whether field is touched
+ * @property {boolean} [isDirty] - Whether field is dirty
+ */
+
+/**
+ * @typedef {object} FormFieldState
+ * @property {string} id - Field ID
+ * @property {string} name - Field name
+ * @property {string} formItemId - Form item ID
+ * @property {string} formDescriptionId - Description ID
+ * @property {string} formMessageId - Message ID
+ * @property {any} error - Field error
+ * @property {boolean} invalid - Whether invalid
+ * @property {boolean} isTouched - Whether touched
+ * @property {boolean} isDirty - Whether dirty
+ */
+
+/**
+ * Structured logging function to replace console.log
+ * @param {'info'|'warn'|'error'} level - Log level
+ * @param {string} message - Log message
+ * @param {any} [data] - Additional data
+ */
+function log(level, message, data) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] [${level.toUpperCase()}] ${message}`;
+  
+  switch (level) {
+    case 'error':
+      console.error(logMessage, data || '');
+      break;
+    case 'warn':
+      console.warn(logMessage, data || '');
+      break;
+    case 'info':
+    default:
+      console.info(logMessage, data || '');
+      break;
+  }
+}
+
+/**
  * Form provider component from react-hook-form
  */
 const Form = FormProvider
 
 /**
  * Create form field context with default value
+ * @type {React.Context<FormFieldContext>}
  */
-const FormFieldContext = React.createContext({ name: "" })
+const FormFieldContext = React.createContext(/** @type {FormFieldContext} */ ({ name: "" }))
 
 /**
  * Create form item context with default value
+ * @type {React.Context<FormItemContext>}
  */
-const FormItemContext = React.createContext({ id: "" })
+const FormItemContext = React.createContext(/** @type {FormItemContext} */ ({ id: "" }))
 
 /**
  * Checks if a value is a valid FormFieldContext
  * @param {any} context - The context to check
- * @returns {boolean} Whether the context is valid
+ * @returns {context is FormFieldContext} Whether the context is valid
  */
 function isFormFieldContext(context) {
   return Boolean(context) && 
@@ -42,7 +146,7 @@ function isFormFieldContext(context) {
 /**
  * Checks if a value is a valid FormItemContext
  * @param {any} context - The context to check
- * @returns {boolean} Whether the context is valid
+ * @returns {context is FormItemContext} Whether the context is valid
  */
 function isFormItemContext(context) {
   return Boolean(context) && 
@@ -52,116 +156,55 @@ function isFormItemContext(context) {
 }
 
 /**
- * FormField component for form fields
- * @param {object} props - Component props
- * @returns {JSX.Element} FormField component
+ * Centralized form classes helper
+ * @param {string} [baseClass] - Base CSS class
+ * @param {string} [additionalClass] - Additional CSS class
+ * @param {boolean} [hasError] - Whether there's an error
+ * @returns {string} Combined CSS classes
  */
-function FormField(props) {
-  // Safely extract name from props
-  const name = props?.name || "";
-  
-  /**
-   * Renders the field content
-   * @param {object} renderProps - Props from Controller
-   * @returns {JSX.Element} Rendered content
-   */
-  const renderWrapper = (renderProps) => {
-    // Ensure we always return a JSX element
-    if (typeof props?.render === 'function') {
-      try {
-        const result = props.render(renderProps);
-        // Ensure result is a valid JSX element
-        return React.isValidElement(result) ? result : <div>{String(result || "")}</div>;
-      } catch (err) {
-        console.error("Error in form field render function:", err);
-        return <div>Error rendering field</div>;
-      }
-    }
-    
-    // Default rendering with proper fallbacks
-    return <div>{renderProps?.field?.value || ""}</div>;
-  };
-
-  return (
-    <FormFieldContext.Provider value={{ name }}>
-      <Controller {...props} render={renderWrapper} />
-    </FormFieldContext.Provider>
+function getFormClasses(baseClass = '', additionalClass = '', hasError = false) {
+  return cn(
+    baseClass,
+    hasError && "text-destructive",
+    additionalClass
   );
 }
 
 /**
- * Custom hook for form field context
- * @returns {object} Form field properties and state
+ * Centralized form message renderer
+ * @param {any} error - Error object or string
+ * @param {React.ReactNode} children - Fallback children
+ * @returns {string|React.ReactNode} Rendered message content
  */
-const useFormField = () => {
-  const fieldContext = React.useContext(FormFieldContext);
-  const itemContext = React.useContext(FormItemContext);
-  
-  // Get form context with fallback
-  let form = null;
-  try {
-    form = useFormContext();
-  } catch (err) {
-    console.error("Error getting form context:", err);
-  }
-
-  // Validate contexts
-  if (!isFormFieldContext(fieldContext)) {
-    throw new Error("useFormField must be used inside <FormField>");
-  }
-  
-  if (!isFormItemContext(itemContext)) {
-    throw new Error("useFormField must be used inside <FormItem>");
-  }
-
-  // Initialize with safe defaults
-  const result = {
-    id: itemContext.id || "",
-    name: fieldContext.name || "",
-    formItemId: `${itemContext.id || "field"}-form-item`,
-    formDescriptionId: `${itemContext.id || "field"}-form-item-description`,
-    formMessageId: `${itemContext.id || "field"}-form-item-message`,
-    error: null,
-    invalid: false,
-    isTouched: false,
-    isDirty: false
-  };
-  
-  // Safely get field state if available
-  if (form && typeof form.getFieldState === 'function' && form.formState) {
-    try {
-      const fieldState = form.getFieldState(fieldContext.name, form.formState);
-      if (fieldState) {
-        // Update state properties safely
-        if (fieldState.error !== undefined) result.error = fieldState.error;
-        if (fieldState.invalid !== undefined) result.invalid = !!fieldState.invalid;
-        if (fieldState.isTouched !== undefined) result.isTouched = !!fieldState.isTouched;
-        if (fieldState.isDirty !== undefined) result.isDirty = !!fieldState.isDirty;
-      }
-    } catch (err) {
-      console.error("Error getting field state:", err);
+function renderFormMessage(error, children) {
+  if (error) {
+    if (typeof error === "string") {
+      return error;
+    } else if (error && typeof error === 'object' && 'message' in error) {
+      return typeof error.message === "string" ? error.message : "Error";
+    } else {
+      return "An error occurred";
     }
   }
-
-  return result;
+  return children;
 }
-
-// Removed unused utility function that was originally intended for property access
-// Now using direct object access with nullish coalescing instead
 
 /**
  * Safely extracts specific props and returns them with all other props
- * @param {object | null | undefined} props - Component props
  * @param {string[]} propNames - Names of props to extract
- * @param {object} defaults - Default values for props
- * @returns {object} - Object containing extracted props and rest props
+ * @param {Record<string, any>} [props] - Component props
+ * @param {Record<string, any>} [defaults] - Default values for props
+ * @returns {Record<string, any>} Object containing extracted props and rest props
  */
-function extractProps(props, propNames, defaults = {}) {
+function extractProps(propNames, props, defaults = {}) {
+  // Provide default if not passed
+  const safeDefaults = defaults || {};
+  
   // Initialize result with default values
-  const result = { ...defaults };
+  const result = { ...safeDefaults };
   
   // Initialize rest object for remaining props
-  const rest = {};
+  const rest = /** @type {Record<string, any>} */ ({});
   
   // Return early if props is not an object
   if (!props || typeof props !== 'object') {
@@ -189,21 +232,138 @@ function extractProps(props, propNames, defaults = {}) {
 }
 
 /**
+ * FormField component for form fields
+ * @param {FormFieldProps} props - Component props
+ * @returns {React.ReactElement} FormField component
+ */
+function FormField(props) {
+  // Safely extract name from props with proper typing
+  const name = (props && typeof props === 'object' && 'name' in props && typeof props.name === 'string') 
+    ? props.name 
+    : "";
+  
+  /**
+   * Renders the field content
+   * @param {any} renderProps - Props from Controller
+   * @returns {React.ReactElement} Rendered content
+   */
+  const renderWrapper = (renderProps) => {
+    // Ensure we always return a JSX element
+    if (props && typeof props === 'object' && 'render' in props && typeof props.render === 'function') {
+      try {
+        const result = props.render(renderProps);
+        // Ensure result is a valid JSX element
+        return React.isValidElement(result) ? result : <div>{String(result || "")}</div>;
+      } catch (err) {
+        log('error', "Error in form field render function:", err);
+        return <div>Error rendering field</div>;
+      }
+    }
+    
+    // Default rendering with proper fallbacks
+    const fieldValue = (renderProps && 
+                       typeof renderProps === 'object' && 
+                       'field' in renderProps && 
+                       renderProps.field &&
+                       typeof renderProps.field === 'object' &&
+                       'value' in renderProps.field) 
+                       ? renderProps.field.value 
+                       : "";
+    return <div>{fieldValue || ""}</div>;
+  };
+
+  // Extract props excluding name to avoid duplication
+  // eslint-disable-next-line no-unused-vars
+  const { name: _, ...controllerProps } = props || {};
+
+  return (
+    <FormFieldContext.Provider value={{ name }}>
+      <Controller 
+        name={name}
+        {...controllerProps} 
+        render={renderWrapper} 
+      />
+    </FormFieldContext.Provider>
+  );
+}
+
+/**
+ * Custom hook for form field context
+ * @returns {FormFieldState} Form field properties and state
+ */
+const useFormField = () => {
+  const fieldContext = React.useContext(FormFieldContext);
+  const itemContext = React.useContext(FormItemContext);
+  
+  // Get form context with fallback
+  let form = null;
+  try {
+    form = useFormContext();
+  } catch (err) {
+    log('error', "Error getting form context:", err);
+  }
+
+  // Validate contexts
+  if (!isFormFieldContext(fieldContext)) {
+    throw new Error("useFormField must be used inside <FormField>");
+  }
+  
+  if (!isFormItemContext(itemContext)) {
+    throw new Error("useFormField must be used inside <FormItem>");
+  }
+
+  // Initialize with safe defaults
+  const result = /** @type {FormFieldState} */ ({
+    id: itemContext.id || "",
+    name: fieldContext.name || "",
+    formItemId: `${itemContext.id || "field"}-form-item`,
+    formDescriptionId: `${itemContext.id || "field"}-form-item-description`,
+    formMessageId: `${itemContext.id || "field"}-form-item-message`,
+    error: null,
+    invalid: false,
+    isTouched: false,
+    isDirty: false
+  });
+  
+  // Safely get field state if available
+  if (form && typeof form.getFieldState === 'function' && form.formState) {
+    try {
+      const fieldState = form.getFieldState(fieldContext.name, form.formState);
+      if (fieldState && typeof fieldState === 'object') {
+        // Update state properties safely
+        if ('error' in fieldState) result.error = fieldState.error;
+        if ('invalid' in fieldState) result.invalid = !!fieldState.invalid;
+        if ('isTouched' in fieldState) result.isTouched = !!fieldState.isTouched;
+        if ('isDirty' in fieldState) result.isDirty = !!fieldState.isDirty;
+      }
+    } catch (err) {
+      log('error', "Error getting field state:", err);
+    }
+  }
+
+  return result;
+}
+
+/**
  * FormItem component that provides the container for form field elements
- * @param {object} props - Component props 
+ * @param {FormItemProps} props - Component props 
  * @param {React.Ref<HTMLDivElement>} ref - Ref to the div element
- * @returns {JSX.Element} FormItem component
+ * @returns {React.ReactElement} FormItem component
  */
 const FormItem = React.forwardRef(function FormItem(props, ref) {
   // Generate unique ID for form item
   const id = React.useId();
   
   // Extract props safely using the helper function
-  const { className = '', children = null, rest } = extractProps(
+  const extracted = extractProps(
+    ['className', 'children'],
     props, 
-    ['className', 'children'], 
     { className: '', children: null }
   );
+  
+  const className = typeof extracted.className === 'string' ? extracted.className : '';
+  const children = extracted.children;
+  const rest = extracted.rest || {};
   
   return (
     <FormItemContext.Provider value={{ id }}>
@@ -223,17 +383,21 @@ FormItem.displayName = "FormItem";
 
 /**
  * FormLabel component that renders a label for form fields
- * @param {object} props - Component props
+ * @param {FormLabelProps} props - Component props
  * @param {React.Ref<HTMLLabelElement>} ref - Ref to the label element
- * @returns {JSX.Element} FormLabel component
+ * @returns {React.ReactElement} FormLabel component
  */
 const FormLabel = React.forwardRef(function FormLabel(props, ref) {
   // Extract props safely using the helper function
-  const { className = '', children = null, rest } = extractProps(
+  const extracted = extractProps(
+    ['className', 'children'],
     props, 
-    ['className', 'children'], 
     { className: '', children: null }
   );
+  
+  const className = typeof extracted.className === 'string' ? extracted.className : '';
+  const children = extracted.children;
+  const rest = extracted.rest || {};
   
   // Get form field context
   const formField = useFormField();
@@ -244,7 +408,7 @@ const FormLabel = React.forwardRef(function FormLabel(props, ref) {
     <Label
       ref={ref}
       htmlFor={formItemId}
-      className={cn(error && "text-destructive", className)}
+      className={getFormClasses("", className, !!error)}
       {...rest}
     >
       {children}
@@ -257,17 +421,20 @@ FormLabel.displayName = "FormLabel";
 
 /**
  * FormControl component that wraps form input elements
- * @param {object} props - Component props
+ * @param {FormControlProps} props - Component props
  * @param {React.Ref<HTMLElement>} ref - Ref to the element
- * @returns {JSX.Element} FormControl component
+ * @returns {React.ReactElement} FormControl component
  */
 const FormControl = React.forwardRef(function FormControl(props, ref) {
   // Extract props safely using the helper function
-  const { children = null, rest } = extractProps(
+  const extracted = extractProps(
+    ['children'],
     props, 
-    ['children'], 
     { children: null }
   );
+  
+  const children = extracted.children;
+  const rest = extracted.rest || {};
   
   // Get form field context with all needed properties
   const formField = useFormField();
@@ -299,17 +466,21 @@ FormControl.displayName = "FormControl";
 
 /**
  * FormDescription component that displays help text for form fields
- * @param {object} props - Component props
+ * @param {FormDescriptionProps} props - Component props
  * @param {React.Ref<HTMLParagraphElement>} ref - Ref to the paragraph element
- * @returns {JSX.Element} FormDescription component
+ * @returns {React.ReactElement} FormDescription component
  */
 const FormDescription = React.forwardRef(function FormDescription(props, ref) {
   // Extract props safely using the helper function
-  const { className = '', children = null, rest } = extractProps(
+  const extracted = extractProps(
+    ['className', 'children'],
     props, 
-    ['className', 'children'], 
     { className: '', children: null }
   );
+  
+  const className = typeof extracted.className === 'string' ? extracted.className : '';
+  const children = extracted.children;
+  const rest = extracted.rest || {};
   
   // Get form field context
   const formField = useFormField();
@@ -332,38 +503,29 @@ FormDescription.displayName = "FormDescription";
 
 /**
  * FormMessage component that displays validation errors for form fields
- * @param {object} props - Component props
+ * @param {FormMessageProps} props - Component props
  * @param {React.Ref<HTMLParagraphElement>} ref - Ref to the paragraph element
- * @returns {JSX.Element|null} FormMessage component or null if no message
+ * @returns {React.ReactElement|null} FormMessage component or null if no message
  */
 const FormMessage = React.forwardRef(function FormMessage(props, ref) {
   // Extract props safely using the helper function
-  const { className = '', children = null, rest } = extractProps(
+  const extracted = extractProps(
+    ['className', 'children'],
     props, 
-    ['className', 'children'], 
     { className: '', children: null }
   );
+  
+  const className = typeof extracted.className === 'string' ? extracted.className : '';
+  const children = extracted.children;
+  const rest = extracted.rest || {};
   
   // Get form field context
   const formField = useFormField();
   const error = formField.error;
   const formMessageId = formField.formMessageId;
   
-  // Determine what to display based on error or children
-  let body = null;
-  
-  // Process errors safely
-  if (error) {
-    if (typeof error === "string") {
-      body = error;
-    } else if (error && typeof error === 'object' && 'message' in error) {
-      body = typeof error.message === "string" ? error.message : "Error";
-    } else {
-      body = "An error occurred";
-    }
-  } else {
-    body = children;
-  }
+  // Determine what to display using centralized helper
+  const body = renderFormMessage(error, children);
 
   // Don't render if no content
   if (!body) {
@@ -386,7 +548,7 @@ const FormMessage = React.forwardRef(function FormMessage(props, ref) {
 FormMessage.displayName = "FormMessage";
 
 /**
- *
+ * Export all form components and hooks for use in applications
  */
 export {
   useFormField,
