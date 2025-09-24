@@ -223,7 +223,7 @@ function analyzeTriageDisagreements(evaluationData, minOccurrences) {
   // Identify inconsistent triage patterns
   Object.entries(disagreements).forEach(([pattern, triages]) => {
     if (triages.length >= minOccurrences) {
-      const uniqueTriages = [...new Set(triages)];
+      const uniqueTriages = Array.from(new Set(triages));
       if (uniqueTriages.length > 1) {
         suggestions.push({
           id: `triage_${pattern.replace(/\s+/g, '_')}_${Date.now()}`,
