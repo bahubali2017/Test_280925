@@ -1,0 +1,93 @@
+ChatGPT said:
+
+Agent prompt — fix client/src/analytics/analytics.test.js (≈44 issues: 41 TS + 3 ESLint)
+
+Goal: 0 TypeScript errors. 0 ESLint issues. Preserve all tests. No suppressions.
+
+Run checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/analytics/analytics.test.js
+eslint client/src/analytics/analytics.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Keep assertions, snapshots, and order identical.
+
+Import @jest/globals if globals are untyped.
+
+Replace top-level await with beforeAll/async wrapper.
+
+Prefer const. Remove unused imports/vars.
+
+All typedefs must match actual code in this file.
+
+Add JSDoc typedefs (adjust to match real shapes)
+
+import { describe, it, test, expect, beforeAll, afterAll, beforeEach, jest } from "@jest/globals";
+
+/** @typedef {{ processingTime?:number; confidence?:number; userInput?:string; enhancedPrompt?:string; isHighRisk?:boolean; triageLevel?:string; [k:string]: unknown }} AnalyticsMetadata */
+
+/** @typedef {{ name:string; ts:number; metadata?:AnalyticsMetadata }} AnalyticsEvent */
+
+/** @typedef {{ total:number; passed:number; failed:number; warnings?:string[] }} AnalyticsTestReport */
+
+/** @typedef {{ track:(e:AnalyticsEvent)=>void; flush:()=>Promise<void>; snapshot:()=>{ events:AnalyticsEvent[] } }} AnalyticsTracker */
+
+
+Fix targets
+
+Type all helpers and mocks:
+
+/** @param {Partial<AnalyticsTracker>} overrides @returns {AnalyticsTracker} */
+function makeTrackerMock(overrides={}) { ... }
+
+/** @param {AnalyticsEvent[]} events @returns {AnalyticsTestReport} */
+function summarize(events) { ... }
+
+
+Guard dynamic access:
+
+const m = ev.metadata || {};
+const t = typeof m.processingTime === "number" ? m.processingTime : 0;
+
+
+Index signatures:
+
+/** @type {Record<string, number>} */
+const counts = {};
+
+
+Arrays:
+
+/** @type {AnalyticsEvent[]} */ const events = [];
+
+
+Async tests:
+
+it("flushes", async () => { await tracker.flush(); expect(...); });
+
+
+Replace console.log with console.info|warn|error only if present.
+
+Validation
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/analytics/analytics.test.js
+eslint client/src/analytics/analytics.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must be zero.
+
+Deliverables
+
+Unified diff.
+
+Final updated file.
+
+Tests unchanged semantically.
+
+Post-fix action
+
+Update TS_ERROR_MASTER_AUDIT_v2.md: mark analytics.test.js as ✅ FIXED, adjust totals and rankings.
