@@ -9,22 +9,119 @@
 
 /**
  * Change log entry structure
- * @typedef {{
- *   version: string;
- *   author: string;
- *   changeType: "prompt_update" | "triage_logic" | "safety_protocol" | "feature_addition" | "bug_fix" | "performance";
- *   reason: string;
- *   date: string;
- *   impact: "low" | "medium" | "high" | "critical";
- *   affectedComponents: Array<string>;
- *   rollbackPlan?: string;
- *   testingNotes?: string;
- * }} ChangeLogEntry
+ * @typedef {object} ChangeLogEntry
+ * @property {string} version - Version identifier
+ * @property {string} author - Author of the change
+ * @property {"prompt_update"|"triage_logic"|"safety_protocol"|"feature_addition"|"bug_fix"|"performance"} changeType - Type of change
+ * @property {string} reason - Reason for the change
+ * @property {string} date - ISO timestamp
+ * @property {"low"|"medium"|"high"|"critical"} impact - Impact level
+ * @property {string[]} affectedComponents - Components affected by change
+ * @property {string|null} [rollbackPlan] - Plan for rolling back if needed
+ * @property {string|null} [testingNotes] - Testing and validation notes
+ * @property {string} [logId] - Unique log identifier
+ * @property {string} [environment] - Environment where logged
+ * @property {AuditInfo} [audit] - Audit information
+ */
+
+/**
+ * @typedef {object} AuditInfo
+ * @property {string} loggedBy - System that logged the change
+ * @property {string} loggedAt - When the change was logged
+ * @property {string} changeHash - Hash for integrity verification
+ */
+
+/**
+ * @typedef {object} ChangeInput
+ * @property {string} version - Version identifier
+ * @property {string} author - Author of the change
+ * @property {string} changeType - Type of change from ChangeType enum
+ * @property {string} reason - Reason for the change
+ * @property {string} [impact] - Impact level (default: 'medium')
+ * @property {string[]} [affectedComponents] - Components affected
+ * @property {string} [rollbackPlan] - Plan for rolling back if needed
+ * @property {string} [testingNotes] - Testing and validation notes
+ */
+
+/**
+ * @typedef {object} TimeRange
+ * @property {string} startDate - Start date ISO string
+ * @property {string} endDate - End date ISO string
+ * @property {number} days - Number of days in range
+ */
+
+/**
+ * @typedef {object} TrendAnalysis
+ * @property {Record<string, number>} dailyChanges - Changes per day
+ * @property {boolean} frequencyIncrease - Whether frequency is increasing
+ * @property {string|null} mostActiveWeek - Most active week
+ * @property {number} changeVelocity - Changes per day
+ * @property {string} [mostActiveDay] - Most active day
+ */
+
+/**
+ * @typedef {object} ChangeAnalytics
+ * @property {number} totalChanges - Total number of changes
+ * @property {TimeRange} timeRange - Time range analyzed
+ * @property {Record<string, number>} changeTypes - Changes by type
+ * @property {Record<string, number>} impactLevels - Changes by impact
+ * @property {Record<string, number>} authors - Changes by author
+ * @property {Record<string, number>} components - Changes by component
+ * @property {TrendAnalysis} trends - Trend analysis
+ * @property {string} [error] - Error message if failed
+ */
+
+/**
+ * @typedef {object} ValidationResult
+ * @property {boolean} isValid - Whether data is valid
+ * @property {string[]} errors - List of validation errors
+ */
+
+/**
+ * @typedef {object} ImpactAssessment
+ * @property {string} suggestedImpact - Suggested impact level
+ * @property {string[]} riskFactors - List of risk factors
+ * @property {boolean} requiresExtensiveTesting - Whether extensive testing needed
+ * @property {boolean} requiresGradualRollout - Whether gradual rollout needed
+ */
+
+/**
+ * @typedef {object} ReportPeriod
+ * @property {number} days - Number of days in period
+ * @property {string} startDate - Start date ISO string
+ * @property {string} endDate - End date ISO string
+ */
+
+/**
+ * @typedef {object} ReportSummary
+ * @property {number} totalChanges - Total changes in period
+ * @property {number} changeVelocity - Change velocity
+ * @property {string} [mostActiveDay] - Most active day
+ */
+
+/**
+ * @typedef {object} ReportBreakdown
+ * @property {Record<string, number>} byType - Changes by type
+ * @property {Record<string, number>} byImpact - Changes by impact
+ * @property {Record<string, number>} byAuthor - Changes by author
+ */
+
+/**
+ * @typedef {object} ChangeReport
+ * @property {string} reportId - Unique report identifier
+ * @property {string} timestamp - Report generation timestamp
+ * @property {ReportPeriod} period - Report period details
+ * @property {ReportSummary} summary - Summary statistics
+ * @property {ReportBreakdown} breakdown - Detailed breakdown
+ * @property {ChangeLogEntry[]} notableChanges - Notable changes in period
+ * @property {string[]} recommendations - Generated recommendations
+ * @property {string} [error] - Error message if failed
  */
 
 /**
  * Change types for categorization
  * @readonly
+ * @type {Record<string, string>}
  */
 export const ChangeType = {
   PROMPT_UPDATE: 'prompt_update',
@@ -38,6 +135,7 @@ export const ChangeType = {
 /**
  * Impact levels for change assessment
  * @readonly
+ * @type {Record<string, string>}
  */
 export const ImpactLevel = {
   LOW: 'low',
@@ -49,20 +147,13 @@ export const ImpactLevel = {
 /**
  * Path to change log file
  * @private
+ * @type {string}
  */
 const CHANGELOG_PATH = 'client/src/training-dataset/layer-change-log.jsonl';
 
 /**
  * Logs a change to the medical logic system
- * @param {object} changeData - Change information
- * @param {string} changeData.version - Version identifier
- * @param {string} changeData.author - Author of the change
- * @param {string} changeData.changeType - Type of change from ChangeType enum
- * @param {string} changeData.reason - Reason for the change
- * @param {string} [changeData.impact] - Impact level (default: 'medium')
- * @param {Array<string>} [changeData.affectedComponents] - Components affected
- * @param {string} [changeData.rollbackPlan] - Plan for rolling back if needed
- * @param {string} [changeData.testingNotes] - Testing and validation notes
+ * @param {ChangeInput} changeData - Change information
  * @returns {Promise<boolean>} Success status of logging operation
  */
 export async function logSystemChange(changeData) {
@@ -75,23 +166,25 @@ export async function logSystemChange(changeData) {
     
     const requiredFields = ['version', 'author', 'changeType', 'reason'];
     for (const field of requiredFields) {
-      if (!changeData[field]) {
+      const fieldValue = /** @type {any} */ (changeData)[field];
+      if (!fieldValue) {
         console.warn(`[version-tracker] Missing required field: ${field}`);
         return false;
       }
     }
     
     // Create change log entry
+    /** @type {ChangeLogEntry} */
     const changeEntry = {
       // Core change information
       version: changeData.version,
       author: changeData.author,
-      changeType: /** @type {import('./version-tracker.js').ChangeLogEntry['changeType']} */ (changeData.changeType),
+      changeType: /** @type {ChangeLogEntry['changeType']} */ (changeData.changeType),
       reason: changeData.reason,
       date: new Date().toISOString(),
       
       // Impact and scope
-      impact: /** @type {import('./version-tracker.js').ChangeLogEntry['impact']} */ (changeData.impact || ImpactLevel.MEDIUM),
+      impact: /** @type {ChangeLogEntry['impact']} */ (changeData.impact || ImpactLevel.MEDIUM),
       affectedComponents: changeData.affectedComponents || [],
       
       // Additional metadata
@@ -113,11 +206,12 @@ export async function logSystemChange(changeData) {
     // Append to change log
     await appendToChangeLog(changeEntry);
     
-    console.log('[version-tracker] Change logged successfully:', changeEntry.logId);
+    console.info('[version-tracker] Change logged successfully:', changeEntry.logId);
     return true;
     
   } catch (error) {
-    console.error('[version-tracker] Failed to log system change:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[version-tracker] Failed to log system change:', errorMessage);
     return false;
   }
 }
@@ -146,7 +240,8 @@ async function appendToChangeLog(changeEntry) {
     fs.appendFileSync(CHANGELOG_PATH, jsonlLine, 'utf8');
     
   } catch (error) {
-    console.error('[version-tracker] Failed to write to change log:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[version-tracker] Failed to write to change log:', errorMessage);
     throw error;
   }
 }
@@ -154,7 +249,7 @@ async function appendToChangeLog(changeEntry) {
 /**
  * Loads recent change log entries
  * @param {number} [limit=50] - Maximum number of entries to load
- * @returns {Promise<Array<ChangeLogEntry>>} Recent change log entries
+ * @returns {Promise<ChangeLogEntry[]>} Recent change log entries
  */
 export async function loadChangeHistory(limit = 50) {
   try {
@@ -170,16 +265,25 @@ export async function loadChangeHistory(limit = 50) {
     // Get most recent entries
     const recentLines = lines.slice(-limit);
     
-    return recentLines.map(line => {
+    /** @type {ChangeLogEntry[]} */
+    const entries = [];
+    
+    for (const line of recentLines) {
       try {
-        return JSON.parse(line);
+        const parsed = JSON.parse(line);
+        if (parsed && typeof parsed === 'object') {
+          entries.push(/** @type {ChangeLogEntry} */ (parsed));
+        }
       } catch {
-        return null;
+        // Skip invalid lines
       }
-    }).filter(Boolean);
+    }
+    
+    return entries;
     
   } catch (error) {
-    console.error('[version-tracker] Failed to load change history:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[version-tracker] Failed to load change history:', errorMessage);
     return [];
   }
 }
@@ -187,7 +291,7 @@ export async function loadChangeHistory(limit = 50) {
 /**
  * Gets change statistics and analytics
  * @param {number} [days=30] - Number of days to analyze
- * @returns {Promise<object>} Change analytics
+ * @returns {Promise<ChangeAnalytics>} Change analytics
  */
 export async function getChangeAnalytics(days = 30) {
   try {
@@ -200,6 +304,7 @@ export async function getChangeAnalytics(days = 30) {
     );
     
     // Analyze change patterns
+    /** @type {ChangeAnalytics} */
     const analytics = {
       totalChanges: recentChanges.length,
       timeRange: {
@@ -215,24 +320,40 @@ export async function getChangeAnalytics(days = 30) {
     };
     
     // Group by change type
-    recentChanges.forEach(change => {
+    for (const change of recentChanges) {
       analytics.changeTypes[change.changeType] = (analytics.changeTypes[change.changeType] || 0) + 1;
       analytics.impactLevels[change.impact] = (analytics.impactLevels[change.impact] || 0) + 1;
       analytics.authors[change.author] = (analytics.authors[change.author] || 0) + 1;
       
       // Track affected components
-      change.affectedComponents.forEach(component => {
+      for (const component of change.affectedComponents) {
         analytics.components[component] = (analytics.components[component] || 0) + 1;
-      });
-    });
+      }
+    }
     
     return analytics;
     
   } catch (error) {
-    console.error('[version-tracker] Failed to generate change analytics:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[version-tracker] Failed to generate change analytics:', errorMessage);
     return {
       error: 'Failed to generate analytics',
-      totalChanges: 0
+      totalChanges: 0,
+      timeRange: {
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString(),
+        days
+      },
+      changeTypes: {},
+      impactLevels: {},
+      authors: {},
+      components: {},
+      trends: {
+        dailyChanges: {},
+        frequencyIncrease: false,
+        mostActiveWeek: null,
+        changeVelocity: 0
+      }
     };
   }
 }
@@ -240,10 +361,11 @@ export async function getChangeAnalytics(days = 30) {
 /**
  * Calculates change trends over time
  * @private
- * @param {Array<ChangeLogEntry>} changes - Change history
- * @returns {object} Trend analysis
+ * @param {ChangeLogEntry[]} changes - Change history
+ * @returns {TrendAnalysis} Trend analysis
  */
 function calculateChangeTrends(changes) {
+  /** @type {TrendAnalysis} */
   const trends = {
     dailyChanges: {},
     frequencyIncrease: false,
@@ -252,10 +374,10 @@ function calculateChangeTrends(changes) {
   };
   
   // Group changes by day
-  changes.forEach(change => {
+  for (const change of changes) {
     const day = change.date.split('T')[0]; // YYYY-MM-DD
     trends.dailyChanges[day] = (trends.dailyChanges[day] || 0) + 1;
-  });
+  }
   
   // Calculate change velocity (changes per day)
   const totalDays = Object.keys(trends.dailyChanges).length;
@@ -263,20 +385,26 @@ function calculateChangeTrends(changes) {
   
   // Find most active period
   const dailyCounts = Object.values(trends.dailyChanges);
-  const maxChanges = Math.max(...dailyCounts);
-  trends.mostActiveDay = Object.keys(trends.dailyChanges).find(
-    day => trends.dailyChanges[day] === maxChanges
-  );
+  if (dailyCounts.length > 0) {
+    const maxChanges = Math.max(...dailyCounts);
+    const mostActiveDay = Object.keys(trends.dailyChanges).find(
+      day => trends.dailyChanges[day] === maxChanges
+    );
+    if (mostActiveDay) {
+      trends.mostActiveDay = mostActiveDay;
+    }
+  }
   
   return trends;
 }
 
 /**
  * Validates a change log entry structure
- * @param {object} changeData - Change data to validate
- * @returns {object} Validation result
+ * @param {unknown} changeData - Change data to validate
+ * @returns {ValidationResult} Validation result
  */
 export function validateChangeData(changeData) {
+  /** @type {string[]} */
   const errors = [];
   
   if (!changeData) {
@@ -284,26 +412,33 @@ export function validateChangeData(changeData) {
     return { isValid: false, errors };
   }
   
+  if (typeof changeData !== 'object') {
+    errors.push('Change data must be an object');
+    return { isValid: false, errors };
+  }
+  
+  const data = /** @type {Record<string, unknown>} */ (changeData);
+  
   // Check required fields
   const requiredFields = ['version', 'author', 'changeType', 'reason'];
-  requiredFields.forEach(field => {
-    if (!changeData[field]) {
+  for (const field of requiredFields) {
+    if (!data[field]) {
       errors.push(`${field} is required`);
     }
-  });
+  }
   
   // Validate change type
-  if (changeData.changeType && !Object.values(ChangeType).includes(changeData.changeType)) {
+  if (data.changeType && !Object.values(ChangeType).includes(String(data.changeType))) {
     errors.push(`Invalid changeType. Must be one of: ${Object.values(ChangeType).join(', ')}`);
   }
   
   // Validate impact level
-  if (changeData.impact && !Object.values(ImpactLevel).includes(changeData.impact)) {
+  if (data.impact && !Object.values(ImpactLevel).includes(String(data.impact))) {
     errors.push(`Invalid impact level. Must be one of: ${Object.values(ImpactLevel).join(', ')}`);
   }
   
   // Validate affected components (should be array)
-  if (changeData.affectedComponents && !Array.isArray(changeData.affectedComponents)) {
+  if (data.affectedComponents && !Array.isArray(data.affectedComponents)) {
     errors.push('affectedComponents must be an array');
   }
   
@@ -316,10 +451,11 @@ export function validateChangeData(changeData) {
 /**
  * Generates a rollback plan template
  * @param {string} changeType - Type of change
- * @param {Array<string>} affectedComponents - Components that will be affected
+ * @param {string[]} [affectedComponents] - Components that will be affected
  * @returns {string} Rollback plan template
  */
 export function generateRollbackPlan(changeType, affectedComponents = []) {
+  /** @type {Record<string, string>} */
   const plans = {
     [ChangeType.PROMPT_UPDATE]: 'Revert to previous prompt version in system configuration',
     [ChangeType.TRIAGE_LOGIC]: 'Restore previous triage decision tree and test with sample cases',
@@ -341,14 +477,15 @@ export function generateRollbackPlan(changeType, affectedComponents = []) {
 /**
  * Generates change impact assessment
  * @param {string} changeType - Type of change
- * @param {Array<string>} affectedComponents - Components affected
- * @returns {object} Impact assessment
+ * @param {string[]} [affectedComponents] - Components affected
+ * @returns {ImpactAssessment} Impact assessment
  */
 export function assessChangeImpact(changeType, affectedComponents = []) {
   const highImpactTypes = [ChangeType.TRIAGE_LOGIC, ChangeType.SAFETY_PROTOCOL];
   const criticalComponents = ['triage', 'safety', 'emergency-detection'];
   
   let suggestedImpact = ImpactLevel.MEDIUM;
+  /** @type {string[]} */
   const riskFactors = [];
   
   // Check change type risk
@@ -387,7 +524,7 @@ function generateLogId() {
 /**
  * Generates a hash for change data integrity
  * @private
- * @param {object} changeData - Change data to hash
+ * @param {ChangeInput} changeData - Change data to hash
  * @returns {string} Change hash
  */
 function generateChangeHash(changeData) {
@@ -412,7 +549,7 @@ function generateChangeHash(changeData) {
 /**
  * Creates a system change report
  * @param {number} [days=7] - Days to include in report
- * @returns {Promise<object>} Change report
+ * @returns {Promise<ChangeReport>} Change report
  */
 export async function generateChangeReport(days = 7) {
   try {
@@ -453,10 +590,28 @@ export async function generateChangeReport(days = 7) {
     };
     
   } catch (error) {
-    console.error('[version-tracker] Failed to generate change report:', error.message);
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    console.error('[version-tracker] Failed to generate change report:', errorMessage);
     return {
+      reportId: `change_report_${Date.now()}`,
+      timestamp: new Date().toISOString(),
       error: 'Failed to generate change report',
-      timestamp: new Date().toISOString()
+      period: {
+        days,
+        startDate: new Date().toISOString(),
+        endDate: new Date().toISOString()
+      },
+      summary: {
+        totalChanges: 0,
+        changeVelocity: 0
+      },
+      breakdown: {
+        byType: {},
+        byImpact: {},
+        byAuthor: {}
+      },
+      notableChanges: [],
+      recommendations: []
     };
   }
 }
@@ -464,10 +619,11 @@ export async function generateChangeReport(days = 7) {
 /**
  * Generates recommendations based on change patterns
  * @private
- * @param {object} analytics - Change analytics
- * @returns {Array<string>} Recommendations
+ * @param {ChangeAnalytics} analytics - Change analytics
+ * @returns {string[]} Recommendations
  */
 function generateChangeRecommendations(analytics) {
+  /** @type {string[]} */
   const recommendations = [];
   
   if (analytics.trends.changeVelocity > 2) {
