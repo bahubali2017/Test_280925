@@ -1,0 +1,101 @@
+🔹 Agent Prompt — Fix test-executor.js
+
+Task:
+Fix all TypeScript strict mode and ESLint errors in
+client/src/tests/qa/test-executor.js.
+Bring error count to 0. No suppressions. No regressions.
+
+Run per-file checks
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/qa/test-executor.js
+eslint client/src/tests/qa/test-executor.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve test semantics — keep it running as a QA harness.
+
+Use JSDoc typedefs for all test data structures and results.
+
+Remove unused vars/imports. Prefer const.
+
+Replace console.log with console.debug|info|error (or logger if available).
+
+Initialize arrays/maps with explicit element types.
+
+Add null/undefined guards before property access.
+
+Add JSDoc typedefs at top
+/** @typedef {{ id: string, input: string, expected: string, meta?: Record<string, unknown> }} TestCase */
+
+/** @typedef {{ id: string, passed: boolean, actual: string, expected: string, durationMs: number, error?: string }} TestResult */
+
+/** @typedef {{ total: number, passed: number, failed: number, results: TestResult[] }} TestReport */
+
+Refactor targets
+
+Accumulators:
+
+/** @type {TestResult[]} */
+const results = [];
+
+
+Maps:
+
+/** @type {Record<string, number>} */
+const counts = {};
+
+
+Functions:
+
+/** @param {TestCase} tc @returns {Promise<TestResult>} */
+async function runTest(tc) { ... }
+
+/** @param {TestCase[]} suite @returns {Promise<TestReport>} */
+async function runSuite(suite) { ... }
+
+
+Error handling:
+
+try {
+  const start = Date.now();
+  const actual = await execute(tc.input);
+  return { id: tc.id, passed: actual === tc.expected, actual, expected: tc.expected, durationMs: Date.now() - start };
+} catch (err) {
+  return { id: tc.id, passed: false, actual: "", expected: tc.expected, durationMs: 0, error: err instanceof Error ? err.message : String(err) };
+}
+
+
+Reporting:
+
+/** @param {TestResult[]} results @returns {TestReport} */
+function summarize(results) {
+  let passed = 0, failed = 0;
+  for (const r of results) (r.passed ? passed++ : failed++);
+  return { total: results.length, passed, failed, results };
+}
+
+ESLint fixes
+
+Remove unused imports.
+
+Use const where possible.
+
+Ensure async functions use await properly.
+
+No bare console.log — use console.debug/info/error.
+
+Validation
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/qa/test-executor.js
+eslint client/src/tests/qa/test-executor.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must return 0 errors/warnings.
+
+Deliverables
+
+Unified diff patch.
+
+Full updated file.
+
+File remains a working test harness with full type safety.
