@@ -6,19 +6,101 @@
 /* global setTimeout, setInterval, performance */
 
 /**
+ * @typedef {object} PerformanceMetricData
+ * @property {number} totalTime - Total execution time in milliseconds
+ * @property {number} count - Number of times operation was executed
+ * @property {number} avgTime - Average execution time in milliseconds
+ * @property {number} maxTime - Maximum execution time in milliseconds
+ * @property {number} minTime - Minimum execution time in milliseconds
+ */
+
+/**
+ * @typedef {object} CacheEntry
+ * @property {any} data - Cached data
+ * @property {number} timestamp - Cache entry creation timestamp
+ * @property {number} accessCount - Number of times entry was accessed
+ * @property {number} lastAccessed - Last access timestamp
+ * @property {number} ttl - Time to live in milliseconds
+ */
+
+/**
+ * @typedef {object} CacheConfiguration
+ * @property {number} MAX_CACHE_SIZE - Maximum number of cache entries
+ * @property {number} DEFAULT_TTL - Default time to live in milliseconds
+ * @property {number} CLEANUP_INTERVAL - Cache cleanup interval in milliseconds
+ * @property {number} LRU_EVICTION_RATIO - Ratio of entries to evict when at capacity
+ */
+
+/**
+ * @typedef {object} ScoredCacheEntry
+ * @property {string} key - Cache key
+ * @property {number} score - Eviction score (lower = more likely to evict)
+ * @property {CacheEntry} cached - Cache entry data
+ */
+
+/**
+ * @typedef {object} PerformanceMetricReport
+ * @property {number} avgTime - Average execution time (rounded)
+ * @property {number} maxTime - Maximum execution time (rounded)
+ * @property {number} minTime - Minimum execution time (rounded)
+ * @property {number} totalCalls - Total number of calls
+ * @property {number} totalTime - Total execution time (rounded)
+ */
+
+/**
+ * @typedef {object} CacheEntryReport
+ * @property {string} key - Cache key
+ * @property {number} ageMinutes - Age in minutes
+ * @property {number} accessCount - Number of accesses
+ * @property {number} minutesSinceAccess - Minutes since last access
+ * @property {number} ttlMinutes - TTL in minutes
+ */
+
+/**
+ * @typedef {object} CacheStatistics
+ * @property {number} size - Current cache size
+ * @property {number} maxSize - Maximum cache size
+ * @property {number} utilization - Cache utilization percentage
+ * @property {CacheEntryReport[]} entries - Cache entry details
+ */
+
+/**
+ * @typedef {object} MemoryUsageEstimate
+ * @property {number} performanceMetrics - Performance metrics memory in KB
+ * @property {number} cache - Cache memory usage in KB
+ * @property {number} total - Total memory usage in KB
+ */
+
+/**
+ * @typedef {object} PerformanceReport
+ * @property {string} timestamp - Report timestamp
+ * @property {Record<string, PerformanceMetricReport>} performance - Performance metrics
+ * @property {CacheStatistics} cache - Cache statistics
+ * @property {MemoryUsageEstimate} memoryEstimate - Memory usage estimates
+ */
+
+/**
+ * @typedef {object} OptimizationRecommendations
+ * @property {string} operationName - Name of the operation
+ * @property {PerformanceMetricReport} currentPerformance - Current performance data
+ * @property {string[]} recommendations - List of optimization recommendations
+ */
+
+/**
  * Performance monitoring metrics
- * @type {Map<string, {totalTime: number, count: number, avgTime: number, maxTime: number, minTime: number}>}
+ * @type {Map<string, PerformanceMetricData>}
  */
 const performanceMetrics = new Map();
 
 /**
  * Advanced caching layer with intelligent eviction
- * @type {Map<string, {data: any, timestamp: number, accessCount: number, lastAccessed: number, ttl: number}>}
+ * @type {Map<string, CacheEntry>}
  */
 const enhancedCache = new Map();
 
 /**
  * Cache configuration settings
+ * @type {CacheConfiguration}
  */
 const CACHE_CONFIG = {
   MAX_CACHE_SIZE: 200,          // Increased from 50
@@ -28,12 +110,14 @@ const CACHE_CONFIG = {
 };
 
 /**
- * Performance tracking decorators
+ * Performance tracking interval reference
+ * @type {number|null}
  */
 let performanceCleanupInterval = null;
 
 /**
  * Initialize performance monitoring and cache cleanup
+ * @returns {void}
  */
 function initializePerformanceMonitoring() {
   if (performanceCleanupInterval) return;
@@ -43,14 +127,14 @@ function initializePerformanceMonitoring() {
     optimizePerformanceMetrics();
   }, CACHE_CONFIG.CLEANUP_INTERVAL);
   
-  console.log('[Performance] Monitoring initialized');
+  console.info('[Performance] Monitoring initialized');
 }
 
 /**
  * Performance measurement wrapper for functions
  * @param {string} operationName - Name of the operation being measured
  * @param {Function} operation - Function to measure
- * @param {any[]} args - Arguments for the function
+ * @param {...any} args - Arguments for the function
  * @returns {Promise<any>} Result of the operation
  */
 export async function measurePerformance(operationName, operation, ...args) {
@@ -82,6 +166,7 @@ export async function measurePerformance(operationName, operation, ...args) {
  * Update performance metrics for an operation
  * @param {string} operationName - Name of the operation
  * @param {number} duration - Duration in milliseconds
+ * @returns {void}
  */
 function updatePerformanceMetrics(operationName, duration) {
   if (!performanceMetrics.has(operationName)) {
@@ -95,18 +180,20 @@ function updatePerformanceMetrics(operationName, duration) {
   }
   
   const metrics = performanceMetrics.get(operationName);
-  metrics.totalTime += duration;
-  metrics.count += 1;
-  metrics.avgTime = metrics.totalTime / metrics.count;
-  metrics.maxTime = Math.max(metrics.maxTime, duration);
-  metrics.minTime = Math.min(metrics.minTime, duration);
+  if (metrics) {
+    metrics.totalTime += duration;
+    metrics.count += 1;
+    metrics.avgTime = metrics.totalTime / metrics.count;
+    metrics.maxTime = Math.max(metrics.maxTime, duration);
+    metrics.minTime = Math.min(metrics.minTime, duration);
+  }
 }
 
 /**
  * Advanced cache with intelligent eviction and access patterns
  * @param {string} key - Cache key
  * @param {any} data - Data to cache
- * @param {number} customTTL - Custom TTL in milliseconds
+ * @param {number} [customTTL] - Custom TTL in milliseconds
  * @returns {boolean} Whether the data was cached successfully
  */
 export function setCacheWithIntelligence(key, data, customTTL = CACHE_CONFIG.DEFAULT_TTL) {
@@ -157,12 +244,14 @@ export function getCacheWithIntelligence(key) {
 
 /**
  * Intelligent cache eviction based on access patterns and age
+ * @returns {void}
  */
 function performIntelligentEviction() {
   const now = Date.now();
   const entries = Array.from(enhancedCache.entries());
   
   // Score each entry for eviction (lower score = more likely to evict)
+  /** @type {ScoredCacheEntry[]} */
   const scoredEntries = entries.map(([key, cached]) => {
     const age = now - cached.timestamp;
     const timeSinceLastAccess = now - cached.lastAccessed;
@@ -183,11 +272,12 @@ function performIntelligentEviction() {
     enhancedCache.delete(scoredEntries[i].key);
   }
   
-  console.log(`[Cache] Evicted ${evictionCount} entries using intelligent algorithm`);
+  console.info(`[Cache] Evicted ${evictionCount} entries using intelligent algorithm`);
 }
 
 /**
  * Clean up expired cache entries
+ * @returns {void}
  */
 function cleanupExpiredCache() {
   const now = Date.now();
@@ -201,12 +291,13 @@ function cleanupExpiredCache() {
   }
   
   if (cleanedCount > 0) {
-    console.log(`[Cache] Cleaned up ${cleanedCount} expired entries`);
+    console.info(`[Cache] Cleaned up ${cleanedCount} expired entries`);
   }
 }
 
 /**
  * Optimize performance metrics storage
+ * @returns {void}
  */
 function optimizePerformanceMetrics() {
   // Keep only the most recent 100 operation types to prevent memory leak
@@ -234,12 +325,17 @@ export function optimizeMemoryUsage(data) {
   const optimized = JSON.parse(JSON.stringify(data));
   
   // Remove null/undefined values to save space
+  /**
+   * @param {any} obj - Object to clean
+   * @returns {any} Cleaned object
+   */
   function removeEmpty(obj) {
     if (Array.isArray(obj)) {
       return obj.filter(item => item !== null && item !== undefined).map(removeEmpty);
     }
     
     if (typeof obj === 'object' && obj !== null) {
+      /** @type {Record<string, any>} */
       const cleaned = {};
       for (const [key, value] of Object.entries(obj)) {
         if (value !== null && value !== undefined) {
@@ -259,11 +355,12 @@ export function optimizeMemoryUsage(data) {
  * Batch processing optimization for multiple operations
  * @param {any[]} items - Items to process
  * @param {(item: any, index?: number) => any} processor - Processing function
- * @param {number} batchSize - Size of each batch
- * @param {number} delayBetweenBatches - Delay in milliseconds between batches
+ * @param {number} [batchSize=10] - Size of each batch
+ * @param {number} [delayBetweenBatches=0] - Delay in milliseconds between batches
  * @returns {Promise<any[]>} Results from all batches
  */
 export async function processBatches(items, processor, batchSize = 10, delayBetweenBatches = 0) {
+  /** @type {any[]} */
   const results = [];
   
   for (let i = 0; i < items.length; i += batchSize) {
@@ -292,12 +389,13 @@ export async function processBatches(items, processor, batchSize = 10, delayBetw
 
 /**
  * Get comprehensive performance report
- * @returns {object} Performance metrics and cache statistics
+ * @returns {PerformanceReport} Performance metrics and cache statistics
  */
 export function getPerformanceReport() {
   const now = Date.now();
   
   // Performance metrics summary
+  /** @type {Record<string, PerformanceMetricReport>} */
   const metricsReport = {};
   for (const [operation, metrics] of performanceMetrics.entries()) {
     metricsReport[operation] = {
@@ -310,6 +408,7 @@ export function getPerformanceReport() {
   }
   
   // Cache statistics
+  /** @type {CacheStatistics} */
   const cacheStats = {
     size: enhancedCache.size,
     maxSize: CACHE_CONFIG.MAX_CACHE_SIZE,
@@ -344,7 +443,7 @@ export function getPerformanceReport() {
 
 /**
  * Estimate memory usage of performance monitoring systems
- * @returns {object} Memory usage estimates
+ * @returns {MemoryUsageEstimate} Memory usage estimates
  */
 function estimateMemoryUsage() {
   // Rough estimates in bytes
@@ -360,7 +459,8 @@ function estimateMemoryUsage() {
 
 /**
  * Reset all performance monitoring data
- * @param {boolean} includeCache - Whether to also clear the cache
+ * @param {boolean} [includeCache=false] - Whether to also clear the cache
+ * @returns {void}
  */
 export function resetPerformanceData(includeCache = false) {
   performanceMetrics.clear();
@@ -369,21 +469,32 @@ export function resetPerformanceData(includeCache = false) {
     enhancedCache.clear();
   }
   
-  console.log('[Performance] Monitoring data reset');
+  console.info('[Performance] Monitoring data reset');
 }
 
 /**
  * Optimize specific operation based on historical performance
  * @param {string} operationName - Name of the operation to optimize
- * @returns {object} Optimization recommendations
+ * @returns {OptimizationRecommendations} Optimization recommendations
  */
 export function getOptimizationRecommendations(operationName) {
   const metrics = performanceMetrics.get(operationName);
   
   if (!metrics) {
-    return { recommendations: ["No performance data available for this operation"] };
+    return { 
+      operationName,
+      currentPerformance: {
+        avgTime: 0,
+        maxTime: 0,
+        minTime: 0,
+        totalCalls: 0,
+        totalTime: 0
+      },
+      recommendations: ["No performance data available for this operation"] 
+    };
   }
   
+  /** @type {string[]} */
   const recommendations = [];
   
   // Analyze performance patterns
@@ -408,7 +519,8 @@ export function getOptimizationRecommendations(operationName) {
       avgTime: Math.round(metrics.avgTime * 100) / 100,
       maxTime: Math.round(metrics.maxTime * 100) / 100,
       minTime: Math.round(metrics.minTime * 100) / 100,
-      callCount: metrics.count
+      totalCalls: metrics.count,
+      totalTime: Math.round(metrics.totalTime * 100) / 100
     },
     recommendations
   };
