@@ -5,6 +5,7 @@ import { performTriage } from "./triage-checker.js";
 import { enhancePrompt } from "./prompt-enhancer.js";
 import { StageTimer, now } from "./utils/perf.js";
 import { normalizeRouterResult } from "./output-spec.js";
+import { selectDisclaimers } from "./disclaimers.js";
 
 const log = createLogger("layer:router");
 
@@ -39,7 +40,11 @@ export async function routeMedicalQuery(userInput) {
 
     t.start("enhancePrompt");
     const { systemPrompt, enhancedPrompt, atdNotices } = enhancePrompt(ctx);
-    const disclaimers = []; // Single centralized source - router no longer injects
+    // PHASE 6.4: Re-enable disclaimers from centralized source only
+    const disclaimers = selectDisclaimers(
+      ctx.triage?.level || 'non_urgent', 
+      ctx.triage?.symptomNames || []
+    ).disclaimers;
     t.stop("enhancePrompt");
     updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
 
@@ -49,7 +54,7 @@ export async function routeMedicalQuery(userInput) {
       userInput: ctx.userInput,
       enhancedPrompt,
       isHighRisk: !!ctx.triage?.isHighRisk,
-      disclaimers, // Use explicit empty array
+      disclaimers, // ✅ Reinjected only once, from centralized source
       atd: atdNotices && atdNotices.length ? atdNotices : null,
       suggestions: ctx.triage?.isHighRisk
         ? ["If symptoms worsen, seek urgent care.", "Consider calling emergency services if severe."]
@@ -75,7 +80,7 @@ export async function routeMedicalQuery(userInput) {
       userInput: String(userInput || ""),
       enhancedPrompt: "System fallback: Provide general, low‑risk educational guidance and suggest appropriate next steps. Include red‑flag checklist and advise contacting a clinician if concerned.",
       isHighRisk: false,
-      disclaimers: [], // Let fallback-engine handle disclaimers via selectDisclaimers()
+      disclaimers: selectDisclaimers('non_urgent', []).disclaimers, // PHASE 6.4: Fallback uses centralized source
       suggestions: ["Describe symptoms, duration, severity, and any red flags (e.g., chest pain, shortness of breath)."],
       metadata: { processingTime, stageTimings: t.toJSON() }
     });
