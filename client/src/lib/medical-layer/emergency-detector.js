@@ -9,12 +9,12 @@ import { assessMentalHealthCrisis, getEmergencyContact } from '../config/safety-
  * @typedef {object} MentalHealthAssessment
  * @property {boolean} isCrisis - Whether mental health crisis detected
  * @property {string[]} triggers - Triggered patterns
- * @property {string} severity - Crisis severity (high, moderate, low)
+ * @property {string|null} severity - Crisis severity (high, moderate, low, null)
  */
 
 /**
  * @typedef {object} EmergencyContact
- * @property {string} emergency - Emergency services number
+ * @property {string} [emergency] - Emergency services number
  * @property {string} [crisis] - Crisis hotline number
  * @property {string} [poison] - Poison control number
  */
@@ -136,8 +136,7 @@ export function detectEmergency(userInput, region = "US", _context = {}) {
   }
   
   const isEmergency = triggeredPatterns.length > 0;
-  /** @type {EmergencyContact} */
-  const emergencyContacts = getEmergencyContact(region);
+  const emergencyContacts = /** @type {EmergencyContact} */ (getEmergencyContact(region));
   
   /** @type {EmergencyDetectionResult} */
   const result = {
@@ -266,7 +265,7 @@ export function requiresEmergencyServices(userInput) {
  * @returns {CrisisInterventionResources} Crisis intervention resources
  */
 export function getCrisisInterventionResources(emergencyType, region = "US") {
-  const contacts = getEmergencyContact(region);
+  const contacts = /** @type {EmergencyContact} */ (getEmergencyContact(region));
   /** @type {CrisisInterventionResources} */
   const resources = {
     immediate: [],
