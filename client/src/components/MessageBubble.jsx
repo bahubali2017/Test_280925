@@ -735,8 +735,11 @@ export function MessageBubble({
             )}
 
             {/* NEW: Expansion invitation - show only when response can be expanded */}
-            {!isUser && isLast && metadata?.canExpand && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && 
-             metadata?.responseMode !== 'concise_medication' && (() => {
+            {!isUser && isLast && metadata?.canExpand === true && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && 
+             (metadata?.responseMode === 'concise_medication' || 
+              metadata?.responseMode === 'educational' || 
+              metadata?.responseMode === 'symptom' || 
+              metadata?.responseMode === 'general') && (() => {
               console.log('[TRACE] Expansion button gated by master flag', { enableExpansion: AI_FLAGS.ENABLE_EXPANSION_PROMPT });
               return true;
             })() &&
