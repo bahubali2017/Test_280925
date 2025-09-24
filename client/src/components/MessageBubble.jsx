@@ -499,15 +499,9 @@ export function MessageBubble({
                       <div>
                         <strong>Medical Notice:</strong>
                         <ul className="mt-1 ml-2">
-                          {(() => {
-                            const deduped = dedupeDisclaimers(metadata.queryIntent.disclaimers);
-                            console.log('[DISCLAIMER_FINAL] UI rendering disclaimers - original:', metadata.queryIntent.disclaimers.length, 'deduped:', deduped.length);
-                            console.log('[DISCLAIMER_FINAL] Original disclaimers:', metadata.queryIntent.disclaimers.map(d => d.substring(0, 50)));
-                            console.log('[DISCLAIMER_FINAL] Deduped disclaimers:', deduped.map(d => d.substring(0, 50)));
-                            return deduped.map((disclaimer, index) => (
-                              <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
-                            ));
-                          })()}
+                          {dedupeDisclaimers(metadata.queryIntent.disclaimers).map((disclaimer, index) => (
+                            <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
+                          ))}
                         </ul>
                       </div>
                     </div>

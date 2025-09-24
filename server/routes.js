@@ -671,13 +671,10 @@ router.get("/app-config.json", async (req, res) => {
         Format: Brief answer, key points, recommendations.`;
 
       // PHASE 5 FIX: Use client systemPrompt if provided, fallback to server medicalContext
-      // Also use enhancedPrompt if available for additional context
       const finalSystemPrompt = systemPrompt || medicalContext;
       const role = userRole || 'public';
       
       console.log('[PROMPT_SOURCE]', systemPrompt ? 'CLIENT' : 'SERVER');
-      console.log('[DISCLAIMER_DEBUG] server finalSystemPrompt length:', finalSystemPrompt.length, 'chars');
-      console.log('[DISCLAIMER_DEBUG] server role:', role, 'enhancedPrompt available:', !!enhancedPrompt);
 
       const messages = [
         { role: "system", content: finalSystemPrompt }
@@ -967,13 +964,10 @@ router.get("/app-config.json", async (req, res) => {
         CRITICAL: Always complete your response fully. If you must be concise due to length, focus on the most essential medical information first.`;
 
       // PHASE 5 FIX: Use client systemPrompt if provided, fallback to server defaultMedicalContext
-      // Also use enhancedPrompt if available for additional context
       const finalSystemPrompt = systemPrompt || defaultMedicalContext;
       const role = userRole || 'public';
       
       console.log('[PROMPT_SOURCE]', systemPrompt ? 'CLIENT' : 'SERVER');
-      console.log('[DISCLAIMER_DEBUG] server finalSystemPrompt length:', finalSystemPrompt.length, 'chars');
-      console.log('[DISCLAIMER_DEBUG] server role:', role, 'enhancedPrompt available:', !!enhancedPrompt);
 
       promptMessages.push({
         role: "system",
