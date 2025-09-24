@@ -1,0 +1,100 @@
+🔹 Agent Prompt — Fix qa.test.js
+
+Task:
+Refactor client/src/qa/qa.test.js to eliminate all TypeScript strict mode errors and ESLint issues.
+Target = TRIPLE-0 POLICY:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+No any, no unknown, no suppressions.
+
+Validation Commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/qa/qa.test.js
+eslint client/src/qa/qa.test.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+Match actual test structure. Adjust typedefs and function signatures to reflect the real test cases, results, and reports in this file.
+
+Keep test execution valid with jest (or your runner).
+
+Replace unsafe property access with type guards and optional chaining.
+
+Replace console.log with console.info, console.warn, console.error for structured test output.
+
+Remove unused vars/imports, enforce prefer-const.
+
+All arrays, objects, and accumulators explicitly typed.
+
+Suggested JSDoc Typedefs (adjust to actual test code)
+/**
+ * @typedef {Object} QATestCase
+ * @property {string} id - Unique test identifier
+ * @property {string} description - What this test validates
+ * @property {any} input - Input query or payload
+ * @property {any} expected - Expected outcome
+ */
+
+/**
+ * @typedef {Object} QATestResult
+ * @property {string} id
+ * @property {boolean} passed
+ * @property {any} actual
+ * @property {any} expected
+ * @property {string[]} [errors]
+ */
+
+/**
+ * @typedef {Object} QATestReport
+ * @property {string} timestamp
+ * @property {number} total
+ * @property {number} passed
+ * @property {number} failed
+ * @property {QATestResult[]} results
+ */
+
+Refactor Targets
+
+Accumulators
+
+/** @type {QATestCase[]} */ const cases = [];
+/** @type {QATestResult[]} */ const results = [];
+
+
+Functions (adjust to actual code in this file):
+
+/** @param {QATestCase[]} cases @returns {QATestReport} */
+function runQATests(cases) { ... }
+
+/** @param {QATestResult[]} results @returns {void} */
+function logQATestResults(results) { ... }
+
+
+Ensure all loops are for...of instead of forEach if type inference fails.
+
+Add instanceof Error checks for error handling.
+
+Replace raw {} with proper typed shapes.
+
+Use explicit return annotations everywhere.
+
+ESLint Fixes
+
+Remove unused vars/imports.
+
+Enforce const instead of let.
+
+Ensure no implicit returns in test functions.
+
+Fix test globals (describe, it, expect) with @jest/globals import if missing.
+
+Deliverables
+
+Full corrected file with accurate JSDoc typedefs matching actual test harness.
+
+Validation commands pass with 0 issues.
+
+All tests remain functional and aligned with the rest of the qa/ suite.
