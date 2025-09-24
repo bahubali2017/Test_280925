@@ -14,6 +14,7 @@ import { TextDecoder } from "util";
 import { sessionTracker } from "./utils/sessionTracker.js";
 import { injectWatermark, logAIResponse } from "./utils/watermarking.js";
 import { chatEndpointRateLimit } from "./middleware/rateLimiter.js";
+import { selectDisclaimers } from "../client/src/lib/disclaimers.js";
 
 // Import the test connection function
 import { testSupabaseConnection } from "./test-connection.js";
@@ -891,6 +892,11 @@ router.get("/app-config.json", async (req, res) => {
       }
 
       const { message, conversationHistory, isHighRisk, systemPrompt, enhancedPrompt, userRole } = validation.data;
+      
+      // ✅ PHASE 6.4: Generate disclaimers on server-side for all streaming responses  
+      console.log('[DISCLAIMER_DEBUG] Server generating disclaimers for message:', message?.substring(0, 50) + '...');
+      const disclaimers = selectDisclaimers('non_urgent', ['general']).disclaimers;
+      console.log('[DISCLAIMER_DEBUG] Generated disclaimers count:', disclaimers.length, 'disclaimers:', disclaimers);
       
 
       const config = getDeepSeekConfig();
