@@ -1,0 +1,106 @@
+Agent Prompt — ChatPage.jsx
+
+Goal
+Refactor client/src/pages/ChatPage.jsx to achieve:
+
+TypeScript strict mode: 0 errors
+
+ESLint compliance: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+
+Preserve 100% runtime behavior (chat rendering, message sending, safety features)
+
+Validation Commands
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/pages/ChatPage.jsx
+eslint client/src/pages/ChatPage.jsx --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve imports and exports exactly. If unused → remove or prefix _.
+
+Keep JSX/React structure identical; only enhance typing, safety, and deduplication.
+
+Replace unsafe property access (x.foo) with null-safe (x?.foo, guards, or type guards).
+
+Replace all console.log with console.info, console.error, console.warn as appropriate.
+
+All typedefs must match the actual props and state used in this file. Adjust templates to reality.
+
+JSDoc Typedefs (Adjust to Match Actual File)
+/** @typedef {"user"|"assistant"|"system"} RoleType */
+
+/** @typedef {{
+  id: string;
+  role: RoleType;
+  content: string;
+  metadata?: Record<string, unknown>;
+  createdAt: string;
+}} ChatMessage */
+
+/** @typedef {{
+  onSendMessage: (text: string) => Promise<void>|void;
+  messages: ChatMessage[];
+  isStreaming?: boolean;
+  error?: string|null;
+  userRole?: RoleType;
+}} ChatPageProps */
+
+Expected Fixes
+
+Props & State
+
+Add ChatPageProps JSDoc to component.
+
+Ensure messages is typed as ChatMessage[].
+
+Guard optional props (isStreaming, error, userRole).
+
+Handlers
+
+Type handleSendMessage properly:
+
+/** @param {string} text */
+async function handleSendMessage(text) { ... }
+
+
+Guard async errors with instanceof Error.
+
+Rendering
+
+Centralize message rendering in a helper:
+
+/** @param {ChatMessage} msg */
+function renderMessage(msg) { ... }
+
+
+Ensure safe access to msg.metadata.
+
+Deduplication
+
+Extract repeated className logic into getMessageClasses().
+
+Extract safety/disclaimer rendering into renderDisclaimer().
+
+Accessibility
+
+Add role="log" and aria-live="polite" to the chat container.
+
+Ensure error banners have role="alert".
+
+Post-Fix Deliverables
+
+Updated client/src/pages/ChatPage.jsx with TRIPLE-0 compliance.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark ChatPage.jsx as ✅ FIXED.
+
+Adjust error/file counts accordingly.
+
+Add changelog entry: “ChatPage.jsx fully refactored with TRIPLE-0 compliance, runtime preserved.”
+
+⚠️ Reminder: All typedefs, function signatures, and examples are templates. You must adjust them to match the actual code structure in ChatPage.jsx. Never introduce mismatches.
