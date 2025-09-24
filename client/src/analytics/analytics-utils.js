@@ -10,9 +10,95 @@
 import { QueryCategory } from './enums.js';
 
 /**
+ * @typedef {Object} AnalyticsMetadata
+ * @property {number} [processingTime] - Processing time in milliseconds
+ * @property {number} [intentConfidence] - Intent confidence score
+ * @property {string} [bodySystem] - Detected body system
+ */
+
+/**
+ * @typedef {Object} QueryResult
+ * @property {AnalyticsMetadata} [metadata] - Analytics metadata
+ * @property {string} [userInput] - User input text
+ * @property {string} [enhancedPrompt] - Enhanced prompt text
+ * @property {boolean} [isHighRisk] - High risk flag
+ * @property {string} [triageLevel] - Triage level classification
+ */
+
+/**
+ * @typedef {Object} OutlierResult
+ * @property {string[]} flags - Array of outlier flags
+ * @property {number} score - Outlier score (0-1)
+ * @property {Record<string, number>} details - Outlier details
+ */
+
+/**
+ * @typedef {Object} SymptomExtractedData
+ * @property {string} [duration] - Symptom duration
+ * @property {string} [severity] - Symptom severity
+ * @property {string} [location] - Symptom location
+ */
+
+/**
+ * @typedef {Object} SymptomAnalysis
+ * @property {boolean} hasPotentialSymptoms - Whether symptoms detected
+ * @property {string[]} missingSymptomData - Missing symptom data flags
+ * @property {string[]} suggestions - Suggestion messages
+ * @property {number} confidence - Analysis confidence score
+ */
+
+/**
+ * @typedef {Object} ComplexityFactors
+ * @property {number} inputLength - Input length complexity factor
+ * @property {number} terminology - Medical terminology factor
+ * @property {number} symptoms - Symptom count factor
+ * @property {number} processing - Processing complexity factor
+ * @property {number} risk - Risk level factor
+ */
+
+/**
+ * @typedef {Object} ComplexityResult
+ * @property {number} score - Complexity score (0-1)
+ * @property {ComplexityFactors} factors - Complexity factor breakdown
+ * @property {string} level - Complexity level classification
+ */
+
+/**
+ * @typedef {Object} PatternTrends
+ * @property {number} [avgProcessingTime] - Average processing time
+ * @property {number} [avgConfidence] - Average confidence score
+ * @property {Record<string, number>} [triageDistribution] - Triage distribution
+ * @property {Record<string, number>} [categoryDistribution] - Category distribution
+ */
+
+/**
+ * @typedef {Object} PatternAnalysis
+ * @property {PatternTrends} trends - Pattern trends data
+ * @property {string[]} insights - Analysis insights
+ * @property {string[]} recommendations - Recommendations
+ */
+
+/**
+ * @typedef {Object} QueryContext
+ * @property {string} triageLevel - Triage level
+ * @property {boolean} isHighRisk - High risk flag
+ */
+
+/**
+ * Simple logger that outputs to console for analytics utilities
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {...unknown} args - Additional arguments
+ */
+function log(level, message, ...args) {
+  const timestamp = new Date().toISOString();
+  console[level](`[${timestamp}] [Analytics] ${message}`, ...args);
+}
+
+/**
  * Detects outlier patterns in query structures that may indicate issues
- * @param {object} queryResult - Query result to analyze for outliers
- * @returns {object} Outlier detection result with flags and scores
+ * @param {QueryResult} queryResult - Query result to analyze for outliers
+ * @returns {OutlierResult} Outlier detection result with flags and scores
  */
 export function detectOutliers(queryResult) {
   const outliers = {
@@ -23,7 +109,7 @@ export function detectOutliers(queryResult) {
 
   try {
     // Check processing time outliers
-    const processingTime = queryResult.metadata?.processingTime || 0;
+    const processingTime = queryResult?.metadata?.processingTime ?? 0;
     if (processingTime > 5000) {
       outliers.flags.push('excessive_processing_time');
       outliers.score += 0.3;
@@ -34,7 +120,7 @@ export function detectOutliers(queryResult) {
     }
 
     // Check confidence score outliers
-    const confidence = queryResult.metadata?.intentConfidence || 0;
+    const confidence = queryResult?.metadata?.intentConfidence ?? 0;
     if (confidence < 0.1) {
       outliers.flags.push('extremely_low_confidence');
       outliers.score += 0.4;
@@ -45,7 +131,7 @@ export function detectOutliers(queryResult) {
     }
 
     // Check input length outliers
-    const inputLength = queryResult.userInput ? queryResult.userInput.length : 0;
+    const inputLength = queryResult?.userInput ? queryResult.userInput.length : 0;
     if (inputLength > 1000) {
       outliers.flags.push('excessively_long_input');
       outliers.score += 0.2;
@@ -56,7 +142,7 @@ export function detectOutliers(queryResult) {
     }
 
     // Check response enhancement ratio
-    const promptLength = queryResult.enhancedPrompt ? queryResult.enhancedPrompt.length : 0;
+    const promptLength = queryResult?.enhancedPrompt ? queryResult.enhancedPrompt.length : 0;
     const enhancementRatio = inputLength > 0 ? promptLength / inputLength : 0;
     
     if (enhancementRatio > 20) {
@@ -69,13 +155,14 @@ export function detectOutliers(queryResult) {
     }
 
     // Check triage consistency
-    if (queryResult.isHighRisk && queryResult.triageLevel === 'non_urgent') {
+    if (queryResult?.isHighRisk && queryResult?.triageLevel === 'non_urgent') {
       outliers.flags.push('inconsistent_risk_triage');
       outliers.score += 0.3;
     }
 
     // Check missing critical data
-    if (!queryResult.metadata?.bodySystem || queryResult.metadata.bodySystem === 'unknown') {
+    const bodySystem = queryResult?.metadata?.bodySystem;
+    if (!bodySystem || bodySystem === 'unknown') {
       outliers.flags.push('missing_body_system_detection');
       outliers.score += 0.1;
     }
@@ -83,10 +170,11 @@ export function detectOutliers(queryResult) {
     // Cap score at 1.0
     outliers.score = Math.min(1.0, outliers.score);
 
-  } catch {
+  } catch (error) {
     outliers.flags.push('analysis_error');
     outliers.score = 0.5;
     outliers.details.error = 'Analysis failed';
+    log('error', 'Outlier detection failed', error);
   }
 
   return outliers;
@@ -95,9 +183,7 @@ export function detectOutliers(queryResult) {
 /**
  * Categorizes queries based on content analysis and keyword detection
  * @param {string} userInput - User input text to categorize
- * @param {object} context - Additional context for categorization
- * @param {string} context.triageLevel - Triage level classification
- * @param {boolean} context.isHighRisk - High risk flag
+ * @param {QueryContext} context - Additional context for categorization
  * @returns {string} Inferred query category
  */
 export function tagQueryCategory(userInput, context = { triageLevel: 'unknown', isHighRisk: false }) {
@@ -163,8 +249,8 @@ export function tagQueryCategory(userInput, context = { triageLevel: 'unknown', 
 /**
  * Analyzes input to detect if symptoms are mentioned and flags missing symptom data
  * @param {string} userInput - User input to analyze
- * @param {object} extractedData - Extracted symptom data from intent parser
- * @returns {object} Analysis result with missing symptom flags
+ * @param {SymptomExtractedData} extractedData - Extracted symptom data from intent parser
+ * @returns {SymptomAnalysis} Analysis result with missing symptom flags
  */
 export function flagMissingSymptoms(userInput, extractedData = {}) {
   const analysis = {
@@ -242,13 +328,19 @@ export function flagMissingSymptoms(userInput, extractedData = {}) {
 
 /**
  * Calculates query complexity score based on multiple factors
- * @param {object} queryResult - Complete query result to analyze
- * @returns {object} Complexity analysis with score and breakdown
+ * @param {QueryResult} queryResult - Complete query result to analyze
+ * @returns {ComplexityResult} Complexity analysis with score and breakdown
  */
 export function calculateQueryComplexity(queryResult) {
   const complexity = {
     score: 0, // 0 = simple, 1 = very complex
-    factors: {},
+    factors: {
+      inputLength: 0,
+      terminology: 0,
+      symptoms: 0,
+      processing: 0,
+      risk: 0
+    },
     level: 'simple' // simple, moderate, complex, very_complex
   };
 
@@ -256,32 +348,32 @@ export function calculateQueryComplexity(queryResult) {
     let totalScore = 0;
 
     // Input length complexity (20% weight)
-    const inputLength = queryResult.userInput ? queryResult.userInput.length : 0;
+    const inputLength = queryResult?.userInput ? queryResult.userInput.length : 0;
     const lengthScore = Math.min(1.0, inputLength / 500);
     complexity.factors.inputLength = lengthScore;
     totalScore += lengthScore * 0.2;
 
     // Medical terminology density (25% weight)
-    const medicalTerms = countMedicalTerms(queryResult.userInput || '');
+    const medicalTerms = countMedicalTerms(queryResult?.userInput ?? '');
     const termDensity = inputLength > 0 ? medicalTerms / (inputLength / 100) : 0;
     const terminologyScore = Math.min(1.0, termDensity);
     complexity.factors.terminology = terminologyScore;
     totalScore += terminologyScore * 0.25;
 
     // Symptom count complexity (20% weight)
-    const symptomCount = countSymptoms(queryResult.userInput || '');
+    const symptomCount = countSymptoms(queryResult?.userInput ?? '');
     const symptomScore = Math.min(1.0, symptomCount / 5);
     complexity.factors.symptoms = symptomScore;
     totalScore += symptomScore * 0.2;
 
     // Processing complexity (20% weight)
-    const processingTime = queryResult.metadata?.processingTime || 0;
+    const processingTime = queryResult?.metadata?.processingTime ?? 0;
     const processingScore = Math.min(1.0, processingTime / 2000);
     complexity.factors.processing = processingScore;
     totalScore += processingScore * 0.2;
 
     // Risk level complexity (15% weight)
-    const riskScore = queryResult.isHighRisk ? 0.8 : 0.2;
+    const riskScore = queryResult?.isHighRisk ? 0.8 : 0.2;
     complexity.factors.risk = riskScore;
     totalScore += riskScore * 0.15;
 
@@ -298,10 +390,10 @@ export function calculateQueryComplexity(queryResult) {
       complexity.level = 'very_complex';
     }
 
-  } catch {
+  } catch (error) {
     complexity.score = 0.5;
     complexity.level = 'moderate';
-    // Error in complexity calculation
+    log('error', 'Error in complexity calculation', error);
   }
 
   return complexity;
@@ -309,7 +401,6 @@ export function calculateQueryComplexity(queryResult) {
 
 /**
  * Counts medical terminology in text
- * @private
  * @param {string} text - Text to analyze
  * @returns {number} Count of medical terms
  */
@@ -327,7 +418,6 @@ function countMedicalTerms(text) {
 
 /**
  * Counts potential symptoms mentioned in text
- * @private
  * @param {string} text - Text to analyze
  * @returns {number} Count of potential symptoms
  */
@@ -344,8 +434,8 @@ function countSymptoms(text) {
 
 /**
  * Analyzes query patterns for trend detection
- * @param {Array<object>} queryHistory - Array of recent query results
- * @returns {object} Pattern analysis with trends and insights
+ * @param {QueryResult[]} queryHistory - Array of recent query results
+ * @returns {PatternAnalysis} Pattern analysis with trends and insights
  */
 export function analyzeQueryPatterns(queryHistory) {
   const patterns = {
@@ -360,7 +450,7 @@ export function analyzeQueryPatterns(queryHistory) {
 
   try {
     // Analyze processing time trends
-    const processingTimes = queryHistory.map(q => q.metadata?.processingTime || 0);
+    const processingTimes = queryHistory.map(q => q?.metadata?.processingTime ?? 0);
     const avgProcessingTime = processingTimes.reduce((a, b) => a + b, 0) / processingTimes.length;
     patterns.trends.avgProcessingTime = avgProcessingTime;
 
@@ -370,7 +460,7 @@ export function analyzeQueryPatterns(queryHistory) {
     }
 
     // Analyze confidence trends
-    const confidenceScores = queryHistory.map(q => q.metadata?.intentConfidence || 0);
+    const confidenceScores = queryHistory.map(q => q?.metadata?.intentConfidence ?? 0);
     const avgConfidence = confidenceScores.reduce((a, b) => a + b, 0) / confidenceScores.length;
     patterns.trends.avgConfidence = avgConfidence;
 
@@ -380,7 +470,7 @@ export function analyzeQueryPatterns(queryHistory) {
     }
 
     // Analyze triage distribution
-    const triageLevels = queryHistory.map(q => q.triageLevel);
+    const triageLevels = queryHistory.map(q => q?.triageLevel ?? 'unknown');
     const triageDistribution = triageLevels.reduce((acc, level) => {
       acc[level] = (acc[level] || 0) + 1;
       return acc;
@@ -390,9 +480,9 @@ export function analyzeQueryPatterns(queryHistory) {
 
     // Analyze query categories
     const categories = queryHistory.map(q => 
-      tagQueryCategory(q.userInput, { 
-        triageLevel: q.triageLevel, 
-        isHighRisk: q.isHighRisk 
+      tagQueryCategory(q?.userInput ?? '', { 
+        triageLevel: q?.triageLevel ?? 'unknown', 
+        isHighRisk: q?.isHighRisk ?? false 
       })
     );
     
@@ -403,9 +493,10 @@ export function analyzeQueryPatterns(queryHistory) {
     
     patterns.trends.categoryDistribution = categoryDistribution;
 
-  } catch {
+  } catch (error) {
     patterns.insights.push('Error analyzing query patterns');
     patterns.recommendations.push('Review pattern analysis implementation');
+    log('error', 'Pattern analysis failed', error);
   }
 
   return patterns;

@@ -1,0 +1,92 @@
+🔹 Agent Prompt — Fix analytics-utils.js
+
+Task:
+Fix all TypeScript strict mode and ESLint errors in
+client/src/analytics/analytics-utils.js.
+Bring error count to 0. No runtime regressions. No suppressions.
+
+Constraints:
+
+Do not use any, unknown, @ts-ignore, or eslint-disable.
+
+Preserve existing logic and external API (exports).
+
+Replace console.* with the project’s logger (logger from lib/utils/message-logger if available).
+
+Every function parameter and return type must be explicit.
+
+For analytics data, define proper types:
+
+interface AnalyticsMetadata {
+  processingTime?: number;
+  confidence?: number;
+  userInput?: string;
+  inputLength?: number;
+  enhancedPrompt?: string;
+  enhancementRatio?: number;
+  isHighRisk?: boolean;
+  triageLevel?: string;
+  error?: string;
+  duration?: number;
+  severity?: number | string;
+  location?: string;
+  terminology?: string;
+  symptoms?: string[];
+  processing?: string;
+  risk?: string;
+  avgProcessingTime?: number;
+  avgConfidence?: number;
+  triageDistribution?: Record<string, number>;
+  categoryDistribution?: Record<string, number>;
+}
+
+interface AnalyticsEvent {
+  name: string;
+  ts: number;
+  metadata?: AnalyticsMetadata;
+}
+
+type CategoryMap = Record<string, number>;
+
+
+All objects previously {} or object must be replaced with one of these precise types.
+
+Any map/dictionary must have a safe index signature (e.g. Record<string, number>).
+
+Add null checks before property access.
+
+Steps the agent must follow:
+
+Open analytics-utils.js.
+
+Identify all TS2339, TS2345, TS7053 sources and replace unsafe property access with typed metadata, CategoryMap, or guarded access.
+
+Add AnalyticsEvent and AnalyticsMetadata types at top. Use them in functions.
+
+Fix ESLint errors:
+
+Remove unused vars/imports.
+
+Change let → const where reassignment doesn’t occur.
+
+Replace console with logger.
+
+Ensure proper naming and consistent return types.
+
+Run validation:
+
+tsc --noEmit --strict --allowJs --checkJs client/src/analytics/analytics-utils.js
+eslint client/src/analytics/analytics-utils.js --max-warnings=0
+
+
+Both must report 0 errors/warnings.
+
+Output a unified diff patch, then the full corrected file.
+
+Deliverable:
+
+A fully corrected client/src/analytics/analytics-utils.js with 0 errors.
+
+No suppressions, no any.
+
+Logic intact, types precise.
