@@ -40,18 +40,11 @@ export async function routeMedicalQuery(userInput) {
 
     t.start("enhancePrompt");
     const { systemPrompt, enhancedPrompt, atdNotices } = enhancePrompt(ctx);
-    // ✅ Phase 6.4 Reinjection: single centralized disclaimer source
-    const disclaimerPack = selectDisclaimers(
+    const disclaimers = selectDisclaimers(
       ctx.triage?.level || 'non_urgent',
       ctx.triage?.symptomNames || ['general']
-    );
-    const disclaimers = disclaimerPack.disclaimers;
-    console.log('[DISCLAIMER-DEBUG]', 'selectDisclaimers result:', { 
-      level: ctx.triage?.level || 'non_urgent', 
-      symptoms: ctx.triage?.symptomNames || ['general'],
-      disclaimerCount: disclaimers.length,
-      disclaimers 
-    });
+    ).disclaimers;
+    console.log('[DISCLAIMER_DEBUG] triage level:', ctx.triage?.level, 'symptoms:', ctx.triage?.symptomNames, 'disclaimers:', disclaimers.length);
     t.stop("enhancePrompt");
     updateLayerContext(ctx, { prompt: { systemPrompt, enhancedPrompt } });
 
