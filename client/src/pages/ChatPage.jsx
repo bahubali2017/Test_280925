@@ -896,7 +896,7 @@ export default function ChatPage() {
             <AnimatedNeuralLogo size={40} />
           </div>
           <div className="border-l border-gray-200 dark:border-gray-700 pl-4">
-            <h1 className="text-lg font-semibold" style={{ color: '#06b6d4' }}>Anamnesis</h1>
+            <h1 className="text-lg font-semibold text-blue-900 dark:text-blue-300">Anamnesis</h1>
             <p className="text-xs text-muted-foreground">Medical AI Assistant</p>
           </div>
         </div>
