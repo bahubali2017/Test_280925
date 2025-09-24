@@ -1,0 +1,116 @@
+🔹 Agent Prompt — Fix atd-router.js
+
+Goal:
+Bring client/src/lib/medical-layer/atd-router.js to 0 TypeScript strict errors and 0 ESLint issues.
+No suppressions. No regressions. Preserve runtime and exports.
+
+Run per-file checks
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/medical-layer/atd-router.js
+eslint client/src/lib/medical-layer/atd-router.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Known error patterns (from audit)
+
+TS2339: accessing .metadata, .triageLevel, .isHighRisk, .bodySystems, etc. on object.
+
+TS2345: argument not assignable to parameter of type never.
+
+TS7053: implicit any index access on {}.
+
+ESLint: no-unused-vars, prefer-const, no-console.
+
+JSDoc typedefs to add at top
+/** @typedef {{[k: string]: number}} NumDict */
+/** @typedef {{[k: string]: string}} StringDict */
+
+/**
+ * @typedef TriageResult
+ * @property {string} triageLevel
+ * @property {boolean} isHighRisk
+ * @property {string[]} [bodySystems]
+ * @property {number} [confidence]
+ * @property {number} [processingTime]
+ * @property {string[]} [flags]
+ */
+
+/**
+ * @typedef RouterContext
+ * @property {string} sessionId
+ * @property {string} userId
+ * @property {string} query
+ * @property {number} ts
+ * @property {TriageResult=} triage
+ * @property {{[k:string]: unknown}=} metadata
+ */
+
+/**
+ * @typedef RouterDecision
+ * @property {string} route
+ * @property {string} reason
+ * @property {boolean} highPriority
+ * @property {TriageResult=} triage
+ * @property {StringDict=} tags
+ */
+
+Refactor targets
+
+Property access safety
+
+Replace ctx.triageLevel with ctx.triage?.triageLevel ?? "unknown".
+
+Replace direct .metadata access with ctx.metadata && "key" in ctx.metadata.
+
+Accumulators
+
+Replace {} with typed maps:
+
+/** @type {NumDict} */
+const routeCounts = {};
+
+
+Arrays
+
+Initialize with element type:
+
+/** @type {RouterDecision[]} */
+const decisions = [];
+
+
+Function signatures
+
+/** @param {RouterContext} ctx @returns {RouterDecision} */
+function routeQuery(ctx) { ... }
+
+/** @param {RouterDecision[]} list @returns {NumDict} */
+function countRoutes(list) { ... }
+
+
+Index signatures
+
+Replace obj[key] on {} with Record<string, T>.
+
+Logging
+
+Replace console.log with logger.debug/info/error from lib/utils/message-logger.
+
+If unavailable, use console.debug|info|warn|error.
+
+ESLint cleanups
+
+Remove unused vars/imports.
+
+Convert let → const when immutable.
+
+Validation
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/lib/medical-layer/atd-router.js
+eslint client/src/lib/medical-layer/atd-router.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must return 0 errors/warnings.
+
+Deliverables
+
+Unified diff patch.
+
+Full updated file.
+
+File must remain functionally identical, but with strict typing, ESLint compliance, and null safety.
