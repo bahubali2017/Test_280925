@@ -205,7 +205,7 @@ const DEFAULT_CONFIG = {
 /** @type {Array<{ queryResult: LegacyQueryResult; responseCategory: string; timestamp: number; }>} */
 let queryBuffer = [];
 let lastSampleTime = 0;
-/** @type {number | null} */
+/** @type {ReturnType<typeof setInterval> | null} */
 let flushTimer = null;
 let samplerConfig = { ...DEFAULT_CONFIG };
 
@@ -379,7 +379,7 @@ export function configureSampler(newConfig) {
  */
 export function startAutoFlush() {
   if (flushTimer) {
-    clearInterval(flushTimer);
+    globalThis.clearInterval(flushTimer);
   }
 
   if (typeof globalThis !== 'undefined' && globalThis.setInterval) {
