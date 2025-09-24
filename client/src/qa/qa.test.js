@@ -52,7 +52,7 @@ import { logSystemChange, validateChangeData, assessChangeImpact } from './versi
  */
 
 /**
- * @typedef {object} UserFeedback
+ * @typedef {object} TestUserFeedback
  * @property {string} query - Test medical query
  * @property {"high"|"medium"|"low"} perceivedAccuracy - Accuracy perception
  * @property {string} feedbackText - Feedback content
@@ -286,29 +286,25 @@ console.info('🧪 Testing QA Framework - Phase 6\n');
 console.info('📊 Testing Metrics Evaluator...');
 
 // Test triage accuracy evaluation
-/** @type {TriageEvaluationResult} */
-const accurateEval = evaluateTriageAccuracy('chest pain', 'emergency');
+const accurateEval = /** @type {TriageEvaluationResult} */ (evaluateTriageAccuracy('chest pain', 'emergency'));
 assert(accurateEval.isAccurate === true, 'Metrics Evaluator - Accurate Triage Detection');
 assert(accurateEval.expectedTriage === 'emergency', 'Metrics Evaluator - Expected Triage Lookup');
 
-/** @type {TriageEvaluationResult} */
-const inaccurateEval = evaluateTriageAccuracy('mild headache', 'emergency');
+const inaccurateEval = /** @type {TriageEvaluationResult} */ (evaluateTriageAccuracy('mild headache', 'emergency'));
 assert(inaccurateEval.isAccurate === false, 'Metrics Evaluator - Inaccurate Triage Detection');
 assert(inaccurateEval.isOverTriage === true, 'Metrics Evaluator - Over-triage Detection');
 
 // Test metrics calculation
 const sampleData = createSampleEvaluationData();
-/** @type {CalculatedMetrics} */
-const metrics = calculateMetrics(sampleData);
+const metrics = /** @type {CalculatedMetrics} */ (calculateMetrics(sampleData));
 assert(typeof metrics.accuracy === 'number', 'Metrics Evaluator - Accuracy Calculation');
 assert(typeof metrics.precision === 'number', 'Metrics Evaluator - Precision Calculation');
 assert(typeof metrics.recall === 'number', 'Metrics Evaluator - Recall Calculation');
 assert(metrics.totalEvaluated === sampleData.length, 'Metrics Evaluator - Dataset Count');
 
 // Test evaluation report generation
-/** @type {GeneratedEvaluationReport} */
-const report = generateEvaluationReport(sampleData);
-assert(report.reportId && report.reportId.includes('eval_'), 'Metrics Evaluator - Report Generation');
+const report = /** @type {GeneratedEvaluationReport} */ (generateEvaluationReport(sampleData));
+assert(Boolean(report.reportId && report.reportId.includes('eval_')), 'Metrics Evaluator - Report Generation');
 assert(report.performance && typeof report.performance.overallAccuracy === 'number', 'Metrics Evaluator - Performance Metrics');
 assert(Array.isArray(report.recommendations), 'Metrics Evaluator - Recommendations Generation');
 
@@ -317,7 +313,7 @@ assert(Array.isArray(report.recommendations), 'Metrics Evaluator - Recommendatio
 console.info('\n📝 Testing Feedback Handler...');
 
 // Test feedback validation
-/** @type {UserFeedback} */
+/** @type {TestUserFeedback} */
 const validFeedback = {
   query: 'Test medical query',
   perceivedAccuracy: 'high',
@@ -326,27 +322,24 @@ const validFeedback = {
   timestamp: new Date().toISOString()
 };
 
-/** @type {FeedbackValidationResult} */
-const validation = validateFeedback(validFeedback);
+const validation = /** @type {FeedbackValidationResult} */ (validateFeedback(/** @type {any} */ (validFeedback)));
 assert(validation.isValid === true, 'Feedback Handler - Valid Feedback Validation');
 assert(validation.errors.length === 0, 'Feedback Handler - No Validation Errors');
 
-/** @type {Partial<UserFeedback>} */
+/** @type {Partial<TestUserFeedback>} */
 const invalidFeedback = {
   query: '',
   perceivedAccuracy: /** @type {any} */ ('invalid'),
   userType: /** @type {any} */ ('invalid')
 };
 
-/** @type {FeedbackValidationResult} */
-const invalidValidation = validateFeedback(invalidFeedback);
+const invalidValidation = /** @type {FeedbackValidationResult} */ (validateFeedback(/** @type {any} */ (invalidFeedback)));
 assert(invalidValidation.isValid === false, 'Feedback Handler - Invalid Feedback Detection');
 assert(invalidValidation.errors.length > 0, 'Feedback Handler - Validation Error Detection');
 
 // Test feedback trends analysis
 const sampleFeedback = createSampleFeedbackData();
-/** @type {AnalyzedFeedbackTrends} */
-const trends = analyzeFeedbackTrends(sampleFeedback);
+const trends = /** @type {AnalyzedFeedbackTrends} */ (analyzeFeedbackTrends(sampleFeedback));
 assert(trends.totalFeedback === sampleFeedback.length, 'Feedback Handler - Feedback Count');
 assert(typeof trends.averageAccuracy === 'number', 'Feedback Handler - Average Accuracy Calculation');
 assert(trends.actionRequired > 0, 'Feedback Handler - Action Required Detection');
@@ -370,8 +363,8 @@ async function runQATestSuite() {
   // Test improvement report generation
   /** @type {ImprovementOptions} */
   const reportOptions = { feedbackDays: 7, minOccurrences: 1 };
-  const improvementReport = await generateImprovementReport(reportOptions);
-  assert(improvementReport.reportId && improvementReport.reportId.includes('improvement_'), 'Improvement Suggester - Report Generation');
+  const improvementReport = /** @type {ImprovementReport} */ (await generateImprovementReport(reportOptions));
+  assert(Boolean(improvementReport.reportId && improvementReport.reportId.includes('improvement_')), 'Improvement Suggester - Report Generation');
   assert(improvementReport.summary && typeof improvementReport.summary.totalSuggestions === 'number', 'Improvement Suggester - Summary Generation');
   assert(Array.isArray(improvementReport.actionItems), 'Improvement Suggester - Action Items Generation');
 
@@ -416,8 +409,8 @@ async function runQATestSuite() {
     llmResponse: 'Test response from system'
   };
 
-  /** @type {UserFeedback} */
-  const validFeedback = {
+  /** @type {TestUserFeedback} */
+  const integrationValidFeedback = {
     query: 'Test medical query',
     perceivedAccuracy: 'high',
     feedbackText: 'Great response',
@@ -425,15 +418,15 @@ async function runQATestSuite() {
     timestamp: new Date().toISOString()
   };
 
-  const feedbackResult = await captureFeedback(validFeedback, queryContext);
+  const feedbackResult = await captureFeedback(/** @type {any} */ (integrationValidFeedback), queryContext);
   assert(feedbackResult === true, 'QA Integration - Feedback Capture with Context');
 
   // Test end-to-end QA workflow
   const sampleData = createSampleEvaluationData();
   const sampleFeedback = createSampleFeedbackData();
   
-  const workflowMetrics = calculateMetrics(sampleData);
-  const workflowTrends = analyzeFeedbackTrends(sampleFeedback);
+  const workflowMetrics = /** @type {CalculatedMetrics} */ (calculateMetrics(sampleData));
+  const workflowTrends = /** @type {AnalyzedFeedbackTrends} */ (analyzeFeedbackTrends(sampleFeedback));
   /** @type {ImprovementOptions} */
   const workflowOptions = { feedbackDays: 1, minOccurrences: 1 };
   const workflowSuggestions = await generateImprovementSuggestions(workflowOptions);
