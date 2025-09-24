@@ -3,6 +3,38 @@
  * Phase 9: Medical Safety Guidelines - Professional medical handoff system
  */
 
+/** @typedef {{[k: string]: number}} NumDict */
+/** @typedef {{[k: string]: string}} StringDict */
+
+/**
+ * @typedef TriageResult
+ * @property {string} triageLevel
+ * @property {boolean} isHighRisk
+ * @property {string[]} [bodySystems]
+ * @property {number} [confidence]
+ * @property {number} [processingTime]
+ * @property {string[]} [flags]
+ */
+
+/**
+ * @typedef RouterContext
+ * @property {string} sessionId
+ * @property {string} userId
+ * @property {string} query
+ * @property {number} ts
+ * @property {TriageResult=} triage
+ * @property {{[k:string]: unknown}=} metadata
+ */
+
+/**
+ * @typedef RouterDecision
+ * @property {string} route
+ * @property {string} reason
+ * @property {boolean} highPriority
+ * @property {TriageResult=} triage
+ * @property {StringDict=} tags
+ */
+
 /**
  * ATD routing decision result
  * @typedef {object} ATDRoutingResult
@@ -16,73 +48,143 @@
  */
 
 /**
+ * @typedef TriageInput
+ * @property {string} level
+ * @property {string[]} [symptomNames]
+ * @property {string[]} [safetyFlags]
+ * @property {object} [severityAssessment]
+ * @property {number} [severityAssessment.severeCount]
+ * @property {string[]} [reasons]
+ * @property {boolean} [emergencyProtocol]
+ * @property {boolean} [mentalHealthCrisis]
+ * @property {boolean} [conservativeBiasApplied]
+ * @property {object[]} [detectedSymptoms]
+ * @property {string[]} [recommendedActions]
+ */
+
+/**
+ * @typedef EmergencyDetectionInput
+ * @property {boolean} isEmergency
+ * @property {string} [emergencyType]
+ * @property {string} [severity]
+ * @property {string[]} [triggeredPatterns]
+ * @property {boolean} [requiresEmergencyServices]
+ */
+
+/**
+ * @typedef DemographicsInput
+ * @property {number} [age]
+ * @property {string} [sex]
+ * @property {string} [sessionId]
+ */
+
+/**
+ * @typedef DetectedSymptom
+ * @property {string} name
+ * @property {string} severity
+ * @property {string} category
+ */
+
+/**
+ * Simple logger function
+ * @param {string} level - Log level
+ * @param {string} message - Log message
+ * @param {...unknown} args - Additional arguments
+ * @returns {void}
+ */
+function log(level, message, ...args) {
+  const timestamp = new Date().toISOString();
+  const logMessage = `[${timestamp}] [ATD Router] ${message}`;
+  
+  if (level === 'error') {
+    console.error(logMessage, ...args);
+  } else if (level === 'warn') {
+    console.warn(logMessage, ...args);
+  } else {
+    console.info(logMessage, ...args);
+  }
+}
+
+/**
  * Determine if case should be routed to healthcare provider
- * @param {object} triageResult - Enhanced triage result from triage-engine
- * @param {object} emergencyDetection - Emergency detection result
+ * @param {TriageInput} triageResult - Enhanced triage result from triage-engine
+ * @param {EmergencyDetectionInput} emergencyDetection - Emergency detection result
  * @param {string} originalQuery - User's original query
- * @param {object} demographics - Patient demographics (age, sex, etc.)
+ * @param {DemographicsInput} [demographics={}] - Patient demographics (age, sex, etc.)
  * @returns {ATDRoutingResult} ATD routing decision
  */
 export function routeToProvider(triageResult, emergencyDetection, originalQuery, demographics = {}) {
+  /** @type {string[]} */
   const clinicalFlags = [];
   let routeToProvider = false;
   let providerType = "routine";
   let priorityScore = 1;
   
+  // Safe property access
+  const triageLevel = triageResult && typeof triageResult.level === 'string' ? triageResult.level : '';
+  const isEmergency = emergencyDetection && typeof emergencyDetection.isEmergency === 'boolean' ? emergencyDetection.isEmergency : false;
+  const emergencyType = emergencyDetection && typeof emergencyDetection.emergencyType === 'string' ? emergencyDetection.emergencyType : '';
+  const emergencySeverity = emergencyDetection && typeof emergencyDetection.severity === 'string' ? emergencyDetection.severity : '';
+  const safetyFlags = triageResult && Array.isArray(triageResult.safetyFlags) ? triageResult.safetyFlags : [];
+  const symptomNames = triageResult && Array.isArray(triageResult.symptomNames) ? triageResult.symptomNames : [];
+  const severityAssessment = triageResult && triageResult.severityAssessment ? triageResult.severityAssessment : null;
+  const severeCount = severityAssessment && typeof severityAssessment.severeCount === 'number' ? severityAssessment.severeCount : 0;
+  
   // 1. EMERGENCY ROUTING - Immediate provider intervention
-  if (triageResult.level === "EMERGENCY" || emergencyDetection.isEmergency) {
+  if (triageLevel === "EMERGENCY" || isEmergency) {
     routeToProvider = true;
-    providerType = emergencyDetection.emergencyType === "mental_health" ? "mental_health" : "emergency";
+    providerType = emergencyType === "mental_health" ? "mental_health" : "emergency";
     priorityScore = 10;
     clinicalFlags.push("EMERGENCY_SITUATION");
     
-    if (emergencyDetection.emergencyType === "mental_health") {
+    if (emergencyType === "mental_health") {
       clinicalFlags.push("MENTAL_HEALTH_CRISIS");
-      if (emergencyDetection.severity === "critical") {
+      if (emergencySeverity === "critical") {
         clinicalFlags.push("SUICIDE_RISK");
       }
     }
     
-    if (triageResult.safetyFlags?.includes("CHEST_SYMPTOMS")) {
+    if (safetyFlags.includes("CHEST_SYMPTOMS")) {
       clinicalFlags.push("CARDIAC_CONCERN");
     }
     
-    if (triageResult.safetyFlags?.includes("BREATHING_SYMPTOMS")) {
+    if (safetyFlags.includes("BREATHING_SYMPTOMS")) {
       clinicalFlags.push("RESPIRATORY_DISTRESS");
     }
   }
   
   // 2. URGENT ROUTING - Provider needed within hours
-  else if (triageResult.level === "URGENT") {
+  else if (triageLevel === "URGENT") {
     routeToProvider = true;
     providerType = "urgent";
     priorityScore = 7;
     clinicalFlags.push("URGENT_EVALUATION_NEEDED");
     
     // Add specific flags for urgent conditions
-    if (triageResult.safetyFlags?.includes("MULTIPLE_SYMPTOMS")) {
+    if (safetyFlags.includes("MULTIPLE_SYMPTOMS")) {
       clinicalFlags.push("COMPLEX_SYMPTOM_PATTERN");
       priorityScore = 8;
     }
     
-    if (triageResult.safetyFlags?.includes("CONSERVATIVE_ESCALATION")) {
+    if (safetyFlags.includes("CONSERVATIVE_ESCALATION")) {
       clinicalFlags.push("CONSERVATIVE_BIAS_APPLIED");
     }
   }
   
   // 3. DEMOGRAPHIC-BASED ROUTING
-  if (demographics.age) {
-    if (demographics.age < 18) {
+  const age = demographics && typeof demographics.age === 'number' ? demographics.age : null;
+  if (age !== null) {
+    if (age < 18) {
       clinicalFlags.push("PEDIATRIC_PATIENT");
       priorityScore = Math.min(priorityScore + 1, 10);
-      if (!routeToProvider && triageResult.symptomNames.length > 0) {
+      if (!routeToProvider && symptomNames.length > 0) {
         routeToProvider = true;
         providerType = "routine";
         priorityScore = Math.max(priorityScore, 5);
       }
-    } else if (demographics.age >= 65) {
+    } else if (age >= 65) {
       clinicalFlags.push("GERIATRIC_PATIENT");
-      if (triageResult.symptomNames.length > 1) {
+      if (symptomNames.length > 1) {
         priorityScore = Math.min(priorityScore + 1, 10);
         if (!routeToProvider) {
           routeToProvider = true;
@@ -94,7 +196,7 @@ export function routeToProvider(triageResult, emergencyDetection, originalQuery,
   }
   
   // 4. COMPLEX SYMPTOM PATTERNS
-  if (triageResult.severityAssessment?.severeCount >= 2) {
+  if (severeCount >= 2) {
     routeToProvider = true;
     providerType = providerType === "routine" ? "urgent" : providerType;
     clinicalFlags.push("MULTIPLE_SEVERE_SYMPTOMS");
@@ -111,7 +213,7 @@ export function routeToProvider(triageResult, emergencyDetection, originalQuery,
   
   for (const combo of highRiskCombinations) {
     const hasCombo = combo.symptoms.every(symptom => 
-      triageResult.symptomNames.some(s => s.includes(symptom))
+      symptomNames.some(s => s.includes(symptom))
     );
     
     if (hasCombo) {
@@ -144,21 +246,38 @@ export function routeToProvider(triageResult, emergencyDetection, originalQuery,
 
 /**
  * Generate structured medical data for healthcare provider interface
- * @param {object} triageResult - Triage result
- * @param {object} emergencyDetection - Emergency detection
+ * @param {TriageInput} triageResult - Triage result
+ * @param {EmergencyDetectionInput} emergencyDetection - Emergency detection
  * @param {string} originalQuery - Original user query
- * @param {object} demographics - Patient demographics
+ * @param {DemographicsInput} demographics - Patient demographics
  * @param {string[]} clinicalFlags - Clinical flags
  * @returns {object} Structured medical data
  */
 function generateStructuredMedicalData(triageResult, emergencyDetection, originalQuery, demographics, clinicalFlags) {
+  const detectedSymptoms = triageResult && Array.isArray(triageResult.detectedSymptoms) ? triageResult.detectedSymptoms : [];
+  const recommendedActions = triageResult && Array.isArray(triageResult.recommendedActions) ? triageResult.recommendedActions : [];
+  const symptomNames = triageResult && Array.isArray(triageResult.symptomNames) ? triageResult.symptomNames : [];
+  const triageLevel = triageResult && typeof triageResult.level === 'string' ? triageResult.level : '';
+  const reasons = triageResult && Array.isArray(triageResult.reasons) ? triageResult.reasons : [];
+  const safetyFlags = triageResult && Array.isArray(triageResult.safetyFlags) ? triageResult.safetyFlags : [];
+  const emergencyProtocol = triageResult && typeof triageResult.emergencyProtocol === 'boolean' ? triageResult.emergencyProtocol : false;
+  const mentalHealthCrisis = triageResult && typeof triageResult.mentalHealthCrisis === 'boolean' ? triageResult.mentalHealthCrisis : false;
+  const conservativeBiasApplied = triageResult && typeof triageResult.conservativeBiasApplied === 'boolean' ? triageResult.conservativeBiasApplied : false;
+  const severityAssessment = triageResult && triageResult.severityAssessment ? triageResult.severityAssessment : null;
+  
+  const isEmergency = emergencyDetection && typeof emergencyDetection.isEmergency === 'boolean' ? emergencyDetection.isEmergency : false;
+  const emergencyType = emergencyDetection && typeof emergencyDetection.emergencyType === 'string' ? emergencyDetection.emergencyType : '';
+  const emergencySeverity = emergencyDetection && typeof emergencyDetection.severity === 'string' ? emergencyDetection.severity : '';
+  const triggeredPatterns = emergencyDetection && Array.isArray(emergencyDetection.triggeredPatterns) ? emergencyDetection.triggeredPatterns : [];
+  const requiresEmergencyServices = emergencyDetection && typeof emergencyDetection.requiresEmergencyServices === 'boolean' ? emergencyDetection.requiresEmergencyServices : false;
+  
   return {
     // Patient Information
     patient: {
-      age: demographics.age || null,
-      sex: demographics.sex || null,
+      age: demographics && typeof demographics.age === 'number' ? demographics.age : null,
+      sex: demographics && typeof demographics.sex === 'string' ? demographics.sex : null,
       queryTimestamp: new Date().toISOString(),
-      sessionId: demographics.sessionId || "anonymous"
+      sessionId: demographics && typeof demographics.sessionId === 'string' ? demographics.sessionId : "anonymous"
     },
     
     // Chief Complaint (sanitized)
@@ -166,47 +285,47 @@ function generateStructuredMedicalData(triageResult, emergencyDetection, origina
       originalQuery: originalQuery.length > 200 ? originalQuery.substring(0, 200) + "..." : originalQuery,
       sanitizedQuery: sanitizeQueryForProvider(originalQuery),
       queryLength: originalQuery.length,
-      keySymptoms: triageResult.symptomNames
+      keySymptoms: symptomNames
     },
     
     // Triage Assessment
     triage: {
-      level: triageResult.level,
-      reasons: triageResult.reasons,
-      safetyFlags: triageResult.safetyFlags,
-      emergencyProtocol: triageResult.emergencyProtocol,
-      mentalHealthCrisis: triageResult.mentalHealthCrisis,
-      conservativeBiasApplied: triageResult.conservativeBiasApplied
+      level: triageLevel,
+      reasons,
+      safetyFlags,
+      emergencyProtocol,
+      mentalHealthCrisis,
+      conservativeBiasApplied
     },
     
     // Symptom Analysis
     symptoms: {
-      detected: triageResult.detectedSymptoms || [],
-      severity: triageResult.severityAssessment,
-      categories: getCategorizedSymptoms(triageResult.detectedSymptoms || []),
+      detected: detectedSymptoms,
+      severity: severityAssessment,
+      categories: getCategorizedSymptoms(detectedSymptoms),
       timeline: extractTimelineFromQuery(originalQuery)
     },
     
     // Emergency Assessment
     emergency: {
-      isEmergency: emergencyDetection.isEmergency,
-      emergencyType: emergencyDetection.emergencyType,
-      severity: emergencyDetection.severity,
-      triggeredPatterns: emergencyDetection.triggeredPatterns,
-      requiresEmergencyServices: emergencyDetection.requiresEmergencyServices
+      isEmergency,
+      emergencyType,
+      severity: emergencySeverity,
+      triggeredPatterns,
+      requiresEmergencyServices
     },
     
     // Clinical Decision Support
     clinicalFlags,
     
     // Recommended Actions
-    recommendedActions: triageResult.recommendedActions || [],
+    recommendedActions,
     
     // Risk Assessment
     riskAssessment: {
       overallRisk: calculateOverallRisk(triageResult, emergencyDetection),
       specificRisks: identifySpecificRisks(triageResult, demographics),
-      followUpUrgency: determineFollowUpUrgency(triageResult.level)
+      followUpUrgency: determineFollowUpUrgency(triageLevel)
     },
     
     // System Context
@@ -254,7 +373,11 @@ function generateProviderMessage(structuredData, clinicalFlags) {
   if (symptoms.detected.length > 0) {
     message += "**KEY SYMPTOMS:**\n";
     for (const symptom of symptoms.detected) {
-      message += `- ${symptom.name} (${symptom.severity}, ${symptom.category})\n`;
+      const symptomObj = symptom && typeof symptom === 'object' ? symptom : {};
+      const name = 'name' in symptomObj && typeof symptomObj.name === 'string' ? symptomObj.name : 'Unknown';
+      const severity = 'severity' in symptomObj && typeof symptomObj.severity === 'string' ? symptomObj.severity : 'Unknown';
+      const category = 'category' in symptomObj && typeof symptomObj.category === 'string' ? symptomObj.category : 'Unknown';
+      message += `- ${name} (${severity}, ${category})\n`;
     }
     message += "\n";
   }
@@ -324,6 +447,11 @@ function generatePatientGuidance(routeToProvider, providerType, priorityScore) {
 
 // Helper functions
 
+/**
+ * Sanitize query for provider by removing PII
+ * @param {string} query - Original query
+ * @returns {string} Sanitized query
+ */
 function sanitizeQueryForProvider(query) {
   // Remove potential PII while keeping medical content
   return query.replace(/\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g, '[EMAIL_REDACTED]')
@@ -331,17 +459,36 @@ function sanitizeQueryForProvider(query) {
               .replace(/\b\d{3}-\d{2}-\d{4}\b/g, '[SSN_REDACTED]');
 }
 
+/**
+ * Categorize symptoms by type
+ * @param {DetectedSymptom[]} symptoms - Array of detected symptoms
+ * @returns {StringDict} Categories mapping to symptom names
+ */
 function getCategorizedSymptoms(symptoms) {
+  /** @type {StringDict} */
   const categories = {};
   for (const symptom of symptoms) {
-    if (!categories[symptom.category]) {
-      categories[symptom.category] = [];
+    const symptomObj = symptom && typeof symptom === 'object' ? symptom : {};
+    const category = 'category' in symptomObj && typeof symptomObj.category === 'string' ? symptomObj.category : 'unknown';
+    const name = 'name' in symptomObj && typeof symptomObj.name === 'string' ? symptomObj.name : 'Unknown symptom';
+    
+    if (!categories[category]) {
+      categories[category] = [];
     }
-    categories[symptom.category].push(symptom.name);
+    
+    // Ensure we're working with array
+    const categoryArray = Array.isArray(categories[category]) ? categories[category] : [];
+    categoryArray.push(name);
+    categories[category] = categoryArray.join(', '); // Convert to string for StringDict
   }
   return categories;
 }
 
+/**
+ * Extract timeline information from query
+ * @param {string} query - User query
+ * @returns {Array<{type: string, matches: string[]}>} Timeline information
+ */
 function extractTimelineFromQuery(query) {
   const timePatterns = [
     { pattern: /(\d+)\s*(hour|hr)s?\s*ago/gi, type: "hours" },
@@ -351,42 +498,68 @@ function extractTimelineFromQuery(query) {
     { pattern: /(suddenly|gradually|slowly|quickly)/gi, type: "onset" }
   ];
   
+  /** @type {Array<{type: string, matches: string[]}>} */
   const timeline = [];
   for (const timePattern of timePatterns) {
     const matches = query.match(timePattern.pattern);
     if (matches) {
-      timeline.push({ type: timePattern.type, matches });
+      timeline.push({ type: timePattern.type, matches: Array.from(matches) });
     }
   }
   
   return timeline;
 }
 
+/**
+ * Calculate overall risk level
+ * @param {TriageInput} triageResult - Triage result
+ * @param {EmergencyDetectionInput} emergencyDetection - Emergency detection
+ * @returns {string} Risk level
+ */
 function calculateOverallRisk(triageResult, emergencyDetection) {
-  if (emergencyDetection.isEmergency) return "HIGH";
-  if (triageResult.level === "URGENT") return "MODERATE";
-  if (triageResult.safetyFlags?.length > 2) return "MODERATE";
+  const isEmergency = emergencyDetection && typeof emergencyDetection.isEmergency === 'boolean' ? emergencyDetection.isEmergency : false;
+  const triageLevel = triageResult && typeof triageResult.level === 'string' ? triageResult.level : '';
+  const safetyFlags = triageResult && Array.isArray(triageResult.safetyFlags) ? triageResult.safetyFlags : [];
+  
+  if (isEmergency) return "HIGH";
+  if (triageLevel === "URGENT") return "MODERATE";
+  if (safetyFlags.length > 2) return "MODERATE";
   return "LOW";
 }
 
+/**
+ * Identify specific risks based on patient data
+ * @param {TriageInput} triageResult - Triage result
+ * @param {DemographicsInput} demographics - Patient demographics
+ * @returns {string[]} Array of specific risks
+ */
 function identifySpecificRisks(triageResult, demographics) {
+  /** @type {string[]} */
   const risks = [];
   
-  if (demographics.age && demographics.age >= 65) {
+  const age = demographics && typeof demographics.age === 'number' ? demographics.age : null;
+  const safetyFlags = triageResult && Array.isArray(triageResult.safetyFlags) ? triageResult.safetyFlags : [];
+  
+  if (age !== null && age >= 65) {
     risks.push("Age-related complications");
   }
   
-  if (demographics.age && demographics.age < 18) {
+  if (age !== null && age < 18) {
     risks.push("Pediatric considerations");
   }
   
-  if (triageResult.safetyFlags?.includes("MULTIPLE_SYMPTOMS")) {
+  if (safetyFlags.includes("MULTIPLE_SYMPTOMS")) {
     risks.push("Complex symptom interaction");
   }
   
   return risks;
 }
 
+/**
+ * Determine follow-up urgency
+ * @param {string} triageLevel - Triage level
+ * @returns {string} Follow-up urgency
+ */
 function determineFollowUpUrgency(triageLevel) {
   switch (triageLevel) {
     case "EMERGENCY": return "IMMEDIATE";
@@ -395,20 +568,30 @@ function determineFollowUpUrgency(triageLevel) {
   }
 }
 
+/**
+ * Calculate reliability score for the AI assessment
+ * @param {TriageInput} triageResult - Triage result
+ * @param {string} originalQuery - Original user query
+ * @returns {number} Reliability score (1-10)
+ */
 function calculateReliabilityScore(triageResult, originalQuery) {
   let score = 7; // Base reliability
   
+  const symptomNames = triageResult && Array.isArray(triageResult.symptomNames) ? triageResult.symptomNames : [];
+  const emergencyProtocol = triageResult && typeof triageResult.emergencyProtocol === 'boolean' ? triageResult.emergencyProtocol : false;
+  const conservativeBiasApplied = triageResult && typeof triageResult.conservativeBiasApplied === 'boolean' ? triageResult.conservativeBiasApplied : false;
+  
   // Increase reliability for clear symptoms
-  if (triageResult.symptomNames.length >= 3) score += 1;
+  if (symptomNames.length >= 3) score += 1;
   
   // Decrease for very short queries
   if (originalQuery.length < 50) score -= 2;
   
   // Increase for emergency detection consensus
-  if (triageResult.emergencyProtocol) score += 1;
+  if (emergencyProtocol) score += 1;
   
   // Decrease if conservative bias was heavily applied
-  if (triageResult.conservativeBiasApplied) score -= 1;
+  if (conservativeBiasApplied) score -= 1;
   
   return Math.max(1, Math.min(10, score));
 }
