@@ -1,0 +1,48 @@
+🔹 Agent Prompt — Update TS_ERROR_MASTER_AUDIT_v2.md
+You are an engineering audit agent. Your task is to update the file 
+`TS_ERROR_MASTER_AUDIT_v2.md` to reflect the current TypeScript strict mode + ESLint error status. 
+Do not invent fixes — only update tracking.
+
+Instructions:
+1. Update all Tier 1 files (Critical Core Files - LIVE) to ✅ FIXED (0 errors).
+   These are:
+   - client/src/analytics/analytics-utils.js
+   - client/src/analytics/usage-tracker.js
+   - client/src/analytics/improvement-suggester.js
+   - client/src/lib/medical-layer/atd-router.js
+   - client/src/tests/qa/test-executor.js
+   - client/src/analytics/metadata-logger.js
+   - client/src/qa/version-tracker.js
+   - client/src/tests/qa/regression-runner.js
+   - client/src/lib/llm-integration/llm-preference-engine.js
+   - client/src/qa/qa.test.js
+   - client/src/lib/llm-api.jsx
+   - client/src/lib/medical-safety-processor.js
+   - client/src/lib/medical-layer/emergency-detector.js
+   - client/src/lib/optimization/performance-tuner.js
+
+2. Remove their error counts from the global "Found ### errors in ### files" summary.
+   Adjust the total from **670 errors in 81 files** down by the sum of Tier 1 fixed errors 
+   (approx. 352+59+39+35+33+24+26+23+19+18 = ~628). 
+   Recalculate new totals.
+
+3. Re-organize the remaining error table by:
+   - Highest error count at the top.
+   - ✅ Mark all fixed files with “(Fixed - 0 errors)” and move them into a separate 
+     "Resolved Tier 1 Files" section at the bottom.
+
+4. Update progress summary:
+   - Show original totals vs current.
+   - Show % completion (files + errors).
+
+5. Keep formatting identical to the original audit file, just updated.
+   Use clear markdown sections:
+   - `# TS_ERROR_MASTER_AUDIT_v2`
+   - `## Current Status`
+   - `## Remaining Files with Errors`
+   - `## Resolved Tier 1 Files`
+   - `## Progress Summary`
+
+Goal: The document must be ready as the **new master audit index** for the next phase of fixes.
+
+i attached the current TS errors - you will need to also the Eslint errors for each files 
