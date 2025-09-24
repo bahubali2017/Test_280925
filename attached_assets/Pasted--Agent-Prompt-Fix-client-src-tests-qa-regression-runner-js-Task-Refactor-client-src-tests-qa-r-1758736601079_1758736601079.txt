@@ -1,0 +1,103 @@
+🔹 Agent Prompt — Fix client/src/tests/qa/regression-runner.js
+
+Task:
+Refactor client/src/tests/qa/regression-runner.js to eliminate all TypeScript strict mode errors and ESLint issues.
+Target = TRIPLE-0 POLICY:
+
+TypeScript strict mode: 0 errors
+
+ESLint: 0 warnings/errors
+
+LSP diagnostics: 0 issues
+No any, no unknown, no @ts-ignore, no suppressions.
+
+Validation commands
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/tests/qa/regression-runner.js
+eslint client/src/tests/qa/regression-runner.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+Rules
+
+All JSDoc typedefs must reflect the actual implementation. Adjust property names, shapes, and fields based on the real code. Do not leave placeholders.
+
+Preserve QA functionality: regression test execution, reporting, and logging.
+
+Replace console.log with console.info, console.warn, or console.error where contextually correct (or structured logger if available).
+
+Remove unused variables/imports, enforce const where possible.
+
+Guard property access with null checks and in operator checks.
+
+Ensure typed accumulators and arrays are explicit.
+
+Suggested JSDoc typedefs (adjust to actual file)
+/**
+ * @typedef RegressionCase
+ * @property {string} id
+ * @property {string} description
+ * @property {any} input
+ * @property {any} expected
+ */
+
+/**
+ * @typedef RegressionResult
+ * @property {string} id
+ * @property {boolean} passed
+ * @property {any} actual
+ * @property {any} expected
+ * @property {string[]} [errors]
+ */
+
+/**
+ * @typedef RegressionReport
+ * @property {string} timestamp
+ * @property {number} total
+ * @property {number} passed
+ * @property {number} failed
+ * @property {RegressionResult[]} results
+ */
+
+Refactor targets
+
+Accumulators
+
+/** @type {RegressionCase[]} */ const cases = [];
+/** @type {RegressionResult[]} */ const results = [];
+
+
+Dictionaries
+
+/** @type {Record<string, number>} */ const failureCount = {};
+
+
+Functions (adjust to actual code):
+
+/** @param {RegressionCase[]} testCases @returns {RegressionReport} */
+export function runRegression(testCases) { ... }
+
+/** @param {RegressionResult[]} results @returns {string} */
+export function summarizeResults(results) { ... }
+
+
+Ensure all loops are typed (for...of preferred over forEach).
+
+Add instanceof Error checks when handling thrown errors.
+
+Replace unsafe property access on {} with typed shapes.
+
+ESLint fixes
+
+Remove unused imports and variables.
+
+Ensure consistent return statements.
+
+Apply prefer-const and no-undef rules.
+
+Deliverables
+
+Full corrected file with accurate JSDoc typedefs matching actual code.
+
+Validation commands must both return 0.
+
+All QA regression logic preserved.
+
+Codebase remains compliant with TRIPLE-0 error policy.
