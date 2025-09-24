@@ -1,20 +1,30 @@
 /* global setTimeout */
-import React from 'react';
+import * as React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
-import { getExpansionInvitationText } from '../lib/expansion-prompts.js';
 import { isDebug, trace } from '../lib/debug-flag.js';
-import { AI_FLAGS } from '../config/ai-flags.js';
 import { dedupeDisclaimers } from '../lib/disclaimers.js';
 
 /**
+ * @typedef {'user'|'assistant'|'system'} RoleType
+ */
+
+/**
+ * @typedef {object} QueryIntent
+ * @property {string} [type] - Intent type
+ * @property {number} [confidence] - Confidence score
+ * @property {string[]} [disclaimers] - Disclaimers
+ * @property {string[]} [suggestions] - Follow-up suggestions
+ * @property {boolean} [isProfessionalQuery] - Whether this is a professional query
+ * @property {object} [atd] - Advice to doctor data
+ * @property {string} [atd.atdReason] - ATD reason
+ */
+
+/**
  * @typedef {object} MessageMetadata
- * @property {object} [queryIntent] - Query analysis results
- * @property {string} [queryIntent.type] - Intent type
- * @property {number} [queryIntent.confidence] - Confidence score
- * @property {string[]} [queryIntent.disclaimers] - Disclaimers
+ * @property {QueryIntent} [queryIntent] - Query analysis results
  * @property {'emergency'|'urgent'|'non_urgent'} [triageLevel] - Triage classification
  * @property {boolean} [isHighRisk] - High risk flag
  * @property {object} [layerStatus] - Layer processing status
@@ -26,29 +36,66 @@ import { dedupeDisclaimers } from '../lib/disclaimers.js';
  * @property {boolean} [isTimeout] - Timeout flag
  * @property {boolean} [delivered] - Delivery status
  * @property {boolean} [isStreaming] - Streaming status
+ * @property {boolean} [canExpand] - Whether message can be expanded
+ * @property {string} [questionType] - Question type
+ * @property {string} [responseMode] - Response mode
+ * @property {boolean} [forceShowDisclaimers] - Force show disclaimers
  */
 
+/**
+ * @typedef {object} Message
+ * @property {string} id - Message identifier
+ * @property {RoleType} role - Message role
+ * @property {string} content - Message content
+ * @property {Date} [timestamp] - Message timestamp
+ * @property {boolean} [isStreaming] - Whether streaming
+ * @property {MessageMetadata} [metadata] - Message metadata
+ * @property {string[]} [safetyFlags] - Safety flags
+ * @property {boolean} [disclaimerShown] - Whether disclaimer was shown
+ */
+
+/**
+ * @typedef {object} MessageBubbleProps
+ * @property {string} message - The message content
+ * @property {boolean} isUser - Whether the message is from the user
+ * @property {Date} [timestamp] - When the message was sent
+ * @property {boolean} [isError] - Whether this is an error message
+ * @property {boolean} [isHighRisk] - Whether this is a high-risk medical query
+ * @property {MessageMetadata} [metadata] - Additional message metadata
+ * @property {string} [originalMessage] - The original message that failed
+ * @property {() => void} [onRetry] - Function to call when retry button is clicked
+ * @property {(suggestion: string) => void} [onFollowUpClick] - Function to call when follow-up clicked
+ * @property {(event: React.MouseEvent<HTMLButtonElement>) => void} [onStopAI] - Function to call when stopping AI
+ * @property {boolean} [isStoppingAI] - Whether the AI response is being stopped
+ * @property {boolean} [showFollowUps] - Whether to show follow-up suggestions
+ * @property {boolean} [isFirst] - Whether this is the first message in a sequence
+ * @property {boolean} [isLast] - Whether this is the last message in a sequence
+ * @property {string} [className] - Additional CSS classes
+ * @property {boolean} [isStreaming] - Whether this message is being streamed
+ * @property {string} [partialContent] - Partial content during streaming
+ * @property {'sent'|'delivered'|'failed'|'stopped'|'stopping'|'cancelled'} [status] - Message status
+ * @property {string} [sessionId] - Session identifier
+ * @property {string} [messageId] - Message identifier
+ * @property {string} [streamingMessageId] - Streaming message identifier
+ * @property {string} [userQuery] - User query text
+ * @property {string} [userRole] - User role
+ * @property {boolean} [isCollapsed] - Whether message is collapsed
+ */
 
 /**
  * Helper to format message content using ReactMarkdown
  * @param {string} content - The message content
  * @param {boolean} [isStreaming=false] - Whether content is being streamed
- * @param {string} [partialContent=''] - Partial content for streaming display
- * @param _partialContent
- * @param status
- * @returns {JSX.Element|null} Formatted content with proper Markdown rendering
+ * @param {'sent'|'delivered'|'failed'|'stopped'|'stopping'|'cancelled'} [status='sent'] - Message status
+ * @returns {React.ReactNode} Formatted content with proper Markdown rendering
  */
-function formatMessageContent(content, isStreaming = false, _partialContent = '', status = 'sent') {
-  // For streaming, always show the content as it updates in real-time
+function formatMessageContent(content, isStreaming = false, status = 'sent') {
   const rawContent = content;
 
   if (!rawContent) return null;
 
-  // For ReactMarkdown, we don't want aggressive text cleanup that destroys markdown
-  // Only apply basic safety processing without the stray marker cleaning
-  const displayContent = isStreaming 
-    ? rawContent // Preserve formatting during streaming
-    : rawContent; // Let ReactMarkdown handle the formatting - skip processFinalResponse
+  // For streaming, always show the content as it updates in real-time
+  const displayContent = rawContent;
 
   // Only show typing indicator if streaming is active and message is not delivered
   const showTypingIndicator = isStreaming && status !== 'delivered';
@@ -56,46 +103,46 @@ function formatMessageContent(content, isStreaming = false, _partialContent = ''
   return (
     <div className="relative" data-status={status}>
       <ReactMarkdown
-        className="ai-markdown"
         remarkPlugins={[remarkGfm]}
         components={{
-          h1: ({ ...props }) => (
-            <h1 className="text-2xl font-bold text-gray-900 dark:text-white" {...props} />
+          h1: ({ children, ...props }) => (
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-white" {...props}>{children}</h1>
           ),
-          h2: ({ ...props }) => (
-            <h2 className="text-xl font-semibold text-gray-900 dark:text-white" {...props} />
+          h2: ({ children, ...props }) => (
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white" {...props}>{children}</h2>
           ),
-          h3: ({ ...props }) => (
-            <h3 className="text-lg font-semibold text-gray-900 dark:text-white" {...props} />
+          h3: ({ children, ...props }) => (
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white" {...props}>{children}</h3>
           ),
-          p: ({ ...props }) => (
-            <p className="text-foreground dark:text-foreground" {...props} />
+          p: ({ children, ...props }) => (
+            <p className="text-foreground dark:text-foreground" {...props}>{children}</p>
           ),
-          ul: ({ ...props }) => (
-            <ul className="list-disc ml-6" {...props} />
+          ul: ({ children, ...props }) => (
+            <ul className="list-disc ml-6" {...props}>{children}</ul>
           ),
-          ol: ({ ...props }) => (
-            <ol className="list-decimal ml-6" {...props} />
+          ol: ({ children, ...props }) => (
+            <ol className="list-decimal ml-6" {...props}>{children}</ol>
           ),
-          li: ({ ...props }) => (
-            <li className="text-foreground dark:text-foreground" {...props} />
+          li: ({ children, ...props }) => (
+            <li className="text-foreground dark:text-foreground" {...props}>{children}</li>
           ),
-          strong: ({ ...props }) => (
-            <strong className="font-bold text-gray-900 dark:text-white" {...props} />
+          strong: ({ children, ...props }) => (
+            <strong className="font-bold text-gray-900 dark:text-white" {...props}>{children}</strong>
           ),
-          em: ({ ...props }) => (
-            <em className="italic text-foreground dark:text-foreground" {...props} />
+          em: ({ children, ...props }) => (
+            <em className="italic text-foreground dark:text-foreground" {...props}>{children}</em>
           ),
-          blockquote: ({ ...props }) => (
-            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300" {...props} />
+          blockquote: ({ children, ...props }) => (
+            <blockquote className="border-l-4 border-blue-500 pl-4 italic text-gray-600 dark:text-gray-300" {...props}>{children}</blockquote>
           ),
-          code: ({ inline, ...props }) => (
-            inline ? (
-              <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono" {...props} />
+          code: ({ children, className, ...props }) => {
+            const isInline = !className || !className.includes('language-');
+            return isInline ? (
+              <code className="bg-gray-100 dark:bg-gray-800 px-1 py-0.5 rounded text-sm font-mono" {...props}>{children}</code>
             ) : (
-              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto" {...props} />
-            )
-          ),
+              <code className="block bg-gray-100 dark:bg-gray-800 p-3 rounded-md text-sm font-mono overflow-x-auto" {...props}>{children}</code>
+            );
+          },
         }}
       >
         {displayContent}
@@ -144,95 +191,163 @@ function formatTimestamp(date) {
 }
 
 /**
- * Props for the MessageBubble component
- * @typedef {object} MessageBubbleProps
- * @property {string} message - The message content
- * @property {boolean} isUser - Whether the message is from the user
- * @property {Date} [timestamp] - When the message was sent
- * @property {boolean} [isError] - Whether this is an error message
- * @property {boolean} [isHighRisk] - Whether this is a high-risk medical query
- * @property {object} [metadata] - Additional message metadata
- * @property {object} [metadata.queryIntent] - Query intent analysis results
- * @property {string} [originalMessage] - The original message that failed (for error messages)
- * @property {Function} [onRetry] - Function to call when retry button is clicked
- * @property {Function} [onFollowUpClick] - Function to call when a follow-up suggestion is clicked
- * @property {boolean} [showFollowUps=false] - Whether to show follow-up suggestions
- * @property {boolean} [isFirst=false] - Whether this is the first message in a sequence 
- * @property {boolean} [isLast=false] - Whether this is the last message in a sequence
- * @property {string} [className] - Additional CSS classes
- * @property {boolean} [isStreaming=false] - Whether this message is being streamed character by character
- * @property {string} [partialContent] - Partial content during streaming
- * @property {string} [status] - Message status (sent, delivered, failed)
+ * Get bubble styling classes based on role and position
+ * @param {RoleType} role - Message role
+ * @param {boolean} isFirst - Whether first in sequence
+ * @param {boolean} isLast - Whether last in sequence
+ * @returns {{rounding: string, padding: string, animation: string}} Styling classes
  */
+function getBubbleClasses(role, isFirst, isLast) {
+  const isUser = role === 'user';
+  
+  // Determine bubble rounding based on sequence position
+  const rounding = isUser
+    ? isFirst && isLast
+      ? "rounded-lg"
+      : isFirst
+        ? "rounded-t-lg rounded-bl-lg rounded-br-sm"
+        : isLast
+          ? "rounded-b-lg rounded-tl-lg rounded-tr-sm"
+          : "rounded-l-lg rounded-tr-sm rounded-br-sm"
+    : isFirst && isLast
+      ? "rounded-lg"
+      : isFirst
+        ? "rounded-t-lg rounded-br-lg rounded-bl-sm"
+        : isLast
+          ? "rounded-b-lg rounded-tr-lg rounded-tl-sm"
+          : "rounded-r-lg rounded-tl-sm rounded-bl-sm";
+
+  // Y-padding based on position in sequence
+  const padding = isFirst && !isLast
+    ? "pt-3 pb-2.5"
+    : !isFirst && isLast
+      ? "pt-2.5 pb-3"
+      : isFirst && isLast
+        ? "py-3"
+        : "py-2.5";
+
+  // Animation classes
+  const animation = isFirst 
+    ? "animate-slide-in" 
+    : "animate-fade-in";
+
+  return { rounding, padding, animation };
+}
 
 /**
- * Message bubble component for chat messages
- * @param {object} props - The message bubble props
- * @param {string} props.message - The message content
- * @param {boolean} props.isUser - Whether the message is from the user
- * @param {Date} [props.timestamp] - When the message was sent
- * @param {boolean} [props.isError=false] - Whether this is an error message
- * @param {boolean} [props.isHighRisk=false] - Whether this is a high-risk medical query
- * @param {object} [props.metadata] - Additional message metadata
- * @param {string} [props.originalMessage] - The original message that failed (for error messages)
- * @param {Function} [props.onRetry] - Function to call when retry button is clicked
- * @param {Function} [props.onFollowUpClick] - Function to call when a follow-up suggestion is clicked
- * @param {(event: React.MouseEvent<HTMLButtonElement>) => void} [props.onStopAI] - Function to call when stopping AI response
- * @param {boolean} [props.isStoppingAI=false] - Whether the AI response is being stopped
- * @param {boolean} [props.showFollowUps=false] - Whether to show follow-up suggestions
- * @param {boolean} [props.isFirst=false] - Whether this is the first message in a sequence
- * @param {boolean} [props.isLast=false] - Whether this is the last message in a sequence
- * @param {string} [props.className] - Additional CSS classes
- * @param {boolean} [props.isStreaming=false] - Whether this message is being streamed character by character
- * @param {string} [props.partialContent] - Partial content during streaming
- * @param {string} [props.status] - Message status (sent, delivered, failed)
- * @param props.sessionId
- * @param props._streamingMessageId
- * @param props.userQuery
- * @param props.userRole
- * @param props._partialContent
- * @returns {JSX.Element} The rendered message bubble component
+ * Render medical safety notices in a centralized way
+ * @param {MessageMetadata} metadata - Message metadata
+ * @param {'sent'|'delivered'|'failed'|'stopped'|'stopping'|'cancelled'} status - Message status
+ * @returns {React.ReactNode} Safety notices JSX
  */
-export function MessageBubble({
-  message,
-  isUser,
-  timestamp,
-  isError = false,
-  isHighRisk = false,
-  metadata = {},
-  originalMessage,
-  onRetry,
-  onFollowUpClick,
-  onStopAI,
-  isStoppingAI = false,
-  showFollowUps = false,
-  isFirst = false,
-  isLast = false,
-  className,
-  isStreaming = false,
-  _partialContent = '',
-  status = 'sent',
-  sessionId = '',
-  messageId = '',
-  _streamingMessageId = '',
-  userQuery = '',
-  userRole = 'general_public'
-}) {
-  
-  // State for feedback status
-  const [feedbackStatus, setFeedbackStatus] = React.useState('');
-  const [feedbackType, setFeedbackType] = React.useState('');
+function renderSafetyNotices(metadata, status) {
+  if (!metadata || !metadata.queryIntent) return null;
 
-  
-  // Create stop click handler
-  const handleStopClick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    onStopAI?.(e);
-  };
+  const showHighRiskAlert = metadata.isHighRisk;
+  const hasTriageLevel = metadata.triageLevel && metadata.triageLevel !== 'non_urgent' && !showHighRiskAlert;
+  const hasDisclaimers = metadata.queryIntent.disclaimers && 
+                        metadata.queryIntent.disclaimers.length > 0 && 
+                        !showHighRiskAlert && 
+                        status !== "stopped" && 
+                        metadata.forceShowDisclaimers !== false;
+  const hasATD = metadata.queryIntent.atd && status !== "stopped";
 
-  // Create simple feedback handler
-  const handleFeedback = async (type) => {
+  if (!showHighRiskAlert && !hasTriageLevel && !hasDisclaimers && !hasATD) {
+    return null;
+  }
+
+  return (
+    <div className="mb-3">
+      {/* High-risk alert with triage information */}
+      {showHighRiskAlert && (
+        <div className="mb-3 p-3 bg-destructive/10 dark:bg-destructive/20 text-destructive dark:text-destructive-foreground border border-destructive/30 rounded-md text-sm animate-fade-in">
+          <p className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-destructive mt-0.5 flex-shrink-0">
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/>
+              <line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>
+            <span>
+              <strong>Medical Emergency Alert:</strong> {(metadata.queryIntent.atd && metadata.queryIntent.atd.atdReason) || 'If this is a medical emergency, please contact emergency services immediately.'}
+            </span>
+          </p>
+        </div>
+      )}
+
+      {/* Triage level indicator for non-emergency cases */}
+      {hasTriageLevel && (
+        <div className={`mb-2 p-2 rounded-md text-xs font-medium flex items-center ${
+          metadata.triageLevel === 'urgent' 
+            ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800/50'
+            : metadata.triageLevel === 'emergency'
+              ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/50'
+              : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50'
+        }`}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
+            <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+          </svg>
+          Triage Level: {(metadata.triageLevel || 'unknown').replace('_', ' ').toUpperCase()}
+        </div>
+      )}
+
+      {/* Display specific disclaimers from layer processing */}
+      {hasDisclaimers && (
+        <div className="mb-2 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/50">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
+              <circle cx="12" cy="12" r="10"/>
+              <path d="M12 16v-4"/>
+              <path d="m12 8 .01 0"/>
+            </svg>
+            <div>
+              <strong>Medical Notice:</strong>
+              <ul className="mt-1 ml-2">
+                {dedupeDisclaimers(metadata.queryIntent.disclaimers || []).map((/** @type {string} */ disclaimer, /** @type {number} */ index) => (
+                  <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ATD (Advice to Doctor) notice for urgent/emergency cases */}
+      {hasATD && (
+        <div className="mb-3 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-sm dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50 animate-fade-in">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+              <polyline points="14,2 14,8 20,8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+              <polyline points="10,9 9,9 8,9"/>
+            </svg>
+            <div>
+              <strong>🩺 Healthcare Provider Notice:</strong>
+              <p className="mt-1 text-xs">This query may benefit from professional medical evaluation. Consider consulting with a healthcare provider for personalized advice.</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Create centralized feedback handler
+ * @param {string} messageId - Message identifier
+ * @param {string} messageId - Message identifier
+ * @param {string} sessionId - Session identifier
+ * @param {string} userQuery - User query
+ * @param {string} message - AI response
+ * @param {string} userRole - User role
+ * @param {MessageMetadata} metadata - Response metadata
+ * @param {(status: string) => void} setFeedbackStatus - Status setter
+ * @param {(type: string) => void} setFeedbackType - Type setter
+ * @returns {(type: string) => Promise<void>} Feedback handler function
+ */
+function createFeedbackHandler(messageId, sessionId, userQuery, message, userRole, metadata, setFeedbackStatus, setFeedbackType) {
+  return async (/** @type {string} */ type) => {
     console.log(`[Feedback] Button clicked: ${type}`);
     setFeedbackStatus('submitting');
     setFeedbackType(type);
@@ -264,7 +379,6 @@ export function MessageBubble({
         const result = await response.json();
         console.log('[Feedback] Success:', result);
         setFeedbackStatus('success');
-        // Clear the message after 3 seconds
         setTimeout(() => setFeedbackStatus(''), 3000);
       } else {
         const errorText = await response.text();
@@ -278,7 +392,91 @@ export function MessageBubble({
       setTimeout(() => setFeedbackStatus(''), 3000);
     }
   };
+}
+
+/**
+ * Get follow-up suggestions in a centralized way
+ * @param {MessageMetadata} [metadata] - Message metadata
+ * @param {string} originalMessage - Original message
+ * @param {boolean} isUser - Whether message is from user
+ * @param {string} message - Message content
+ * @returns {string[]} Follow-up suggestions
+ */
+function getFollowUpSuggestions(metadata, originalMessage = '', isUser = false, message = '') {
+  // Use medical layer suggestions if available
+  if (metadata && metadata.queryIntent && metadata.queryIntent.suggestions && metadata.queryIntent.suggestions.length > 0) {
+    return metadata.queryIntent.suggestions.slice(0, 4);
+  }
+
+  // If this is a professional query, use professional follow-ups
+  if (metadata && metadata.queryIntent && metadata.queryIntent.isProfessionalQuery) {
+    return getProfessionalFollowups(4);
+  }
+
+  // Use contextual follow-ups based on the original message content
+  const userQuestion = originalMessage || (isUser ? message : '') || '';
+  const suggestions = getContextualFollowups(userQuestion, [], 4) || [];
   
+  // Fallback to generic medical suggestions if contextual ones aren't available
+  if (!suggestions || suggestions.length === 0) {
+    return [
+      "What symptoms should I watch for?",
+      "When should I see a doctor?",
+      "Are there any home remedies?",
+      "Is this condition serious?"
+    ];
+  }
+  
+  return suggestions;
+}
+
+/**
+ * Message bubble component for chat messages
+ * @param {MessageBubbleProps} props - The message bubble props
+ * @returns {React.ReactElement} The rendered message bubble component
+ */
+export function MessageBubble({
+  message,
+  isUser,
+  timestamp,
+  isError = false,
+  isHighRisk = false,
+  metadata = {},
+  originalMessage,
+  onRetry,
+  onFollowUpClick,
+  onStopAI,
+  isStoppingAI = false,
+  showFollowUps = false,
+  isFirst = false,
+  isLast = false,
+  className,
+  isStreaming = false,
+  partialContent: _partialContent = '',
+  status = 'sent',
+  sessionId = '',
+  messageId = '',
+  streamingMessageId: _streamingMessageId = '',
+  userQuery = '',
+  userRole = 'general_public'
+}) {
+  
+  // State for feedback status
+  const [feedbackStatus, setFeedbackStatus] = React.useState('');
+  const [, setFeedbackType] = React.useState('');
+
+  // Create centralized handlers
+  const handleStopClick = React.useCallback((/** @type {React.MouseEvent<HTMLButtonElement>} */ e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (onStopAI) onStopAI(e);
+  }, [onStopAI]);
+
+  const handleFeedback = React.useMemo(() => 
+    createFeedbackHandler(messageId, sessionId, userQuery, message, userRole, metadata, setFeedbackStatus, setFeedbackType), 
+    [messageId, sessionId, userQuery, message, userRole, metadata]
+  );
+
   // Determine role for accessibility
   const roleAttribute = isUser 
     ? 'user message' 
@@ -286,83 +484,26 @@ export function MessageBubble({
       ? 'error message'
       : 'assistant message';
 
-  // Determine if we should show the full disclaimer alert
-  const showHighRiskAlert = !isUser && metadata?.isHighRisk;
+  // Get bubble styling
+  const role = /** @type {RoleType} */ (isUser ? 'user' : isError ? 'system' : 'assistant');
+  const { rounding, padding, animation } = getBubbleClasses(role, isFirst, isLast);
 
-  // Message styling is applied directly in the JSX below rather than storing in a variable
-
-  // Phase 7: Enhanced follow-up suggestions using layer processing results
-  // Memoize suggestions so they don't change while user is typing
-  const followUpSuggestions = React.useMemo(() => {
-    // Use medical layer suggestions if available
-    if (metadata?.queryIntent?.suggestions && metadata.queryIntent.suggestions.length > 0) {
-      return metadata.queryIntent.suggestions.slice(0, 4);
-    }
-
-    // If this is a professional query, use professional follow-ups
-    if (metadata?.queryIntent?.isProfessionalQuery) {
-      return getProfessionalFollowups(4);
-    }
-
-    // Use contextual follow-ups based on the original message content
-    // For AI responses, we want to use the originalMessage (user's question), not the AI response
-    const userQuestion = originalMessage || (isUser ? message : '') || '';
-    const suggestions = getContextualFollowups(userQuestion, [], 4);
-    
-    // Fallback to generic medical suggestions if contextual ones aren't available
-    if (!suggestions || suggestions.length === 0) {
-      return [
-        "What symptoms should I watch for?",
-        "When should I see a doctor?",
-        "Are there any home remedies?",
-        "Is this condition serious?"
-      ];
-    }
-    
-    return suggestions;
-  }, [metadata?.queryIntent?.suggestions, metadata?.queryIntent?.isProfessionalQuery, originalMessage, isUser, message]);
-
-  // Determine bubble styling based on sequence position
-  const bubbleRounding = isUser
-    ? isFirst && isLast
-      ? "rounded-lg"
-      : isFirst
-        ? "rounded-t-lg rounded-bl-lg rounded-br-sm"
-        : isLast
-          ? "rounded-b-lg rounded-tl-lg rounded-tr-sm"
-          : "rounded-l-lg rounded-tr-sm rounded-br-sm"
-    : isFirst && isLast
-      ? "rounded-lg"
-      : isFirst
-        ? "rounded-t-lg rounded-br-lg rounded-bl-sm"
-        : isLast
-          ? "rounded-b-lg rounded-tr-lg rounded-tl-sm"
-          : "rounded-r-lg rounded-tl-sm rounded-bl-sm";
-
-  // Y-padding based on position in sequence with enhanced spacing
-  const yPadding = isFirst && !isLast
-    ? "pt-3 pb-2.5"
-    : !isFirst && isLast
-      ? "pt-2.5 pb-3"
-      : isFirst && isLast
-        ? "py-3"
-        : "py-2.5";
-
-  // Add animation classes based on message state and status
-  // Avoid using pulse animation on the whole bubble to prevent flickering
-  const animationClass = isFirst 
-    ? "animate-slide-in" 
-    : "animate-fade-in";
+  // Memoize follow-up suggestions
+  const followUpSuggestions = React.useMemo(() => 
+    getFollowUpSuggestions(metadata, originalMessage, isUser, message), 
+    [metadata, originalMessage, isUser, message]
+  );
 
   // Add a data attribute for styling/debugging
-  const bubbleStatus = isStreaming && status !== 'delivered'
-    ? 'streaming'
-    : status;
+  const bubbleStatus = isStreaming && status !== 'delivered' ? 'streaming' : status;
 
   // TRACE: Render bubble (non-intrusive)
   if (isDebug()) {
     trace('[TRACE] renderBubble', {
-      status, canExpand: metadata?.canExpand, questionType: metadata?.questionType, responseMode: metadata?.responseMode
+      status, 
+      canExpand: metadata && metadata.canExpand, 
+      questionType: metadata && metadata.questionType, 
+      responseMode: metadata && metadata.responseMode
     });
   }
 
@@ -381,14 +522,14 @@ export function MessageBubble({
         <div className="flex justify-end">
           <div
             className={cn(
-              `bg-gradient-to-r from-cyan-500 to-blue-600 text-white ${bubbleRounding} px-4 ${yPadding} max-w-[85%] md:max-w-[75%] text-body relative transition-all duration-200 ${animationClass} shadow-md shadow-cyan-500/25`,
+              `bg-gradient-to-r from-cyan-500 to-blue-600 text-white ${rounding} px-4 ${padding} max-w-[85%] md:max-w-[75%] text-body relative transition-all duration-200 ${animation} shadow-md shadow-cyan-500/25`,
               isStreaming && status !== 'delivered' ? 'bubble--streaming' : '',
               className
             )}
             data-bubble-status={bubbleStatus}
           >
             <div className="whitespace-pre-wrap break-words">
-              {formatMessageContent(message, isStreaming, _partialContent, status)}
+              {formatMessageContent(message, isStreaming, status)}
             </div>
 
             {(timestamp || status !== 'sent') && (
@@ -421,8 +562,8 @@ export function MessageBubble({
           <div
             className={cn(
               status === 'cancelled' 
-                ? `bg-secondary/80 dark:bg-secondary/30 text-foreground dark:text-foreground shadow-sm border-l-2 border-amber-500 ${bubbleRounding} px-4 ${yPadding} max-w-[85%] md:max-w-[80%] text-body relative transition-all duration-200 ${animationClass}`
-                : `bg-secondary/80 dark:bg-secondary/30 text-foreground dark:text-foreground shadow-sm ${bubbleRounding} px-4 ${yPadding} max-w-[85%] md:max-w-[80%] text-body relative transition-all duration-200 ${animationClass}`,
+                ? `bg-secondary/80 dark:bg-secondary/30 text-foreground dark:text-foreground shadow-sm border-l-2 border-amber-500 ${rounding} px-4 ${padding} max-w-[85%] md:max-w-[80%] text-body relative transition-all duration-200 ${animation}`
+                : `bg-secondary/80 dark:bg-secondary/30 text-foreground dark:text-foreground shadow-sm ${rounding} px-4 ${padding} max-w-[85%] md:max-w-[80%] text-body relative transition-all duration-200 ${animation}`,
               isStreaming && status !== 'delivered' ? 'bubble--streaming' : '',
               className
             )}
@@ -454,436 +595,116 @@ export function MessageBubble({
               )}
             </p>
 
-            {/* Enhanced Phase 7: Display triage level and medical layer information */}
-            {!isUser && metadata?.queryIntent && (
-              <div className="mb-3">
-                {/* High-risk alert with triage information */}
-                {showHighRiskAlert && (
-                  <div className="mb-3 p-3 bg-destructive/10 dark:bg-destructive/20 text-destructive dark:text-destructive-foreground border border-destructive/30 rounded-md text-sm animate-fade-in">
-                    <p className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-destructive mt-0.5 flex-shrink-0">
-                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                        <line x1="12" y1="9" x2="12" y2="13"/>
-                        <line x1="12" y1="17" x2="12.01" y2="17"/>
-                      </svg>
-                      <span><strong>Medical Emergency Alert:</strong> {metadata?.queryIntent?.atd?.atdReason || 'If this is a medical emergency, please contact emergency services immediately.'}</span>
-                    </p>
-                  </div>
-                )}
-
-                {/* Triage level indicator for non-emergency cases */}
-                {metadata?.triageLevel && metadata.triageLevel !== 'non_urgent' && !showHighRiskAlert && (
-                  <div className={`mb-2 p-2 rounded-md text-xs font-medium flex items-center ${
-                    metadata.triageLevel === 'urgent' 
-                      ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800/50'
-                      : metadata.triageLevel === 'emergency'
-                        ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/50'
-                        : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50'
-                  }`}>
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                      <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                    </svg>
-                    Triage Level: {metadata.triageLevel.replace('_', ' ').toUpperCase()}
-                  </div>
-                )}
-
-                {/* Display specific disclaimers from layer processing - NOT for stopped messages */}
-                {metadata?.queryIntent?.disclaimers && metadata.queryIntent.disclaimers.length > 0 && !showHighRiskAlert && status !== "stopped" && metadata?.forceShowDisclaimers !== false && (
-                  <div className="mb-2 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/50">
-                    <div className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 16v-4"/>
-                        <path d="m12 8 .01 0"/>
-                      </svg>
-                      <div>
-                        <strong>Medical Notice:</strong>
-                        <ul className="mt-1 ml-2">
-                          {dedupeDisclaimers(metadata?.queryIntent?.disclaimers || []).map((disclaimer, index) => (
-                            <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* ATD (Advice to Doctor) notice for urgent/emergency cases - NOT for stopped messages */}
-                {metadata?.queryIntent?.atd && status !== "stopped" && (
-                  <div className="mb-3 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-sm dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50 animate-fade-in">
-                    <div className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                        <polyline points="14,2 14,8 20,8"/>
-                        <line x1="16" y1="13" x2="8" y2="13"/>
-                        <line x1="16" y1="17" x2="8" y2="17"/>
-                        <polyline points="10,9 9,9 8,9"/>
-                      </svg>
-                      <div>
-                        <strong>🩺 Healthcare Provider Notice:</strong>
-                        <p className="text-xs mt-1 font-medium">{metadata.queryIntent.atd.atdReason}</p>
-                        <p className="text-xs mt-1 opacity-75">This guidance should be considered in clinical decision-making.</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-
-                {/* Phase 7: Enhanced Emergency Alert with visual prominence */}
-                {metadata?.triageLevel === 'emergency' && !showHighRiskAlert && (
-                  <div className="mb-3 p-3 bg-red-100 text-red-800 border-2 border-red-300 rounded-md text-sm dark:bg-red-900/30 dark:text-red-200 dark:border-red-700/50 animate-pulse">
-                    <div className="flex items-start">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0 text-red-600 dark:text-red-400">
-                        <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
-                      </svg>
-                      <div>
-                        <strong className="text-red-900 dark:text-red-100">🚨 EMERGENCY LEVEL CONDITION</strong>
-                        <p className="text-xs mt-1 font-medium">This appears to require immediate medical attention. Please seek emergency care.</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Phase 7: Real-time medical layer processing indicator */}
-            {!isUser && metadata?.layerStatus && !['completed', 'fallback'].includes(metadata.layerStatus) && (
-              <div className="mb-3 p-2 bg-cyan-50 border border-cyan-200 rounded-md text-sm dark:bg-cyan-900/20 dark:border-cyan-800/50 animate-pulse">
-                <div className="flex items-center text-cyan-700 dark:text-cyan-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 animate-spin">
-                    <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                    <path d="m9 12 2 2 4-4"/>
-                  </svg>
-                  <span className="font-medium">
-                    {metadata.layerStatus === 'parsing' && 'Analyzing medical query...'}
-                    {metadata.layerStatus === 'triaging' && 'Assessing urgency level...'}
-                    {metadata.layerStatus === 'enhancing' && 'Preparing specialized guidance...'}
-                    {!['parsing', 'triaging', 'enhancing'].includes(metadata.layerStatus) && 'Processing medical information...'}
-                  </span>
-                  {metadata.layerProcessingTime && (
-                    <span className="ml-2 text-xs opacity-70">
-                      {Math.round(metadata.layerProcessingTime)}ms
-                    </span>
-                  )}
-                </div>
-                {/* Estimated time indicator */}
-                <div className="mt-1 text-xs text-cyan-600 dark:text-cyan-400 opacity-80">
-                  Expected completion: {metadata.layerStatus === 'parsing' ? '1-2s' : metadata.layerStatus === 'triaging' ? '2-3s' : '3-4s'}
-                </div>
-              </div>
-            )}
-
-            {/* Phase 7: Fallback notification for failed medical layer processing */}
-            {!isUser && metadata?.layerStatus === 'fallback' && metadata?.fallbackReason && (
-              <div className="mb-3 p-2 bg-amber-50 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:border-amber-800/50">
-                <div className="flex items-center text-amber-700 dark:text-amber-300">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
-                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
-                    <line x1="12" y1="9" x2="12" y2="13"/>
-                    <line x1="12" y1="17" x2="12.01" y2="17"/>
-                  </svg>
-                  <span className="font-medium">{metadata.fallbackReason}</span>
-                </div>
-              </div>
-            )}
+            {/* Centralized safety notices rendering */}
+            {!isUser && renderSafetyNotices(metadata, status)}
 
             <div className="whitespace-pre-wrap break-words">
-              {formatMessageContent(message, isStreaming, _partialContent, status)}
+              {formatMessageContent(message, isStreaming, status)}
             </div>
 
-            {/* Show metadata if available in non-user messages */}
-            {/* Show Stop AI button when streaming is active */}
-            {!isUser && isStreaming && status === 'streaming' && onStopAI && (
-              <div className="mt-2 flex justify-start">
+            {/* Retry button for error messages */}
+            {isError && onRetry && (
+              <div className="mt-3 flex justify-start">
                 <button
-                  data-testid="button-stop-ai"
-                  type="button"
-                  onClick={handleStopClick}
-                  disabled={isStoppingAI || status === 'stopping'}
-                  className={cn(
-                    "flex items-center text-xs py-1 px-2.5 rounded-full font-medium transition-all duration-300 shadow-sm",
-                    (isStoppingAI || status === 'stopping')
-                      ? "bg-amber-50 text-amber-600 cursor-not-allowed opacity-70 border border-amber-200"
-                      : "bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 hover:border-red-300 hover:shadow-md active:scale-95 cursor-pointer"
-                  )}
-                  title={(isStoppingAI || status === 'stopping') ? "Stopping AI response..." : "Stop the AI response"}
-                  aria-label={(isStoppingAI || status === 'stopping') ? "Stopping AI response" : "Stop AI response"}
+                  onClick={onRetry}
+                  className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
+                  data-testid="button-retry"
                 >
-                  {(isStoppingAI || status === 'stopping') ? (
+                  Try Again
+                </button>
+              </div>
+            )}
+
+            {/* Stop button for streaming responses */}
+            {isStreaming && onStopAI && status !== 'stopped' && status !== 'delivered' && (
+              <div className="mt-3 flex justify-start">
+                <button
+                  onClick={handleStopClick}
+                  disabled={isStoppingAI}
+                  className="px-3 py-1.5 bg-orange-500 hover:bg-orange-600 text-white text-sm rounded-md transition-colors disabled:opacity-50"
+                  data-testid="button-stop-ai"
+                >
+                  {isStoppingAI || status === 'stopping' ? (
                     <span className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 animate-spin">
-                        <circle cx="12" cy="12" r="10"></circle>
-                        <path d="M12 6v6l4 2"></path>
+                      <svg className="animate-spin -ml-1 mr-2 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                       </svg>
                       Stopping...
                     </span>
                   ) : (
-                    <span className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                        <rect x="6" y="6" width="12" height="12"></rect>
-                      </svg>
-                      Stop AI
-                    </span>
+                    'Stop AI'
                   )}
                 </button>
               </div>
             )}
 
-            {/* Show response metadata for completed non-error messages */}
-            {!isUser && metadata && metadata.requestTime && !isError && !isStreaming && (
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground/80 mt-2 flex items-center gap-1.5">
-                <span className="flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                  Response time: {Math.round(metadata.requestTime/100)/10}s
-                  {status === 'stopped' && ' (stopped)'}
-                </span>
-                {metadata.attemptCount > 1 && (
-                  <span className="ml-1 opacity-80">(after {metadata.attemptCount} attempts)</span>
-                )}
-              </div>
-            )}
-
-            {/* AI stopped by user indicator */}
-            {status === 'stopped' && metadata?.cancelledByUser && (
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground/80 mt-2 flex items-center gap-1.5">
-                <span className="flex items-center text-orange-600 dark:text-orange-400">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                    <rect x="6" y="6" width="12" height="12"/>
-                  </svg>
-                  AI stopped by user
-                </span>
-                {metadata.stoppedAt && (
-                  <span className="ml-2 opacity-70">{formatTimestamp(new Date(metadata.stoppedAt))}</span>
-                )}
-              </div>
-            )}
-
-            {/* Only show timestamp and status if message is not cancelled/stopped */}
-            {(timestamp || (status !== 'sent' && status !== 'cancelled' && status !== 'stopped' && !metadata?.isCancelled)) && (
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground/80 mt-2 flex items-center gap-1.5 opacity-80">
-                {timestamp && formatTimestamp(timestamp)}
-                {status !== 'sent' && status !== 'cancelled' && status !== 'stopped' && !metadata?.isCancelled && (
-                  <span className={cn(
-                    "inline-flex items-center text-xs font-medium",
-                    status === 'delivered' ? "text-success dark:text-success/90" : 
-                    status === 'failed' ? "text-destructive dark:text-destructive/90" : "text-muted-foreground"
-                  )}>
-                    {status === 'delivered' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-0.5">
-                        <path d="M20 6L9 17l-5-5"/>
-                      </svg>
-                    ) : status === 'failed' ? (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-0.5">
-                        <line x1="18" y1="6" x2="6" y2="18"/>
-                        <line x1="6" y1="6" x2="18" y2="18"/>
-                      </svg>
-                    ) : (
-                      <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-0.5 animate-spin">
-                        <path d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                      </svg>
-                    )}
-                    {status}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Show cancelled message notice - this takes priority over regular status display */}
-            {!isUser && (status === 'timeout' || metadata?.isTimeout) && (
-              <div className="mt-3 text-sm text-muted-foreground dark:text-muted-foreground/80 flex items-center bg-secondary/20 p-2 rounded-md">
-                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                  <rect x="6" y="6" width="12" height="12"></rect>
-                </svg>
-                <span className="font-medium">
-                  {status === 'timeout' || metadata?.isTimeout ? 
-                    'Response timed out - may be incomplete' : 
-                    ''} {/* Clean stop without unwanted text */}
-                </span>
-                {timestamp && (
-                  <span className="ml-2 text-xs opacity-70">{formatTimestamp(timestamp)}</span>
-                )}
-              </div>
-            )}
-
-            {/* Unified error handling and retry logic */}
-            {(isError && status === 'failed' && !metadata?.delivered) && (
-              <div className="mt-3 text-sm">
-                <div className="mb-2 text-destructive">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="inline-block mr-1.5">
-                    <circle cx="12" cy="12" r="10"/>
-                    <line x1="12" y1="8" x2="12" y2="12"/>
-                    <line x1="12" y1="16" x2="12.01" y2="16"/>
-                  </svg>
-                  {message || 'An error occurred while processing your request'}
-                </div>
-                <button 
-                  className="flex items-center text-primary hover:text-primary-900 dark:hover:text-primary-500 transition-colors duration-200 px-3 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20 focus:outline-none focus:ring-2 focus:ring-primary/20"
-                  onClick={() => onRetry && onRetry(originalMessage)}
-                  aria-label="Try sending the message again"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                    <path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/>
-                    <path d="M21 3v5h-5"/>
-                    <path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/>
-                    <path d="M8 16H3v5"/>
-                  </svg>
-                  Try again
-                </button>
-              </div>
-            )}
-
-            {/* NEW: Expansion invitation - show only when response can be expanded */}
-            {!isUser && isLast && metadata?.canExpand === true && !isStreaming && AI_FLAGS.ENABLE_EXPANSION_PROMPT && 
-             (metadata?.responseMode === 'concise_medication' || 
-              metadata?.responseMode === 'educational' || 
-              metadata?.responseMode === 'symptom' || 
-              metadata?.responseMode === 'general') && (() => {
-              console.log('[TRACE] Expansion button gated by master flag', { enableExpansion: AI_FLAGS.ENABLE_EXPANSION_PROMPT });
-              return true;
-            })() &&
-             (status === 'delivered' || status === 'completed' || status === 'stopped') && (() => {
-               console.log('🔘 [MessageBubble] Expansion button conditions:', { 
-                 isUser, isLast, canExpand: metadata?.canExpand, isStreaming, status,
-                 questionType: metadata?.questionType, userRole: metadata?.userRole, responseMode: metadata?.responseMode 
-               });
-               return true;
-             })() && (
-              <div className="mt-4 pt-3 border-t border-border dark:border-border/70 animate-fade-in">
-                <button
-                  onClick={() => {
-                    console.log('👆 [MessageBubble] Expansion button clicked');
-                    onFollowUpClick && onFollowUpClick("yes, expand");
-                  }}
-                  className="inline-flex items-center px-4 py-2 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 dark:from-cyan-900/30 dark:to-cyan-800/30 dark:hover:from-cyan-800/40 dark:hover:to-cyan-700/40 dark:text-cyan-300 text-sm rounded-lg transition-all duration-200 shadow-sm hover:shadow-md border border-cyan-200 dark:border-cyan-700/50 hover:border-cyan-300 dark:hover:border-cyan-600/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                  aria-label="Expand for more detailed information"
-                  data-testid="expansion-button"
-                >
-                  <span className="mr-2">⚡</span>
-                  {getExpansionInvitationText(metadata.questionType, metadata.userRole)}
-                </button>
-              </div>
-            )}
-
-            {/* Legacy Follow-up suggestions - show only when expansion is NOT available */}
-            {!isUser && isLast && showFollowUps && !metadata?.canExpand && !isStreaming && 
-             (status === 'delivered' || status === 'completed' || status === 'stopped' || status === 'cancelled') && (
-              <div className="mt-4 pt-3 border-t border-border dark:border-border/70 animate-fade-in">
-                <p className="text-xs font-medium text-foreground/70 dark:text-foreground/60 mb-2.5 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                    <polyline points="15 14 20 9 15 4"/>
-                    <path d="M4 20v-7a4 4 0 0 1 4-4h12"/>
-                  </svg>
-                  Suggested follow-up questions:
-                </p>
+            {/* Follow-up suggestions */}
+            {showFollowUps && onFollowUpClick && !isStreaming && status !== 'stopped' && (
+              <div className="mt-4 space-y-2">
+                <p className="text-sm font-medium text-muted-foreground">Suggested follow-ups:</p>
                 <div className="flex flex-wrap gap-2">
-                  {followUpSuggestions.map((suggestion, index) => (
+                  {followUpSuggestions.map((/** @type {string} */ suggestion, /** @type {number} */ index) => (
                     <button
                       key={index}
-                      onClick={() => onFollowUpClick && onFollowUpClick(suggestion)}
-                      className="px-3 py-2 bg-gradient-to-r from-cyan-50 to-cyan-100 hover:from-cyan-100 hover:to-cyan-200 text-cyan-800 dark:from-cyan-900/30 dark:to-cyan-800/30 dark:hover:from-cyan-800/40 dark:hover:to-cyan-700/40 dark:text-cyan-300 text-sm rounded-full transition-all duration-200 shadow-sm hover:shadow-md border border-cyan-200 dark:border-cyan-700/50 hover:border-cyan-300 dark:hover:border-cyan-600/50 focus:outline-none focus:ring-2 focus:ring-cyan-500/30"
-                      aria-label={`Ask follow-up question: ${suggestion}`}
+                      onClick={() => onFollowUpClick(suggestion)}
+                      className="text-sm px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors"
+                      data-testid={`button-followup-${index}`}
                     >
                       {suggestion}
                     </button>
                   ))}
                 </div>
-                
               </div>
             )}
 
-            {/* Phase 7: Medical Layer Feedback System - Independent of follow-ups */}
-            {(!isUser && !isError && isLast && (metadata?.queryIntent || status === 'timeout' || status === 'delivered')) && (
-              <div className="mt-4 pt-3 border-t border-border/30 dark:border-border/20">
-                <p className="text-xs text-foreground/60 dark:text-foreground/50 mb-2 flex items-center">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
-                    <path d="M9 12l2 2 4-4"/>
-                    <path d="M21 12c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1z"/>
-                    <path d="M3 12c.552 0 1-.448 1-1s-.448-1-1-1-1 .448-1 1 .448 1 1 1z"/>
-                  </svg>
-                  Was this medical guidance helpful?
-                </p>
-                <div className="flex items-center gap-3">
-                  <button
-                    onClick={(e) => {
-                      e.target.style.transform = 'scale(0.95)';
-                      e.target.style.opacity = '0.7';
-                      setTimeout(() => {
-                        e.target.style.transform = 'scale(1)';
-                        e.target.style.opacity = '1';
-                      }, 150);
-                      handleFeedback('helpful');
-                    }}
-                    disabled={feedbackStatus === 'submitting'}
-                    className="flex items-center text-xs text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-all duration-150 px-2 py-1 rounded-md bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 active:scale-95 disabled:opacity-50"
-                    aria-label="Mark this guidance as helpful"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1">
-                      <path d="M7 10v12"/>
-                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
-                    </svg>
-                    Helpful
-                  </button>
-                  <button
-                    onClick={(e) => {
-                      e.target.style.transform = 'scale(0.95)';
-                      e.target.style.opacity = '0.7';
-                      setTimeout(() => {
-                        e.target.style.transform = 'scale(1)';
-                        e.target.style.opacity = '1';
-                      }, 150);
-                      handleFeedback('could_improve');
-                    }}
-                    disabled={feedbackStatus === 'submitting'}
-                    className="flex items-center text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-all duration-150 px-2 py-1 rounded-md bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 active:scale-95 disabled:opacity-50"
-                    aria-label="Mark this guidance as not helpful"
-                  >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1 rotate-180">
-                      <path d="M7 10v12"/>
-                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
-                    </svg>
-                    Could improve
-                  </button>
-                  
-                  {/* Inline feedback status message */}
-                  {feedbackStatus && (
-                    <div className={`flex items-center text-xs px-2 py-1 rounded-md transition-all duration-300 ${
-                      feedbackStatus === 'success' 
-                        ? 'text-green-700 dark:text-green-300 bg-green-100 dark:bg-green-900/30' 
-                        : feedbackStatus === 'error'
-                        ? 'text-red-700 dark:text-red-300 bg-red-100 dark:bg-red-900/30'
-                        : 'text-blue-700 dark:text-blue-300 bg-blue-100 dark:bg-blue-900/30'
-                    }`}>
-                      {feedbackStatus === 'submitting' && (
-                        <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-current" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                        </svg>
-                      )}
-                      {feedbackStatus === 'success' && (
-                        <svg className="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {feedbackStatus === 'error' && (
-                        <svg className="mr-1 h-3 w-3" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
-                        </svg>
-                      )}
-                      {feedbackStatus === 'submitting' && 'Submitting...'}
-                      {feedbackStatus === 'success' && `Thank you for your ${feedbackType === 'helpful' ? 'positive' : 'improvement'} feedback!`}
-                      {feedbackStatus === 'error' && 'Failed to submit. Please try again.'}
-                    </div>
-                  )}
-                </div>
+            {/* Feedback buttons */}
+            {!isUser && !isError && !isStreaming && status !== 'stopped' && (
+              <div className="mt-3 flex items-center gap-2">
+                <span className="text-xs text-muted-foreground">Was this helpful?</span>
+                <button
+                  onClick={() => handleFeedback('helpful')}
+                  disabled={feedbackStatus === 'submitting'}
+                  className="text-xs px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors disabled:opacity-50"
+                  data-testid="button-feedback-helpful"
+                >
+                  👍 Yes
+                </button>
+                <button
+                  onClick={() => handleFeedback('not_helpful')}
+                  disabled={feedbackStatus === 'submitting'}
+                  className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors disabled:opacity-50"
+                  data-testid="button-feedback-not-helpful"
+                >
+                  👎 No
+                </button>
+                {feedbackStatus && (
+                  <span className={cn(
+                    "text-xs ml-2",
+                    feedbackStatus === 'success' ? "text-green-600" :
+                    feedbackStatus === 'error' ? "text-red-600" : "text-gray-600"
+                  )}>
+                    {feedbackStatus === 'submitting' ? 'Submitting...' :
+                     feedbackStatus === 'success' ? 'Thank you!' :
+                     feedbackStatus === 'error' ? 'Failed to submit' : ''}
+                  </span>
+                )}
               </div>
             )}
 
-            {/* Debug badge - only shown in debug mode for assistant messages */}
-            {isDebug() && !isUser && metadata && (
-              <div className="mt-2 text-[10px] text-muted-foreground/60 dark:text-muted-foreground/50 font-mono border border-border/30 rounded px-1.5 py-0.5 bg-muted/20 text-left">
-                [questionType: {metadata?.questionType || 'unknown'}] [mode: {metadata?.responseMode || 'unknown'}] [canExpand: {metadata?.canExpand ? 'true' : 'false'}]
+            {(timestamp || status !== 'sent') && (
+              <div className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                {status !== 'sent' && (
+                  <span className={cn(
+                    "inline-block text-xs font-medium",
+                    status === 'delivered' ? "text-green-500" : 
+                    status === 'failed' ? "text-red-500" : "text-gray-400"
+                  )}>
+                    {status === 'delivered' ? '✓' : 
+                     status === 'failed' ? '✕' : '⋯'}
+                  </span>
+                )}
+                {timestamp && formatTimestamp(timestamp)}
               </div>
             )}
           </div>
