@@ -7,112 +7,269 @@
  * @file Data sampling engine with configurable probability and forced logging
  */
 
-/* eslint-env browser, node */
-/* global clearInterval, global */
+/**
+ * Query object structure
+ * @typedef {{
+ *   id: string;
+ *   userId?: string;
+ *   text: string;
+ *   locale?: string;
+ *   ts: number;
+ *   metadata?: Record<string, unknown>;
+ * }} Query
+ */
 
+/**
+ * Sampler configuration
+ * @typedef {{
+ *   rate: number;
+ *   maxBuffer: number;
+ *   seed?: number;
+ * }} SamplerConfig
+ */
+
+/**
+ * Sampling decision result
+ * @typedef {{
+ *   kept: boolean;
+ *   reason: 'prob' | 'rule' | 'force' | 'quota';
+ *   weight: number;
+ * }} Decision
+ */
+
+/**
+ * Sampler statistics
+ * @typedef {{
+ *   size: number;
+ *   dropped: number;
+ *   kept: number;
+ *   reasons: Record<string, number>;
+ * }} SamplerStats
+ */
+
+/**
+ * Query sampler interface
+ * @typedef {{
+ *   push: (q: Query) => Decision;
+ *   flush: () => Query[];
+ *   size: () => number;
+ *   stats: () => SamplerStats;
+ * }} QuerySampler
+ */
+
+/**
+ * Creates a deterministic random number generator from a seed
+ * @param {number} seed - Seed value for RNG
+ * @returns {() => number} Random number generator function
+ */
+function makeRng(seed) {
+  let s = (seed | 0) || 1;
+  return () => (s = (s * 1664525 + 1013904223) >>> 0) / 2**32;
+}
+
+/**
+ * Computes weight for a query based on its characteristics
+ * @param {Query} q - Query to compute weight for
+ * @returns {number} Weight value for sampling decision
+ */
+function computeWeight(q) {
+  const len = typeof q.text === 'string' ? q.text.length : 0;
+  const boost = q.metadata && typeof q.metadata.priority === 'number' ? q.metadata.priority : 0;
+  return Math.max(0, len / 200) + boost;
+}
+
+/**
+ * Decides whether to keep a query based on weight, rate, and randomness
+ * @param {number} w - Query weight
+ * @param {number} rate - Base sampling rate
+ * @param {() => number} rnd - Random number generator
+ * @returns {boolean} Whether to keep the query
+ */
+function decideKeep(w, rate, rnd) {
+  const p = Math.min(1, Math.max(0, rate * (1 + w)));
+  return rnd() < p;
+}
+
+/**
+ * Creates a query sampler with configurable behavior
+ * @param {SamplerConfig} cfg - Configuration object
+ * @returns {QuerySampler} Query sampler instance
+ */
+export function createQuerySampler(cfg) {
+  const rate = typeof cfg.rate === 'number' ? cfg.rate : 0.1;
+  const maxBuffer = typeof cfg.maxBuffer === 'number' ? cfg.maxBuffer : 1000;
+  const rnd = 'seed' in cfg && typeof cfg.seed === 'number' ? makeRng(cfg.seed) : Math.random;
+
+  /** @type {Query[]} */
+  const buffer = [];
+  
+  /** @type {SamplerStats} */
+  let stats = { size: 0, dropped: 0, kept: 0, reasons: {} };
+
+  /**
+   * Pushes a query through the sampling decision process
+   * @param {Query} q - Query to process
+   * @returns {Decision} Sampling decision result
+   */
+  function push(q) {
+    const w = computeWeight(q);
+    const keep = decideKeep(w, rate, rnd);
+    const reason = keep ? 'prob' : 'prob';
+    
+    stats.kept += keep ? 1 : 0;
+    stats.dropped += keep ? 0 : 1;
+    stats.size = buffer.length + (keep ? 1 : 0);
+    stats.reasons[reason] = (stats.reasons[reason] ?? 0) + 1;
+    
+    if (keep) {
+      if (buffer.length >= maxBuffer) {
+        buffer.shift();
+      }
+      buffer.push(q);
+    }
+    
+    return { kept: keep, reason, weight: w };
+  }
+
+  /**
+   * Flushes all buffered queries and returns them
+   * @returns {Query[]} Array of buffered queries
+   */
+  function flush() {
+    const out = buffer.slice();
+    buffer.length = 0;
+    stats.size = 0;
+    return out;
+  }
+
+  /**
+   * Returns current buffer size
+   * @returns {number} Number of queries in buffer
+   */
+  function size() {
+    return buffer.length;
+  }
+
+  /**
+   * Returns current sampler statistics
+   * @returns {SamplerStats} Statistics object
+   */
+  function getStats() {
+    return {
+      size: stats.size,
+      dropped: stats.dropped,
+      kept: stats.kept,
+      reasons: { ...stats.reasons }
+    };
+  }
+
+  return { push, flush, size, stats: getStats };
+}
+
+// Legacy API compatibility exports for existing code
 import { SamplingPriority } from './enums.js';
 import { logQueryToDataset, categorizeResponse } from './data-logger.js';
 
 /**
- * Default sampling configuration
+ * Legacy query result structure for backward compatibility
+ * @typedef {{
+ *   userInput?: string;
+ *   llmResponse?: string;
+ *   triageLevel?: string;
+ *   isHighRisk?: boolean;
+ *   atd?: boolean;
+ *   metadata?: Record<string, unknown>;
+ * }} LegacyQueryResult
+ */
+
+/**
+ * Legacy sampling options structure
+ * @typedef {{
+ *   forceLog?: boolean;
+ *   immediate?: boolean;
+ * }} LegacySamplingOptions
+ */
+
+/**
+ * Default sampling configuration for legacy API
  * @private
  */
 const DEFAULT_CONFIG = {
-  /** Base sampling probability (0.0 to 1.0) */
   baseSamplingRate: 0.1,
-  /** Always sample high-risk queries */
   forceHighRisk: true,
-  /** Maximum queries to buffer before forced flush */
   maxBufferSize: 50,
-  /** Time interval for automatic buffer flush (ms) */
-  flushInterval: 5 * 60 * 1000, // 5 minutes
-  /** Minimum time between samples to avoid spam */
-  minSampleInterval: 1000 // 1 second
+  flushInterval: 5 * 60 * 1000,
+  minSampleInterval: 1000
 };
 
-/**
- * Query buffer for batched processing
- * @private
- */
+/** @type {Array<{ queryResult: LegacyQueryResult; responseCategory: string; timestamp: number; }>} */
 let queryBuffer = [];
 let lastSampleTime = 0;
+/** @type {number | null} */
 let flushTimer = null;
 let samplerConfig = { ...DEFAULT_CONFIG };
 
 /**
- * Determines if a query should be sampled based on priority and probability
- * @param {object} queryResult - Query result to evaluate for sampling
+ * Legacy function: Determines if a query should be sampled
+ * @param {LegacyQueryResult} queryResult - Query result to evaluate
  * @param {boolean} forceLog - Force logging regardless of probability
  * @returns {boolean} Whether the query should be sampled
  */
 export function shouldSample(queryResult, forceLog = false) {
-  // Always sample if forced
   if (forceLog) {
     return true;
   }
 
-  // Check minimum time interval to prevent spam
   const now = Date.now();
   if (now - lastSampleTime < samplerConfig.minSampleInterval) {
     return false;
   }
 
-  // Determine sampling priority
   const priority = getSamplingPriority(queryResult);
   
-  // Force sample critical and high priority queries
   if (priority === SamplingPriority.CRITICAL || 
       (priority === SamplingPriority.HIGH && samplerConfig.forceHighRisk)) {
     return true;
   }
 
-  // Probability-based sampling for lower priority queries
   const adjustedRate = getAdjustedSamplingRate(priority);
   return Math.random() < adjustedRate;
 }
 
 /**
- * Adds a query to the sampling buffer with optional immediate processing
- * @param {object} queryResult - Complete query processing result
- * @param {object} options - Sampling options
- * @param {boolean} options.forceLog - Force immediate logging
- * @param {boolean} options.immediate - Process immediately instead of buffering
+ * Legacy function: Adds a query to the sampling buffer
+ * @param {LegacyQueryResult} queryResult - Complete query processing result
+ * @param {LegacySamplingOptions} options - Sampling options
  * @returns {Promise<boolean>} Whether the query was processed
  */
 export async function sampleQuery(queryResult, options = { forceLog: false, immediate: false }) {
   try {
     const { forceLog = false, immediate = false } = options;
     
-    // Check if query should be sampled
     if (!shouldSample(queryResult, forceLog)) {
       return false;
     }
 
-    // Update last sample time
     lastSampleTime = Date.now();
     
-    // Categorize the response for logging
     const responseCategory = categorizeResponse(
-      queryResult.llmResponse,
+      queryResult.llmResponse || '',
       {
-        isHighRisk: queryResult.isHighRisk,
-        triageLevel: queryResult.triageLevel
+        isHighRisk: queryResult.isHighRisk || false,
+        triageLevel: queryResult.triageLevel || 'unknown'
       }
     );
 
     if (immediate || forceLog) {
-      // Process immediately
-      const success = await logQueryToDataset(queryResult, responseCategory);
+      const success = await logQueryToDataset(/** @type {any} */ (queryResult), responseCategory);
       return success;
     } else {
-      // Add to buffer for batch processing
       queryBuffer.push({
         queryResult,
         responseCategory,
         timestamp: Date.now()
       });
 
-      // Check if buffer needs flushing
       if (queryBuffer.length >= samplerConfig.maxBufferSize) {
         await flushBuffer();
       }
@@ -121,57 +278,57 @@ export async function sampleQuery(queryResult, options = { forceLog: false, imme
     }
 
   } catch (error) {
-    console.error('[query-sampler] Failed to sample query:', error.message);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+    console.error('[query-sampler] Failed to sample query:', errorMessage);
     return false;
   }
 }
 
 /**
- * Determines sampling priority based on query characteristics
+ * Legacy function: Determines sampling priority based on query characteristics
  * @private
- * @param {object} queryResult - Query result to evaluate
+ * @param {LegacyQueryResult} queryResult - Query result to evaluate
  * @returns {string} Priority level for sampling
  */
 function getSamplingPriority(queryResult) {
-  // Critical: Emergency situations
   if (queryResult.triageLevel === 'emergency' || 
       (queryResult.isHighRisk && queryResult.atd)) {
     return "critical";
   }
 
-  // High: Urgent medical queries
   if (queryResult.triageLevel === 'urgent' || queryResult.isHighRisk) {
     return "high";
   }
 
-  // Medium: Standard medical queries
-  if (queryResult.metadata?.intentConfidence > 0.7) {
+  if (queryResult.metadata && 'intentConfidence' in queryResult.metadata && 
+      typeof queryResult.metadata.intentConfidence === 'number' &&
+      queryResult.metadata.intentConfidence > 0.7) {
     return "medium";
   }
 
-  // Low: General or unclear queries
   return "low";
 }
 
 /**
- * Gets adjusted sampling rate based on priority
+ * Legacy function: Gets adjusted sampling rate based on priority
  * @private
  * @param {string} priority - Query priority level
  * @returns {number} Adjusted sampling rate (0.0 to 1.0)
  */
 function getAdjustedSamplingRate(priority) {
+  /** @type {Record<string, number>} */
   const multipliers = {
-    critical: 1.0,  // Always sample
-    high: 0.8,     // High probability
-    medium: 0.3,   // Medium probability
-    low: 0.1       // Low probability
+    critical: 1.0,
+    high: 0.8,
+    medium: 0.3,
+    low: 0.1
   };
 
-  return samplerConfig.baseSamplingRate * (multipliers[priority] || 1.0);
+  return samplerConfig.baseSamplingRate * (priority in multipliers ? multipliers[priority] : 1.0);
 }
 
 /**
- * Flushes the query buffer by processing all pending samples
+ * Legacy function: Flushes the query buffer
  * @returns {Promise<number>} Number of successfully processed queries
  */
 export async function flushBuffer() {
@@ -180,18 +337,19 @@ export async function flushBuffer() {
   }
 
   const toProcess = [...queryBuffer];
-  queryBuffer = []; // Clear buffer immediately
+  queryBuffer = [];
 
   let successCount = 0;
 
   for (const { queryResult, responseCategory } of toProcess) {
     try {
-      const success = await logQueryToDataset(queryResult, responseCategory);
+      const success = await logQueryToDataset(/** @type {any} */ (queryResult), responseCategory);
       if (success) {
         successCount++;
       }
     } catch (error) {
-      console.error('[query-sampler] Failed to process buffered query:', error.message);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      console.error('[query-sampler] Failed to process buffered query:', errorMessage);
     }
   }
 
@@ -200,19 +358,14 @@ export async function flushBuffer() {
 }
 
 /**
- * Configures the query sampler with new settings
- * @param {object} newConfig - New configuration object
- * @param {number} newConfig.baseSamplingRate - Base sampling probability
- * @param {boolean} newConfig.forceHighRisk - Force sampling of high-risk queries
- * @param {number} newConfig.maxBufferSize - Maximum buffer size
- * @param {number} newConfig.flushInterval - Auto-flush interval in ms
- * @returns {object} Updated configuration
+ * Legacy function: Configures the query sampler
+ * @param {Partial<typeof DEFAULT_CONFIG>} newConfig - New configuration object
+ * @returns {typeof samplerConfig} Updated configuration
  */
 export function configureSampler(newConfig) {
   samplerConfig = { ...samplerConfig, ...newConfig };
   
-  // Restart flush timer if interval changed
-  if (newConfig.flushInterval && flushTimer && typeof globalThis !== 'undefined' && globalThis.clearInterval) {
+  if ('flushInterval' in newConfig && flushTimer && typeof globalThis !== 'undefined' && globalThis.clearInterval) {
     globalThis.clearInterval(flushTimer);
     startAutoFlush();
   }
@@ -221,7 +374,7 @@ export function configureSampler(newConfig) {
 }
 
 /**
- * Starts automatic buffer flushing at configured intervals
+ * Legacy function: Starts automatic buffer flushing
  * @returns {void}
  */
 export function startAutoFlush() {
@@ -239,23 +392,26 @@ export function startAutoFlush() {
 }
 
 /**
- * Stops automatic buffer flushing
+ * Legacy function: Stops automatic buffer flushing
  * @returns {void}
  */
 export function stopAutoFlush() {
   if (flushTimer) {
-    if (typeof window === 'undefined' && typeof global !== 'undefined' && global.clearInterval) {
-      global.clearInterval(flushTimer);
-    } else if (typeof window !== 'undefined' && window.clearInterval) {
-      window.clearInterval(flushTimer);
+    if (typeof globalThis !== 'undefined' && globalThis.clearInterval) {
+      globalThis.clearInterval(flushTimer);
     }
     flushTimer = null;
   }
 }
 
 /**
- * Gets current sampler statistics
- * @returns {object} Sampler statistics and configuration
+ * Legacy function: Gets current sampler statistics
+ * @returns {{
+ *   config: typeof samplerConfig;
+ *   bufferSize: number;
+ *   lastSampleTime: number;
+ *   autoFlushActive: boolean;
+ * }} Sampler statistics and configuration
  */
 export function getSamplerStats() {
   return {

@@ -1,0 +1,122 @@
+Agent prompt — fix client/src/analytics/query-sampler.js
+
+Goal: 0 TypeScript errors. 0 ESLint issues. No suppressions. Preserve behavior.
+
+Run checks
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/analytics/query-sampler.js
+eslint client/src/analytics/query-sampler.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Rules
+
+Do not use any, unknown, @ts-ignore, eslint-disable.
+
+Keep exports and runtime semantics unchanged.
+
+Prefer const, remove unused vars/imports.
+
+Guard all optional fields before access.
+
+All JSDoc typedefs must match the actual code in this file.
+
+Add JSDoc typedefs (adjust to actual shapes)
+
+/** @typedef {{ id:string, userId?:string, text:string, locale?:string, ts:number, metadata?:Record<string,unknown> }} Query */
+/** @typedef {{ rate:number, maxBuffer:number, seed?:number }} SamplerConfig */
+/** @typedef {{ kept:boolean, reason:'prob'|'rule'|'force'|'quota', weight:number }} Decision */
+/** @typedef {{ size:number, dropped:number, kept:number, reasons:Record<string,number> }} SamplerStats */
+/** @typedef {{ push:(q:Query)=>Decision, flush:()=>Query[], size:()=>number, stats:()=>SamplerStats }} QuerySampler */
+
+
+Refactor targets
+
+Explicit arrays and maps:
+
+/** @type {Query[]} */ const buffer = [];
+/** @type {Record<string, number>} */ const reasons = {};
+
+
+Deterministic RNG if used:
+
+/** @param {number} seed @returns {()=>number} */
+function makeRng(seed){ let s = seed|0 || 1; return () => (s = (s*1664525+1013904223)>>>0) / 2**32; }
+
+
+Core API (ensure signatures and behavior match file):
+
+/** @param {SamplerConfig} cfg @returns {QuerySampler} */
+export function createQuerySampler(cfg){
+  const rate = typeof cfg.rate === 'number' ? cfg.rate : 0.1;
+  const maxBuffer = typeof cfg.maxBuffer === 'number' ? cfg.maxBuffer : 1000;
+  const rnd = 'seed' in cfg && typeof cfg.seed === 'number' ? makeRng(cfg.seed) : Math.random;
+
+  /** @type {SamplerStats} */
+  let stats = { size:0, dropped:0, kept:0, reasons:{} };
+
+  /** @param {Query} q @returns {Decision} */
+  function push(q){
+    const w = computeWeight(q);
+    const keep = decideKeep(w, rate, rnd);
+    const reason = keep ? 'prob' : 'prob';
+    stats.kept += keep ? 1 : 0; stats.dropped += keep ? 0 : 1;
+    stats.size = buffer.length + (keep ? 1 : 0);
+    stats.reasons[reason] = (stats.reasons[reason] ?? 0) + 1;
+    if (keep) {
+      if (buffer.length >= maxBuffer) buffer.shift();
+      buffer.push(q);
+    }
+    return { kept: keep, reason, weight: w };
+  }
+
+  /** @returns {Query[]} */
+  function flush(){ const out = buffer.slice(); buffer.length = 0; stats.size = 0; return out; }
+
+  /** @returns {number} */
+  function size(){ return buffer.length; }
+
+  /** @returns {SamplerStats} */
+  function getStats(){ return { size: stats.size, dropped: stats.dropped, kept: stats.kept, reasons: { ...stats.reasons } }; }
+
+  return { push, flush, size, stats: getStats };
+}
+
+/** @param {Query} q @returns {number} */
+function computeWeight(q){
+  const len = typeof q.text === 'string' ? q.text.length : 0;
+  const boost = q.metadata && typeof q.metadata.priority === 'number' ? q.metadata.priority : 0;
+  return Math.max(0, len / 200) + boost; // adjust to actual logic in file
+}
+
+/** @param {number} w @param {number} rate @param {()=>number} rnd @returns {boolean} */
+function decideKeep(w, rate, rnd){
+  const p = Math.min(1, Math.max(0, rate * (1 + w)));
+  return rnd() < p;
+}
+
+
+Safety
+
+Use in checks for dynamic metadata.
+
+Never index {} without Record<..., ...>.
+
+Add instanceof Error checks in catch blocks.
+
+Replace console.log with console.info|warn|error only if logging exists.
+
+Validation
+
+tsc --noEmit --strict --allowJs --checkJs --pretty false client/src/analytics/query-sampler.js
+eslint client/src/analytics/query-sampler.js --ext .js,.jsx,.ts,.tsx --max-warnings=0
+
+
+Both must be zero.
+
+Deliverables
+
+Updated file with accurate JSDoc, typed helpers, and null-safe access.
+
+Behavior unchanged. Deterministic path only if seed provided.
+
+Update TS_ERROR_MASTER_AUDIT_v2.md: mark this file ✅ FIXED and adjust totals.
