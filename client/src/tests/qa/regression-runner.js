@@ -14,7 +14,7 @@ import { runAllTests, runRegressionTests } from './test-executor.js';
 
 /**
  * @typedef {object} QAModuleTestResult
- * @property {"PASSED"|"FAILED"|"SKIPPED"} status - Test status
+ * @property {"PASSED"|"FAILED"|"SKIPPED"|"WARNING"} status - Test status
  * @property {string} description - Test description
  * @property {string} [error] - Error message if failed
  */
@@ -92,7 +92,7 @@ export async function runEnhancedQATests(options = {}) {
     // Import and run existing QA tests
     const runQAModuleTests = await import('../../qa/qa.test.js').catch(() => null);
     
-    if (runQAModuleTests) {
+    if (runQAModuleTests && typeof runQAModuleTests === 'function') {
       try {
         await runQAModuleTests();
         results.qaModuleTests = {
@@ -128,10 +128,11 @@ export async function runEnhancedQATests(options = {}) {
       verbose: false
     });
     
-    results.medicalScenarioTests = /** @type {MedicalScenarioTestResult} */ (scenarioResults);
+    const medicalTestResults = /** @type {MedicalScenarioTestResult} */ (scenarioResults);
+    results.medicalScenarioTests = medicalTestResults;
     
-    const passRate = parseFloat(scenarioResults.executionSummary.passRate);
-    console.info(`📊 Medical Scenarios: ${scenarioResults.executionSummary.passed}/${scenarioResults.executionSummary.totalTests} (${passRate}%)`);
+    const passRate = parseFloat(medicalTestResults.executionSummary.passRate);
+    console.info(`📊 Medical Scenarios: ${medicalTestResults.executionSummary.passed}/${medicalTestResults.executionSummary.totalTests} (${passRate}%)`);
     
     if (passRate >= 95) {
       console.info('✅ Medical Scenario Tests: PASSED');
@@ -151,12 +152,13 @@ export async function runEnhancedQATests(options = {}) {
         verbose: false
       });
       
-      results.regressionAnalysis = regressionResults.regressionResults;
+      const regressionData = /** @type {{ regressionResults: RegressionAnalysisResult }} */ (regressionResults);
+      results.regressionAnalysis = regressionData.regressionResults;
       
-      if (regressionResults.regressionResults.regressionDetected) {
+      if (regressionData.regressionResults.regressionDetected) {
         console.error('🚨 Regression Analysis: ISSUES DETECTED');
-        console.error(`   - Critical: ${regressionResults.regressionResults.criticalRegressions.length}`);
-        console.error(`   - Warnings: ${regressionResults.regressionResults.warningRegressions.length}`);
+        console.error(`   - Critical: ${regressionData.regressionResults.criticalRegressions.length}`);
+        console.error(`   - Warnings: ${regressionData.regressionResults.warningRegressions.length}`);
       } else {
         console.info('✅ Regression Analysis: NO ISSUES');
       }
