@@ -6,13 +6,51 @@
 import { assessMentalHealthCrisis, getEmergencyContact } from '../config/safety-rules.js';
 
 /**
+ * @typedef {object} MentalHealthAssessment
+ * @property {boolean} isCrisis - Whether mental health crisis detected
+ * @property {string[]} triggers - Triggered patterns
+ * @property {string} severity - Crisis severity (high, moderate, low)
+ */
+
+/**
+ * @typedef {object} EmergencyContact
+ * @property {string} emergency - Emergency services number
+ * @property {string} [crisis] - Crisis hotline number
+ * @property {string} [poison] - Poison control number
+ */
+
+/**
+ * @typedef {object} CrisisResource
+ * @property {string} name - Resource name
+ * @property {string} [number] - Contact number
+ * @property {string} [text] - Text contact
+ * @property {string} [url] - Website URL
+ * @property {string} available - Availability (e.g., "24/7")
+ */
+
+/**
+ * @typedef {object} CrisisInterventionResources
+ * @property {CrisisResource[]} immediate - Immediate help resources
+ * @property {CrisisResource[]} followup - Follow-up resources
+ * @property {CrisisResource[]} online - Online resources
+ */
+
+/**
+ * @typedef {object} EmergencyChecklistItem
+ * @property {number} step - Step number
+ * @property {string} action - Action to take
+ * @property {'critical'|'high'|'medium'} priority - Priority level
+ * @property {boolean} completed - Whether step is completed
+ */
+
+/**
  * Emergency detection result
  * @typedef {object} EmergencyDetectionResult
  * @property {boolean} isEmergency - Whether an emergency was detected
  * @property {'medical'|'mental_health'|'trauma'|null} emergencyType - Type of emergency
  * @property {string} severity - Emergency severity (critical, high, moderate)
  * @property {string[]} triggeredPatterns - Patterns that triggered emergency detection
- * @property {object} emergencyContacts - Relevant emergency contact information
+ * @property {EmergencyContact} emergencyContacts - Relevant emergency contact information
  * @property {string} immediateActions - Immediate actions to take
  * @property {boolean} requiresEmergencyServices - Whether to call emergency services
  * @property {string} emergencyMessage - User-facing emergency message
@@ -21,18 +59,21 @@ import { assessMentalHealthCrisis, getEmergencyContact } from '../config/safety-
 /**
  * Detect emergency situations from user input
  * @param {string} userInput - User's message
- * @param {string} region - User's region for emergency contacts
- * @param {object} _context - Additional context (age, medical history, etc.)
+ * @param {string} [region='US'] - User's region for emergency contacts
+ * @param {object} [_context={}] - Additional context (age, medical history, etc.)
  * @returns {EmergencyDetectionResult} Emergency detection result
  */
 export function detectEmergency(userInput, region = "US", _context = {}) {
   const text = userInput.toLowerCase();
+  /** @type {string[]} */
   const triggeredPatterns = [];
+  /** @type {'medical'|'mental_health'|'trauma'|null} */
   let emergencyType = null;
   let severity = "moderate";
   let requiresEmergencyServices = false;
   
   // 1. Check for life-threatening medical emergencies
+  /** @type {string[]} */
   const medicalEmergencies = [
     "heart attack", "cardiac arrest", "chest pain", "can't breathe", "difficulty breathing",
     "unconscious", "loss of consciousness", "severe bleeding", "overdose", "poisoning",
@@ -49,15 +90,19 @@ export function detectEmergency(userInput, region = "US", _context = {}) {
   }
   
   // 2. Check for mental health crises
+  /** @type {MentalHealthAssessment} */
   const mentalHealthAssessment = assessMentalHealthCrisis(text);
-  if (mentalHealthAssessment.isCrisis) {
-    triggeredPatterns.push(...mentalHealthAssessment.triggers);
+  if (mentalHealthAssessment && mentalHealthAssessment.isCrisis) {
+    if (mentalHealthAssessment.triggers && Array.isArray(mentalHealthAssessment.triggers)) {
+      triggeredPatterns.push(...mentalHealthAssessment.triggers);
+    }
     emergencyType = "mental_health";
-    severity = mentalHealthAssessment.severity === "high" ? "critical" : "high";
+    severity = (mentalHealthAssessment.severity === "high") ? "critical" : "high";
     requiresEmergencyServices = mentalHealthAssessment.severity === "high";
   }
   
   // 3. Check for trauma emergencies
+  /** @type {string[]} */
   const traumaEmergencies = [
     "severe accident", "car accident", "fell from height", "broken bones", "head trauma",
     "severe bleeding", "can't move", "hit by", "motorcycle accident"
@@ -73,6 +118,7 @@ export function detectEmergency(userInput, region = "US", _context = {}) {
   }
   
   // 4. Check for less obvious but concerning patterns
+  /** @type {string[]} */
   const concerningPatterns = [
     "worst headache of my life", "sudden severe pain", "vision loss", "can't speak",
     "severe allergic reaction", "anaphylaxis", "severe burn", "electrical shock"
@@ -90,11 +136,13 @@ export function detectEmergency(userInput, region = "US", _context = {}) {
   }
   
   const isEmergency = triggeredPatterns.length > 0;
+  /** @type {EmergencyContact} */
   const emergencyContacts = getEmergencyContact(region);
   
-  return {
+  /** @type {EmergencyDetectionResult} */
+  const result = {
     isEmergency,
-    emergencyType: /** @type {'medical'|'mental_health'|'trauma'|null} */ (emergencyType),
+    emergencyType,
     severity,
     triggeredPatterns,
     emergencyContacts,
@@ -102,11 +150,13 @@ export function detectEmergency(userInput, region = "US", _context = {}) {
     requiresEmergencyServices,
     emergencyMessage: generateEmergencyMessage(emergencyType, severity, emergencyContacts)
   };
+  
+  return result;
 }
 
 /**
  * Generate immediate action instructions based on emergency type
- * @param {string|null} emergencyType - Type of emergency
+ * @param {'medical'|'mental_health'|'trauma'|null} emergencyType - Type of emergency
  * @param {string} severity - Emergency severity
  * @param {object} _context - Additional context
  * @returns {string} Immediate action instructions
@@ -114,6 +164,7 @@ export function detectEmergency(userInput, region = "US", _context = {}) {
 function generateImmediateActions(emergencyType, severity, _context) {
   if (!emergencyType) return "";
   
+  /** @type {string[]} */
   const actions = [];
   
   switch (emergencyType) {
@@ -157,9 +208,9 @@ function generateImmediateActions(emergencyType, severity, _context) {
 
 /**
  * Generate emergency message for user interface
- * @param {string|null} emergencyType - Type of emergency
+ * @param {'medical'|'mental_health'|'trauma'|null} emergencyType - Type of emergency
  * @param {string} severity - Emergency severity
- * @param {object} emergencyContacts - Emergency contact information
+ * @param {EmergencyContact} emergencyContacts - Emergency contact information
  * @returns {string} User-facing emergency message
  */
 function generateEmergencyMessage(emergencyType, severity, emergencyContacts) {
@@ -186,11 +237,14 @@ function generateEmergencyMessage(emergencyType, severity, emergencyContacts) {
   }
   
   // Add contact information
+  /** @type {string[]} */
   const contactInfo = [];
-  if (emergencyType === "mental_health") {
+  if (emergencyType === "mental_health" && emergencyContacts && 'crisis' in emergencyContacts && emergencyContacts.crisis) {
     contactInfo.push(`Crisis Line: ${emergencyContacts.crisis}`);
   }
-  contactInfo.push(`Emergency: ${emergencyContacts.emergency}`);
+  if (emergencyContacts && 'emergency' in emergencyContacts && emergencyContacts.emergency) {
+    contactInfo.push(`Emergency: ${emergencyContacts.emergency}`);
+  }
   
   return `${baseMessage}\n\n📞 **IMMEDIATE HELP:**\n${contactInfo.join("\n")}`;
 }
@@ -208,11 +262,12 @@ export function requiresEmergencyServices(userInput) {
 /**
  * Get crisis intervention resources based on situation
  * @param {'medical'|'mental_health'|'trauma'} emergencyType - Emergency type
- * @param {string} region - User region
- * @returns {object} Crisis intervention resources
+ * @param {string} [region='US'] - User region
+ * @returns {CrisisInterventionResources} Crisis intervention resources
  */
 export function getCrisisInterventionResources(emergencyType, region = "US") {
   const contacts = getEmergencyContact(region);
+  /** @type {CrisisInterventionResources} */
   const resources = {
     immediate: [],
     followup: [],
@@ -221,31 +276,55 @@ export function getCrisisInterventionResources(emergencyType, region = "US") {
   
   switch (emergencyType) {
     case "medical":
-      resources.immediate = [
-        { name: "Emergency Services", number: contacts.emergency, available: "24/7" },
-        { name: "Poison Control", number: contacts.poison, available: "24/7" }
-      ];
+      if (contacts && 'emergency' in contacts && contacts.emergency) {
+        resources.immediate.push({
+          name: "Emergency Services",
+          number: contacts.emergency,
+          available: "24/7"
+        });
+      }
+      if (contacts && 'poison' in contacts && contacts.poison) {
+        resources.immediate.push({
+          name: "Poison Control",
+          number: contacts.poison,
+          available: "24/7"
+        });
+      }
       resources.online = [
-        { name: "WebMD Symptom Checker", url: "https://symptoms.webmd.com" },
-        { name: "Mayo Clinic", url: "https://www.mayoclinic.org" }
+        { name: "WebMD Symptom Checker", url: "https://symptoms.webmd.com", available: "24/7" },
+        { name: "Mayo Clinic", url: "https://www.mayoclinic.org", available: "24/7" }
       ];
       break;
       
     case "mental_health":
-      resources.immediate = [
-        { name: "Crisis Hotline", number: contacts.crisis, available: "24/7" },
-        { name: "Emergency Services", number: contacts.emergency, available: "24/7" }
-      ];
+      if (contacts && 'crisis' in contacts && contacts.crisis) {
+        resources.immediate.push({
+          name: "Crisis Hotline",
+          number: contacts.crisis,
+          available: "24/7"
+        });
+      }
+      if (contacts && 'emergency' in contacts && contacts.emergency) {
+        resources.immediate.push({
+          name: "Emergency Services",
+          number: contacts.emergency,
+          available: "24/7"
+        });
+      }
       resources.online = [
         { name: "Crisis Text Line", text: "HOME to 741741", available: "24/7" },
-        { name: "National Suicide Prevention", url: "https://suicidepreventionlifeline.org" }
+        { name: "National Suicide Prevention", url: "https://suicidepreventionlifeline.org", available: "24/7" }
       ];
       break;
       
     case "trauma":
-      resources.immediate = [
-        { name: "Emergency Services", number: contacts.emergency, available: "24/7" }
-      ];
+      if (contacts && 'emergency' in contacts && contacts.emergency) {
+        resources.immediate.push({
+          name: "Emergency Services",
+          number: contacts.emergency,
+          available: "24/7"
+        });
+      }
       break;
   }
   
@@ -255,9 +334,10 @@ export function getCrisisInterventionResources(emergencyType, region = "US") {
 /**
  * Generate emergency protocol checklist
  * @param {EmergencyDetectionResult} detection - Emergency detection result
- * @returns {Array<{step: number, action: string, priority: 'critical'|'high'|'medium', completed: boolean}>} Checklist items
+ * @returns {EmergencyChecklistItem[]} Checklist items
  */
 export function generateEmergencyChecklist(detection) {
+  /** @type {EmergencyChecklistItem[]} */
   const checklist = [];
   let stepNumber = 1;
   
@@ -265,9 +345,11 @@ export function generateEmergencyChecklist(detection) {
   
   // Critical priority actions
   if (detection.requiresEmergencyServices) {
+    const emergencyNumber = (detection.emergencyContacts && 'emergency' in detection.emergencyContacts && detection.emergencyContacts.emergency) ? 
+                           detection.emergencyContacts.emergency : '911';
     checklist.push({
       step: stepNumber++,
-      action: `Call ${detection.emergencyContacts.emergency} immediately`,
+      action: `Call ${emergencyNumber} immediately`,
       priority: "critical",
       completed: false
     });
@@ -323,5 +405,5 @@ export function generateEmergencyChecklist(detection) {
     completed: false
   });
   
-  return /** @type {Array<{step: number, action: string, priority: 'critical'|'high'|'medium', completed: boolean}>} */ (checklist);
+  return checklist;
 }
