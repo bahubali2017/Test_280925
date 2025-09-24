@@ -1,0 +1,82 @@
+🟢 Agent Prompt — Fix client/src/lib/medical-layer/fallback-engine.js
+
+You are tasked with eliminating all TypeScript strict mode errors and ESLint issues from
+client/src/lib/medical-layer/fallback-engine.js. Follow these instructions exactly:
+
+1. Validation & Reference Check
+
+Confirm all imports, exports, and function references are correct.
+
+Ensure fallback-engine.js is actively used:
+
+Search across client/src/ for fallback-engine references.
+
+Check medical-layer integration files (atd-router.js, triage-engine.js, medical-safety-processor.js, etc.) to ensure this module is referenced.
+
+Report dependencies clearly before applying changes.
+
+2. Refactor & Error Fixing
+
+Fix all TypeScript strict mode errors (tsc --noEmit --strict --allowJs --checkJs) in this file.
+
+Fix all ESLint errors/warnings.
+
+Do not introduce suppressions (// @ts-ignore, eslint-disable, any, etc.).
+
+All added JSDoc typedefs and function signatures are templates — adjust them to match the actual code. Never introduce mismatches.
+
+3. Typedef & Type Safety
+
+Add complete JSDoc typedefs for all medical safety fallback structures:
+
+FallbackResponse, FallbackReason, FallbackEngineOptions, FallbackEngineResult, SafetyMetadata (adjust to actual code).
+
+Replace unsafe object access with null checks and type guards.
+
+Ensure all accumulators, arrays, and maps have explicit element typing.
+
+Add proper function parameter and return type annotations.
+
+4. Medical Safety Integrity
+
+Preserve and validate the fallback logic:
+
+Emergency detection fallbacks must remain intact.
+
+Ensure ATD (Advice-to-Doctor) routing still works.
+
+Preserve disclaimer insertion and privacy protections.
+
+If the fallback engine connects to medical-safety-processor, emergency-detector, or triage-engine, ensure compatibility with their fixed typedefs.
+
+5. Logging & Error Handling
+
+Replace raw console.log calls with structured logging (console.info, console.warn, console.error).
+
+Wrap unsafe code in try/catch blocks with proper instanceof Error checks.
+
+Preserve audit trail logging required for medical compliance.
+
+6. Post-Refactor Validation
+
+Run TypeScript check again — file must report 0 errors.
+
+Run ESLint check again — file must report 0 warnings/errors.
+
+Confirm runtime functionality is preserved:
+
+Fallbacks trigger properly when primary safety checks fail.
+
+Emergency and disclaimer handling remain intact.
+
+7. Documentation Update
+
+Update TS_ERROR_MASTER_AUDIT_v2.md:
+
+Mark fallback-engine.js as ✅ FIXED.
+
+Adjust error/file counts accordingly.
+
+Add changelog note summarizing fixes.
+
+⚠️ Reminder: All typedefs and annotations are templates. Adjust them to exactly match the actual implementation in fallback-engine.js. Never leave placeholders or mismatched documentation.

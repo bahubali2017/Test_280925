@@ -3,13 +3,62 @@
  * Phase 9: Medical Safety Guidelines - Fallback handling and disclaimer enforcement
  */
 
-import { selectDisclaimers } from '../disclaimers.js';
 import { filterOverconfidentLanguage } from '../config/safety-rules.js';
+
+/**
+ * Fallback response structure for medical safety system
+ * @typedef {{
+ *   response: string;
+ *   type: "emergency" | "general" | "mental_health" | "medication" | "technical_error";
+ *   disclaimer: string | null;
+ *   disclaimerPack?: { disclaimers: string[]; atdNotices: string[]; };
+ *   requiresHumanIntervention: boolean;
+ *   recommendedActions: string[];
+ *   followUpQuestions?: string[];
+ *   emergencyContext?: {
+ *     symptom: string;
+ *     severity: string;
+ *     originalQuery: string;
+ *   };
+ *   fallbackReason: string;
+ * }} FallbackResponse
+ */
+
+/**
+ * Safety validation result structure
+ * @typedef {{
+ *   isValid: boolean;
+ *   violations: string[];
+ *   riskLevel: 'low' | 'medium' | 'high';
+ * }} SafetyValidationResult
+ */
+
+/**
+ * Fallback context structure
+ * @typedef {{
+ *   originalQuery?: string;
+ *   reason: "ai_failure" | "safety_concern" | "ambiguous_input" | "technical_error";
+ *   triageLevel?: string;
+ *   isEmergency?: boolean;
+ *   isMentalHealth?: boolean;
+ *   detectedSymptoms?: string[];
+ * }} FallbackContext
+ */
+
+/**
+ * Response processing context structure
+ * @typedef {{
+ *   triageLevel?: string;
+ *   isEmergency?: boolean;
+ *   isMentalHealth?: boolean;
+ *   detectedSymptoms?: string[];
+ * }} ResponseContext
+ */
 
 /**
  * Generate context-aware emergency response based on symptoms
  * @param {string} originalQuery - User's original query
- * @param {object} _context - Emergency context (unused)
+ * @param {FallbackContext} _context - Emergency context (unused)
  * @returns {FallbackResponse} Context-specific emergency response
  */
 function generateContextAwareEmergencyResponse(originalQuery, _context) {
@@ -20,6 +69,7 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
     return {
       response: generateChestPainEmergencyResponse(),
       type: "emergency",
+      disclaimer: null,
       // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
       disclaimerPack: { disclaimers: [], atdNotices: [] },
       requiresHumanIntervention: true,
@@ -48,7 +98,8 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
   if (queryLower.includes('can\'t breathe') || queryLower.includes('difficulty breathing') || queryLower.includes('shortness of breath')) {
     return {
       response: generateBreathingEmergencyResponse(),
-      type: "emergency", 
+      type: "emergency",
+      disclaimer: null,
       // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
       disclaimerPack: { disclaimers: [], atdNotices: [] },
       requiresHumanIntervention: true,
@@ -77,6 +128,7 @@ function generateContextAwareEmergencyResponse(originalQuery, _context) {
   return {
     response: "I've detected that this may be a medical emergency. I cannot provide adequate guidance for emergency situations.",
     type: "emergency",
+    disclaimer: null,
     // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
     disclaimerPack: { disclaimers: [], atdNotices: [] },
     requiresHumanIntervention: true,
@@ -145,30 +197,12 @@ function generateBreathingEmergencyResponse() {
 }
 
 /**
- * Fallback response when AI systems fail or provide inadequate responses
- * @typedef {object} FallbackResponse
- * @property {string} response - Fallback response text
- * @property {'general'|'emergency'|'mental_health'|'medication'|'technical_error'} type - Fallback type
- * @property {string|null|object} disclaimer - Safety disclaimer text (null to avoid duplication)\n * @property {object} [disclaimerPack] - Safety disclaimer pack (when using structured disclaimers)
- * @property {boolean} requiresHumanIntervention - Whether human assistance is needed
- * @property {string[]} recommendedActions - Suggested next steps for user
- * @property {string[]} [followUpQuestions] - Optional follow-up questions
- * @property {string} fallbackReason - Reason for fallback activation
- */
-
-/**
  * Generate appropriate fallback response based on context
- * @param {object} context - Fallback context
- * @param {string} context.originalQuery - User's original query
- * @param {'ai_failure'|'safety_concern'|'ambiguous_input'|'technical_error'} context.reason - Reason for fallback
- * @param {string} context.triageLevel - Triage level if available
- * @param {boolean} context.isEmergency - Whether emergency was detected
- * @param {boolean} context.isMentalHealth - Whether mental health concern
- * @param {string[]} [context.existingDisclaimers] - Existing disclaimers to reuse
+ * @param {FallbackContext} context - Fallback context
  * @returns {FallbackResponse} Appropriate fallback response
  */
 export function generateFallbackResponse(context) {
-  const { originalQuery, reason, triageLevel, isEmergency, isMentalHealth, existingDisclaimers } = context;
+  const { originalQuery, reason, triageLevel, isEmergency, isMentalHealth } = context;
   
   // Emergency fallback - highest priority with context-aware responses
   if (isEmergency) {
@@ -214,6 +248,7 @@ export function generateFallbackResponse(context) {
     return {
       response: "I'm experiencing technical difficulties and cannot provide reliable medical guidance at this time.",
       type: "technical_error",
+      disclaimer: null,
       // PHASE 6.3: Centralized disclaimer source - only UI renders disclaimers
       disclaimerPack: { disclaimers: [], atdNotices: [] },
       requiresHumanIntervention: true,
@@ -263,11 +298,7 @@ export function generateFallbackResponse(context) {
 /**
  * Post-process AI response to ensure safety compliance
  * @param {string} aiResponse - Original AI response
- * @param {object} context - Response context
- * @param {string} context.triageLevel - Triage level
- * @param {boolean} context.isEmergency - Emergency status
- * @param {boolean} context.isMentalHealth - Mental health concern
- * @param {string[]} context.detectedSymptoms - Detected symptoms
+ * @param {ResponseContext} context - Response context
  * @returns {string} Safety-compliant response with disclaimers
  */
 export function processAIResponseForSafety(aiResponse, context) {
@@ -280,7 +311,7 @@ export function processAIResponseForSafety(aiResponse, context) {
   processedResponse = addCautionaryLanguage(processedResponse);
   
   // 3. Ensure appropriate disclaimer based on context
-  const disclaimerPack = selectAppropriateDisclaimer(context);
+  selectAppropriateDisclaimer(context);
   
   // 4. Add emergency notice if needed
   let emergencyNotice = "";
@@ -325,11 +356,10 @@ function addCautionaryLanguage(response) {
 
 /**
  * Select appropriate disclaimer pack based on context
- * @param {object} context - Response context
- * @param {string[]} [existingDisclaimers] - Existing disclaimers to reuse
- * @returns {object} Appropriate disclaimer pack from selectDisclaimers()
+ * @param {ResponseContext} context - Response context
+ * @returns {{ disclaimers: string[]; atdNotices: string[]; }} Appropriate disclaimer pack from selectDisclaimers()
  */
-function selectAppropriateDisclaimer(context, existingDisclaimers) {
+function selectAppropriateDisclaimer(context) {
   // PHASE 6.3: Return empty pack - UI handles all disclaimers
   if (context.isEmergency) {
     return { disclaimers: [], atdNotices: [] };
@@ -346,11 +376,12 @@ function selectAppropriateDisclaimer(context, existingDisclaimers) {
 /**
  * Validate response meets safety standards
  * @param {string} response - Response to validate
- * @returns {{isValid: boolean, violations: string[], riskLevel: 'low'|'medium'|'high'}} Validation result
+ * @returns {SafetyValidationResult} Validation result
  */
 export function validateResponseSafety(response) {
+  /** @type {string[]} */
   const violations = [];
-  let riskLevel = "low";
+  let riskLevel = /** @type {'low' | 'medium' | 'high'} */ ("low");
   
   // Check for prohibited diagnostic language
   const prohibitedPhrases = [
@@ -367,6 +398,7 @@ export function validateResponseSafety(response) {
   
   // PHASE 6.3: Validation without disclaimer content injection - UI handles all disclaimers
   // Skip disclaimer presence check as UI handles disclaimer rendering
+  /** @type {string[]} */
   const allDisclaimers = [];
   const hasDisclaimer = allDisclaimers.some(disclaimer => 
     response.includes(disclaimer.substring(0, 20)) // Check first 20 chars of disclaimer
@@ -391,7 +423,7 @@ export function validateResponseSafety(response) {
   return {
     isValid: violations.length === 0,
     violations,
-    riskLevel: /** @type {'low'|'medium'|'high'} */ (riskLevel)
+    riskLevel
   };
 }
 
@@ -410,13 +442,13 @@ export function createSafeFallback(_originalResponse, _violations) {
     isMentalHealth: false
   });
   
-  return `${fallback.response}\n\n**Safety Note**: The original response was replaced due to safety concerns.\n\n${fallback.disclaimer}`;
+  return `${fallback.response}\n\n**Safety Note**: The original response was replaced due to safety concerns.\n\n${fallback.disclaimer || ''}`;
 }
 
 /**
  * Check if response requires human review
  * @param {string} response - Response to check
- * @param {object} context - Response context
+ * @param {ResponseContext} context - Response context
  * @returns {boolean} Whether human review is required
  */
 export function requiresHumanReview(response, context) {
