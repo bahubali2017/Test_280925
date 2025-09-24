@@ -47,6 +47,9 @@ export const supabaseAdmin = createSupabaseClient(
 
 /**
  * Helper function to sign up with email and password
+ * @param email
+ * @param password
+ * @param metadata
  */
 export async function signUp(email, password, metadata = {}) {
   return supabaseClient.auth.signUp({
@@ -58,6 +61,8 @@ export async function signUp(email, password, metadata = {}) {
 
 /**
  * Helper function to sign in with email and password
+ * @param email
+ * @param password
  */
 export async function signIn(email, password) {
   return supabaseClient.auth.signInWithPassword({ email, password });
@@ -65,6 +70,7 @@ export async function signIn(email, password) {
 
 /**
  * Helper function to sign in with a third-party provider
+ * @param provider
  */
 export async function signInWithProvider(provider) {
   return supabaseClient.auth.signInWithOAuth({
@@ -96,4 +102,7 @@ export async function getUser() {
   return supabaseClient.auth.getUser();
 }
 
+/**
+ *
+ */
 export default supabaseClient;

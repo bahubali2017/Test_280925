@@ -126,4 +126,7 @@ export function getConfig() {
   return config;
 }
 
+/**
+ *
+ */
 export default getConfig();
