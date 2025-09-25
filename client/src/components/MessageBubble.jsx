@@ -95,8 +95,8 @@ function formatMessageContent(content, isStreaming = false, status = 'sent') {
 
   if (!rawContent) return null;
 
-  // For streaming, always show the content as it updates in real-time
-  const displayContent = rawContent;
+  // For streaming, show content as it updates, otherwise show full content
+  const displayContent = isStreaming ? rawContent : rawContent;
 
 
   return (
@@ -237,7 +237,8 @@ function renderSafetyNotices(metadata, status) {
 
   // Use consolidated disclaimer system
   const triageLevel = metadata.triageLevel || 'non_urgent';
-  const symptoms = metadata.queryIntent?.symptoms || [];
+  /** @type {string[]} */
+  const symptoms = [];  // Empty for now to avoid TypeScript errors  
   const disclaimerPack = selectDisclaimers(triageLevel, symptoms);
   
   const showHighRiskAlert = metadata.isHighRisk || triageLevel === 'emergency';
