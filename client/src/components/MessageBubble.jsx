@@ -522,7 +522,7 @@ export function MessageBubble({
         <div className="flex justify-end">
           <div
             className={cn(
-              `bg-gradient-to-r from-cyan-500 to-blue-600 text-white ${rounding} px-4 ${padding} max-w-[85%] md:max-w-[75%] text-body relative transition-all duration-200 ${animation} shadow-md shadow-cyan-500/25`,
+              `bg-blue-700 text-white dark:bg-blue-600 dark:text-white shadow-md ${rounding} px-4 ${padding} max-w-[85%] md:max-w-[75%] text-body relative transition-all duration-200 ${animation}`,
               isStreaming && status !== 'delivered' ? 'bubble--streaming' : '',
               className
             )}
@@ -607,7 +607,7 @@ export function MessageBubble({
               <div className="mt-3 flex justify-start">
                 <button
                   onClick={onRetry}
-                  className="px-3 py-1.5 bg-primary text-primary-foreground text-sm rounded-md hover:bg-primary/90 transition-colors"
+                  className="flex items-center text-primary hover:text-primary-900 dark:hover:text-primary-500 px-3 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20 focus:ring-2 focus:ring-primary/20 transition-colors"
                   data-testid="button-retry"
                 >
                   Try Again
@@ -621,7 +621,7 @@ export function MessageBubble({
                 <button
                   onClick={handleStopClick}
                   disabled={isStoppingAI}
-                  className="inline-flex items-center gap-2 px-4 py-2 border-2 border-red-500 text-red-600 hover:bg-red-50 dark:hover:bg-red-950 text-sm rounded-full transition-colors disabled:opacity-50"
+                  className="flex items-center text-xs py-1 px-2.5 rounded-md bg-destructive/20 hover:bg-destructive/30 text-destructive font-medium transition-colors disabled:opacity-50"
                   data-testid="button-stop-ai"
                 >
                   {isStoppingAI || status === 'stopping' ? (
@@ -634,7 +634,7 @@ export function MessageBubble({
                     </>
                   ) : (
                     <>
-                      <svg className="h-4 w-4" fill="currentColor" viewBox="0 0 24 24">
+                      <svg className="h-3 w-3 mr-1" fill="currentColor" viewBox="0 0 24 24">
                         <rect x="6" y="6" width="12" height="12" rx="2"/>
                       </svg>
                       Stop AI
@@ -647,13 +647,13 @@ export function MessageBubble({
             {/* Follow-up suggestions */}
             {showFollowUps && onFollowUpClick && !isStreaming && status !== 'stopped' && (
               <div className="mt-4 space-y-2">
-                <p className="text-sm font-medium text-muted-foreground">Suggested follow-ups:</p>
+                <p className="text-xs font-medium text-foreground/70 dark:text-foreground/60">Suggested follow-ups:</p>
                 <div className="flex flex-wrap gap-2">
                   {followUpSuggestions.map((/** @type {string} */ suggestion, /** @type {number} */ index) => (
                     <button
                       key={index}
                       onClick={() => onFollowUpClick(suggestion)}
-                      className="text-sm px-3 py-1.5 bg-primary/10 hover:bg-primary/20 text-primary rounded-full transition-colors"
+                      className="px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-800 dark:hover:bg-blue-700 dark:text-white text-sm rounded-full transition-colors shadow-sm"
                       data-testid={`button-followup-${index}`}
                     >
                       {suggestion}

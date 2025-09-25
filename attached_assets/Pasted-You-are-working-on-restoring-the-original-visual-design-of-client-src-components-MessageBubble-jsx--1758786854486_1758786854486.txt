@@ -1,0 +1,33 @@
+You are working on restoring the original visual design of `client/src/components/MessageBubble.jsx` while keeping the TypeScript strict-mode and ESLint compliance intact.
+
+🔧 Tasks:
+1. **Restore bubble colors & styles**
+   - User bubbles: `bg-blue-700 text-white dark:bg-blue-600 dark:text-white shadow-md`
+   - Assistant bubbles: `bg-secondary/80 dark:bg-secondary/30 text-foreground dark:text-foreground shadow-sm`
+   - Cancelled messages: add `border-l-2 border-amber-500`
+   - Maintain responsive widths (`max-w-[85%] md:max-w-[75%|80%]`)
+
+2. **Restore corner rounding & spacing**
+   - Keep conditional `bubbleRounding` logic for first/last/sequence messages
+   - Restore y-padding rules (`pt-3 pb-2.5`, `py-3`, etc.)
+
+3. **Restore Stop AI button styling**
+   - Use original classes:
+     `flex items-center text-xs py-1 px-2.5 rounded-md bg-destructive/20 hover:bg-destructive/30 text-destructive font-medium transition-colors`
+
+4. **Restore Retry button styling**
+   - Use original classes:
+     `flex items-center text-primary hover:text-primary-900 dark:hover:text-primary-500 px-3 py-1.5 rounded-md bg-primary/5 hover:bg-primary/10 dark:bg-primary/10 dark:hover:bg-primary/20 focus:ring-2 focus:ring-primary/20`
+
+5. **Restore Follow-up suggestions styling**
+   - Section heading: `text-xs font-medium text-foreground/70 dark:text-foreground/60`
+   - Buttons: `px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 dark:bg-blue-800 dark:hover:bg-blue-700 dark:text-white text-sm rounded-full transition-colors shadow-sm`
+
+6. **Keep all accessibility & TS fixes**
+   - Do not remove JSDoc typedefs, TS props, or ESLint-safe imports
+   - Only adjust classNames and layout logic to match the old design
+
+7. **Ensure feature parity**
+   - Typing indicator, metadata, system messages, high-risk alert, and cancelled notices remain fully functional
+
+🎯 Goal: After the update, MessageBubble.jsx should render *exactly* as in the original design (blue/gray pill bubbles, cyan follow-up chips, Stop AI button visible) while maintaining 0 TypeScript errors and 0 ESLint warnings.
