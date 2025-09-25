@@ -340,45 +340,6 @@ function renderSafetyNotices(metadata, status) {
   );
 }
 
-/**
- * Create feedback handler using the proper feedback API
- * @param {string} messageId - Message identifier
- * @param {string} sessionId - Session identifier
- * @param {string} userQuery - User query
- * @param {string} message - AI response
- * @param {string} userRole - User role
- * @param {MessageMetadata} metadata - Response metadata
- * @param {(status: string) => void} setFeedbackStatus - Status setter
- * @param {(type: string) => void} setFeedbackType - Type setter
- * @returns {(type: string) => Promise<void>} Feedback handler function
- */
-function createFeedbackHandler(messageId, sessionId, userQuery, message, userRole, metadata, setFeedbackStatus, setFeedbackType) {
-  return async (/** @type {string} */ type) => {
-    console.log(`[Feedback] Button clicked: ${type}`);
-    setFeedbackStatus('submitting');
-    setFeedbackType(type);
-    
-    try {
-      await submitFeedback({
-        messageId: messageId || `msg_${Date.now()}`,
-        sessionId: sessionId || 'unknown_session',
-        feedbackType: type,
-        userQuery: userQuery || 'Unknown query',
-        aiResponse: message,
-        userRole: userRole || 'general_public',
-        responseMetadata: metadata || {}
-      });
-      
-      console.log('[Feedback] Success via submitFeedback API');
-      setFeedbackStatus('success');
-      setTimeout(() => setFeedbackStatus(''), 3000);
-    } catch (error) {
-      console.error('[Feedback] Error submitting feedback:', error);
-      setFeedbackStatus('error');
-      setTimeout(() => setFeedbackStatus(''), 3000);
-    }
-  };
-}
 
 /**
  * Get follow-up suggestions in a centralized way
@@ -458,10 +419,31 @@ export function MessageBubble({
     if (onStopAI) onStopAI(e);
   }, [onStopAI]);
 
-  const handleFeedback = React.useMemo(() => 
-    createFeedbackHandler(messageId, sessionId, userQuery, message, userRole, metadata, setFeedbackStatus, setFeedbackType), 
-    [messageId, sessionId, userQuery, message, userRole, metadata]
-  );
+  // Centralized feedback handler using submitFeedback API
+  const handleFeedback = React.useCallback(async (/** @type {string} */ feedbackType) => {
+    console.log(`[Feedback] Button clicked: ${feedbackType}`);
+    setFeedbackStatus('submitting');
+    
+    try {
+      await submitFeedback({
+        messageId: messageId || `msg_${Date.now()}`,
+        sessionId: sessionId || 'unknown_session',
+        feedbackType,
+        userQuery: userQuery || 'Unknown query',
+        aiResponse: message,
+        userRole: userRole || 'general_public',
+        responseMetadata: metadata || {}
+      });
+      
+      console.log('[Feedback] Success via submitFeedback API');
+      setFeedbackStatus('success');
+      setTimeout(() => setFeedbackStatus(''), 3000);
+    } catch (error) {
+      console.error('[Feedback] Error submitting feedback:', error);
+      setFeedbackStatus('error');
+      setTimeout(() => setFeedbackStatus(''), 3000);
+    }
+  }, [messageId, sessionId, userQuery, message, userRole, metadata]);
 
   // Determine role for accessibility
   const roleAttribute = isUser 
@@ -661,40 +643,38 @@ export function MessageBubble({
                     className="text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
                     data-testid="button-feedback-helpful"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" 
-                         viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
-                         className="mr-1">
-                      <path d="M7 10v12"/>
-                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
-                    </svg>
-                    Helpful
+                    👍
+                    <span className="ml-1">Helpful</span>
                   </button>
                   <button
-                    onClick={() => handleFeedback('not_helpful')}
+                    onClick={() => handleFeedback('could_improve')}
                     disabled={feedbackStatus === 'submitting'}
                     className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
-                    data-testid="button-feedback-not-helpful"
+                    data-testid="button-feedback-could-improve"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" 
-                         viewBox="0 0 24 24" fill="none" stroke="currentColor" 
-                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
-                         className="mr-1 rotate-180">
-                      <path d="M7 10v12"/>
-                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
-                    </svg>
-                    Could improve
+                    👎
+                    <span className="ml-1">Could improve</span>
                   </button>
                 </div>
                 {feedbackStatus && (
                   <span className={cn(
-                    "text-xs ml-2",
+                    "text-xs ml-2 flex items-center",
                     feedbackStatus === 'success' ? "text-green-600" :
-                    feedbackStatus === 'error' ? "text-red-600" : "text-gray-600"
+                    feedbackStatus === 'error' ? "text-red-600" : "text-blue-600"
                   )}>
-                    {feedbackStatus === 'submitting' ? 'Submitting...' :
-                     feedbackStatus === 'success' ? 'Thank you!' :
-                     feedbackStatus === 'error' ? 'Failed to submit' : ''}
+                    {feedbackStatus === 'submitting' ? (
+                      <>
+                        <svg className="animate-spin h-3 w-3 mr-1" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Submitting...
+                      </>
+                    ) : feedbackStatus === 'success' ? (
+                      <>✅ Thank you for your feedback!</>
+                    ) : feedbackStatus === 'error' ? (
+                      <>❌ Failed to submit. Please try again.</>
+                    ) : ''}
                   </span>
                 )}
               </div>
