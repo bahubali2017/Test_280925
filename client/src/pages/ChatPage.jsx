@@ -577,13 +577,18 @@ export function ChatPage() {
             })}
           </div>
 
-          {/* Typing indicator */}
+          {/* AI Thinking Indicator - Original Design */}
           {isTyping && (
             <div className="mb-4">
-              <div className="flex space-x-1">
-                <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce delay-150"></div>
-                <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce delay-300"></div>
+              <div className="inline-flex items-center px-3 py-1.5 
+                              bg-cyan-50 dark:bg-cyan-900/20 rounded-lg 
+                              text-cyan-600 dark:text-cyan-400 text-sm">
+                <span className="typing-indicator flex mr-2">
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                  <span className="dot"></span>
+                </span>
+                AI is thinking...
               </div>
             </div>
           )}
