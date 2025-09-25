@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import { MessageBubble } from '../components/MessageBubble';
 import AnimatedNeuralLogo from '../components/AnimatedNeuralLogo.jsx';
 import { ThemeToggle } from '../components/ThemeToggle.jsx';
-import { apiRequest } from '../lib/queryClient';
+import { sendMessage, stopStreaming } from '../lib/llm-api.jsx';
 import { getRandomStarterQuestions } from '../lib/suggestions';
 
 /**
@@ -172,10 +172,8 @@ export function ChatPage() {
       eventSourceRef.current.close();
       eventSourceRef.current = null;
     }
-    if (abortControllerRef.current) {
-      abortControllerRef.current.abort();
-      abortControllerRef.current = null;
-    }
+    // Use LLM API's stopStreaming for proper cleanup
+    stopStreaming();
   }, []);
 
   /**
@@ -233,97 +231,61 @@ export function ChatPage() {
     setMessages(prev => [...prev, userMessage, assistantMessage]);
 
     try {
-      // Create abort controller for this request
-      abortControllerRef.current = new AbortController();
+      console.info('📤 [LLM-API] Starting sendMessage call:', { message: messageToSend.substring(0, 50) + '...', sessionId });
+      
+      // Build conversation history from messages
+      const conversationHistory = messages
+        .filter(msg => msg.content && msg.content.trim())
+        .map(msg => ({
+          role: msg.isUser ? 'user' : 'assistant',
+          content: msg.content
+        }));
 
-      const response = await apiRequest('/api/chat/stream', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: messageToSend,
-          sessionId,
-          userId: user.id
-        }),
-        signal: abortControllerRef.current.signal
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Handle streaming response
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-
-      try {
-        while (true) {
-          const { value, done } = await reader.read();
+      // Use proper LLM API with streaming
+      const result = await sendMessage(messageToSend, conversationHistory, {
+        sessionId,
+        onStreamingUpdate: (/** @type {string} */ chunkContent, /** @type {any} */ info) => {
+          console.info('📥 [LLM-API] Streaming update:', { chunk: chunkContent.substring(0, 20) + '...', fullLength: info.fullContent?.length });
           
-          if (done) {
-            setIsTyping(false);
-            break;
-          }
-
-          buffer += decoder.decode(value, { stream: true });
-          const lines = buffer.split('\n');
-          buffer = lines.pop() || '';
-
-          for (const line of lines) {
-            if (line.startsWith('data: ')) {
-              const data = line.slice(6);
-              
-              if (data === '[DONE]') {
-                setIsTyping(false);
-                continue;
-              }
-
-              try {
-                const parsed = JSON.parse(data);
-                
-                if (parsed.content) {
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === assistantMessage.id 
-                      ? { 
-                          ...msg, 
-                          content: msg.content + parsed.content,
-                          isStreaming: true
-                        }
-                      : msg
-                  ));
+          setMessages(prev => prev.map(msg => 
+            msg.id === assistantMessage.id 
+              ? { 
+                  ...msg, 
+                  content: info.fullContent || msg.content + chunkContent,
+                  isStreaming: info.streaming
                 }
+              : msg
+          ));
 
-                if (parsed.metadata) {
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === assistantMessage.id 
-                      ? { 
-                          ...msg, 
-                          metadata: parsed.metadata,
-                          isHighRisk: Boolean(parsed.metadata.isHighRisk)
-                        }
-                      : msg
-                  ));
-                }
-
-                if (parsed.done) {
-                  setMessages(prev => prev.map(msg => 
-                    msg.id === assistantMessage.id 
-                      ? { ...msg, isStreaming: false }
-                      : msg
-                  ));
-                  setIsTyping(false);
-                }
-              } catch (parseError) {
-                console.error('Error parsing streaming data:', parseError);
-              }
-            }
+          // Update metadata if provided
+          if (info.metadata) {
+            setMessages(prev => prev.map(msg => 
+              msg.id === assistantMessage.id 
+                ? { 
+                    ...msg, 
+                    metadata: info.metadata,
+                    isHighRisk: Boolean(info.metadata && info.metadata.medicalSafety && info.metadata.medicalSafety.emergencyProtocol)
+                  }
+                : msg
+            ));
           }
         }
-      } finally {
-        reader.releaseLock();
-      }
+      });
+
+      console.info('✅ [LLM-API] sendMessage completed:', { contentLength: result.content?.length, hasMetadata: !!result.metadata });
+
+      // Final update with complete response
+      setMessages(prev => prev.map(msg => 
+        msg.id === assistantMessage.id 
+          ? { 
+              ...msg, 
+              content: result.content,
+              metadata: result.metadata,
+              isHighRisk: Boolean(result.metadata && result.metadata.medicalSafety && result.metadata.medicalSafety.emergencyProtocol),
+              isStreaming: false
+            }
+          : msg
+      ));
 
     } catch (/** @type {any} */ error) {
       console.error('Chat API error:', error);
