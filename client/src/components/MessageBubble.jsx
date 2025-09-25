@@ -6,6 +6,7 @@ import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { isDebug, trace } from '../lib/debug-flag.js';
 import { selectDisclaimers } from '../lib/disclaimers.js';
+import { submitFeedback } from '../lib/feedback-api.js';
 
 /**
  * @typedef {'user'|'assistant'|'system'} RoleType
@@ -339,8 +340,7 @@ function renderSafetyNotices(metadata, status) {
 }
 
 /**
- * Create centralized feedback handler
- * @param {string} messageId - Message identifier
+ * Create feedback handler using the proper feedback API
  * @param {string} messageId - Message identifier
  * @param {string} sessionId - Session identifier
  * @param {string} userQuery - User query
@@ -358,7 +358,7 @@ function createFeedbackHandler(messageId, sessionId, userQuery, message, userRol
     setFeedbackType(type);
     
     try {
-      const payload = {
+      await submitFeedback({
         messageId: messageId || `msg_${Date.now()}`,
         sessionId: sessionId || 'unknown_session',
         feedbackType: type,
@@ -366,31 +366,11 @@ function createFeedbackHandler(messageId, sessionId, userQuery, message, userRol
         aiResponse: message,
         userRole: userRole || 'general_public',
         responseMetadata: metadata || {}
-      };
-      
-      console.log('[Feedback] Sending payload:', payload);
-      
-      const response = await fetch('/api/feedback', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(payload)
       });
-
-      console.log('[Feedback] Response status:', response.status);
       
-      if (response.ok) {
-        const result = await response.json();
-        console.log('[Feedback] Success:', result);
-        setFeedbackStatus('success');
-        setTimeout(() => setFeedbackStatus(''), 3000);
-      } else {
-        const errorText = await response.text();
-        console.error('[Feedback] Failed to submit feedback:', errorText);
-        setFeedbackStatus('error');
-        setTimeout(() => setFeedbackStatus(''), 3000);
-      }
+      console.log('[Feedback] Success via submitFeedback API');
+      setFeedbackStatus('success');
+      setTimeout(() => setFeedbackStatus(''), 3000);
     } catch (error) {
       console.error('[Feedback] Error submitting feedback:', error);
       setFeedbackStatus('error');
