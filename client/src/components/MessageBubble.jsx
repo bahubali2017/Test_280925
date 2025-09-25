@@ -667,22 +667,24 @@ export function MessageBubble({
             {!isUser && !isError && !isStreaming && status !== 'stopped' && (
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Was this helpful?</span>
-                <button
-                  onClick={() => handleFeedback('helpful')}
-                  disabled={feedbackStatus === 'submitting'}
-                  className="text-xs px-2 py-1 bg-green-100 hover:bg-green-200 text-green-700 rounded transition-colors disabled:opacity-50"
-                  data-testid="button-feedback-helpful"
-                >
-                  👍 Yes
-                </button>
-                <button
-                  onClick={() => handleFeedback('not_helpful')}
-                  disabled={feedbackStatus === 'submitting'}
-                  className="text-xs px-2 py-1 bg-red-100 hover:bg-red-200 text-red-700 rounded transition-colors disabled:opacity-50"
-                  data-testid="button-feedback-not-helpful"
-                >
-                  👎 No
-                </button>
+                <div className="inline-flex gap-2">
+                  <button
+                    onClick={() => handleFeedback('helpful')}
+                    disabled={feedbackStatus === 'submitting'}
+                    className="text-sm px-3 py-1.5 bg-green-100 hover:bg-green-200 text-green-800 dark:bg-green-900/40 dark:text-green-300 border border-green-200 dark:border-green-700 rounded-full transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
+                    data-testid="button-feedback-helpful"
+                  >
+                    👍 Yes
+                  </button>
+                  <button
+                    onClick={() => handleFeedback('not_helpful')}
+                    disabled={feedbackStatus === 'submitting'}
+                    className="text-sm px-3 py-1.5 bg-red-100 hover:bg-red-200 text-red-800 dark:bg-red-900/40 dark:text-red-300 border border-red-200 dark:border-red-700 rounded-full transition-colors shadow-sm hover:shadow-md disabled:opacity-50"
+                    data-testid="button-feedback-not-helpful"
+                  >
+                    👎 No
+                  </button>
+                </div>
                 {feedbackStatus && (
                   <span className={cn(
                     "text-xs ml-2",
