@@ -97,8 +97,6 @@ function formatMessageContent(content, isStreaming = false, status = 'sent') {
   // For streaming, always show the content as it updates in real-time
   const displayContent = rawContent;
 
-  // Only show typing indicator if streaming is active and message is not delivered
-  const showTypingIndicator = isStreaming && status !== 'delivered';
 
   return (
     <div className="relative" data-status={status}>
@@ -147,13 +145,6 @@ function formatMessageContent(content, isStreaming = false, status = 'sent') {
       >
         {displayContent}
       </ReactMarkdown>
-      {showTypingIndicator && (
-        <span className="typing-indicator ml-1">
-          <span className="dot"></span>
-          <span className="dot"></span>
-          <span className="dot"></span>
-        </span>
-      )}
     </div>
   );
 }
@@ -609,16 +600,6 @@ export function MessageBubble({
               )}
             </p>
 
-            {/* AI thinking box (processing indicator) */}
-            {!isUser && metadata && metadata.layerStatus && (
-              <div className="mb-3">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></div>
-                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce delay-150"></div>
-                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce delay-300"></div>
-                </div>
-              </div>
-            )}
 
             {/* Centralized safety notices rendering */}
             {!isUser && renderSafetyNotices(metadata, status)}
