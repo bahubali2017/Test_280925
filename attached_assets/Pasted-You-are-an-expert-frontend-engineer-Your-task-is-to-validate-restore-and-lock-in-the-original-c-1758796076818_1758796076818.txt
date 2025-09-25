@@ -1,0 +1,117 @@
+You are an expert frontend engineer. Your task is to validate, restore, and lock in the **original chat UI design** for Anamnesis MVP.  
+
+📌 Scope of work:
+- Component focus: 
+  - `MessageBubble.jsx`
+  - `SuggestionButtons.jsx` or inline follow-up button rendering
+  - AI thinking / processing box
+  - Stop AI button
+  - Feedback buttons ("Helpful" / "Could improve")
+- All other supporting files must remain functional, but do not change logic.
+
+---
+
+🎨 Styling requirements (based on verified GitHub snapshot + screenshots):
+
+1. **User message bubble**
+   - Gradient: `bg-gradient-to-r from-cyan-500 to-blue-600`
+   - Text: `text-white`
+   - Rounded corners based on message sequence (rounded-lg, rounded-bl-lg, etc.)
+   - Padding: `px-4 py-3` (dynamic if first/last)
+   - Max width: `max-w-[85%] md:max-w-[75%]`
+   - Shadow: `shadow-md shadow-cyan-500/25`
+   - Transition: `transition-all duration-200`
+   - Status icons: checkmark (✓), cross (✕), ellipsis (⋯) with green/red/gray colors.
+
+2. **AI message bubble**
+   - Background: `bg-secondary/80 dark:bg-secondary/30`
+   - Text: `text-foreground dark:text-foreground`
+   - Rounded corners: same logic as user
+   - Shadow: `shadow-sm`
+   - Padding: `px-4 py-3`
+   - Max width: `max-w-[85%] md:max-w-[80%]`
+   - Transition: `transition-all duration-200`
+   - Top bar: shows **Medical AI Assistant** with logo (`favicon-32x32.png`), glowing `drop-shadow` animation.
+
+3. **AI thinking box (processing indicator)**  
+   - Show when `metadata.layerStatus` is active.  
+   - Styling:  
+     - Background: `bg-cyan-50 dark:bg-cyan-900/20`
+     - Border: `border border-cyan-200 dark:border-cyan-800/50`
+     - Text: `text-cyan-700 dark:text-cyan-300`
+     - Rounded: `rounded-md`
+     - Padding: `p-2`
+     - Animation: `animate-pulse`
+   - Include spinner SVG + status text (“Analyzing medical query…”, etc.).
+
+4. **Stop AI button**
+   - Show when `isStreaming && status !== delivered`
+   - Styling:  
+     - `flex items-center text-xs py-1 px-2.5 rounded-md`
+     - Background: `bg-destructive/20 hover:bg-destructive/30`
+     - Text: `text-destructive font-medium`
+     - Transition: `transition-colors`
+   - Icon: Stop square (`<rect>`), spinning loader when stopping.
+
+5. **Follow-up suggestion buttons**
+   - Rounded pill shape: `rounded-full`
+   - Gradient background: `bg-gradient-to-r from-cyan-50 to-cyan-100`
+   - Hover: `hover:from-cyan-100 hover:to-cyan-200`
+   - Dark mode: `dark:from-cyan-900/30 dark:to-cyan-800/30`
+   - Text: `text-cyan-800 dark:text-cyan-300`
+   - Border: `border border-cyan-200 dark:border-cyan-700/50`
+   - Hover border: `hover:border-cyan-300 dark:hover:border-cyan-600/50`
+   - Shadow: `shadow-sm hover:shadow-md`
+   - Transition: `transition-all duration-200`
+
+6. **Feedback buttons**
+   - ✅ Helpful:  
+     ```
+     text-green-700 dark:text-green-400 
+     hover:text-green-800 dark:hover:text-green-300
+     bg-green-50 dark:bg-green-900/20 
+     hover:bg-green-100 dark:hover:bg-green-900/30
+     px-2 py-1 rounded-md text-xs 
+     flex items-center
+     active:scale-95 disabled:opacity-50
+     ```
+   - ❌ Could improve:  
+     ```
+     text-gray-600 dark:text-gray-400 
+     hover:text-gray-800 dark:hover:text-gray-300
+     bg-gray-50 dark:bg-gray-900/20 
+     hover:bg-gray-100 dark:hover:bg-gray-900/30
+     px-2 py-1 rounded-md text-xs 
+     flex items-center
+     active:scale-95 disabled:opacity-50
+     ```
+
+7. **Disclaimers & alerts**
+   - High-risk alert:  
+     - `bg-destructive/10 dark:bg-destructive/20`
+     - `border border-destructive/30`
+     - `rounded-md p-3 text-sm`
+     - `text-destructive dark:text-destructive-foreground`
+   - Triage level:  
+     - Urgent = `bg-orange-50 text-orange-700 border border-orange-200`
+     - Emergency = `bg-red-50 text-red-700 border border-red-200`
+     - Routine = `bg-blue-50 text-blue-700 border border-blue-200`
+   - Emergency banner:  
+     - `bg-red-100 border-2 border-red-300 rounded-md p-3 text-sm animate-pulse`
+
+---
+
+🛠️ Implementation instructions:
+- Update `MessageBubble.jsx` with these exact classes and states.
+- Ensure hover + dark mode work consistently across all components.
+- Re-test with:
+  1. User message
+  2. AI message with disclaimers
+  3. AI thinking state
+  4. Stop AI active
+  5. Feedback buttons
+  6. Suggested follow-ups
+
+📌 Final requirement:  
+- Output **only the updated JSX (MessageBubble + any subcomponents)** with these styles applied.  
+- Do not modify unrelated logic, state handling, or API calls.
