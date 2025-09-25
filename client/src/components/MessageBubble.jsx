@@ -702,7 +702,7 @@ export function MessageBubble({
                     data-testid="button-feedback-helpful"
                   >
                     <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M7 14H5.5c-.83 0-1.5-.67-1.5-1.5v-3c0-.83.67-1.5 1.5-1.5H7c.83 0 1.5.67 1.5 1.5v3c0 .83-.67 1.5-1.5 1.5zm4.5-4.5v7c0 1.1.9 2 2 2h4.5c.83 0 1.5-.67 1.5-1.5 0-.15-.02-.3-.07-.43L17.92 9.5c-.23-.92-1.05-1.5-1.92-1.5H11c-.55 0-1 .45-1 1v1.5z"/>
+                      <path d="M14 9V5c0-1.1-.9-2-2-2s-2 .9-2 2v4H8c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h2.25c.4 0 .78-.16 1.06-.44L16 12.88c.38-.38.59-.9.59-1.44V10c0-.55-.45-1-1-1h-1.59z"/>
                     </svg>
                     Helpful
                   </button>
@@ -713,7 +713,7 @@ export function MessageBubble({
                     data-testid="button-feedback-not-helpful"
                   >
                     <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M17 14h1.5c.83 0 1.5.67 1.5 1.5v3c0 .83-.67 1.5-1.5 1.5H17c-.83 0-1.5-.67-1.5-1.5v-3c0-.83.67-1.5 1.5-1.5zm-4.5 4.5v-7c0-1.1-.9-2-2-2H6c-.83 0-1.5.67-1.5 1.5 0 .15.02.3.07.43L6.08 18.5c.23.92 1.05 1.5 1.92 1.5H13c.55 0 1-.45 1-1v-1.5z"/>
+                      <path d="M10 15v4c0 1.1.9 2 2 2s2-.9 2-2v-4h2c.55 0 1-.45 1-1V8c0-.55-.45-1-1-1h-2.25c-.4 0-.78.16-1.06.44L8 11.12c-.38.38-.59.9-.59 1.44V14c0 .55.45 1 1 1h1.59z"/>
                     </svg>
                     Could improve
                   </button>
