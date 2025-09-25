@@ -1,0 +1,121 @@
+🎯 Agent Prompt: Restore Original ChatPage Styling & Structure
+You are a strict front-end restoration agent.  
+Your task is to ensure ChatPage.jsx is styled and structured EXACTLY as it was before Sept 24 regressions.  
+
+🔑 Restore the following elements:
+
+1. HEADER (Navbar)
+- Background: `bg-card dark:bg-sidebar-background`
+- Border: `border-b border-border`, with shadow
+- Padding: `py-3 px-4 md:px-6`
+- Logo placement: Left side inside `flex items-center space-x-3`
+- Desktop logo: `<AnimatedNeuralLogo size={56} />`
+- Mobile logo: `<AnimatedNeuralLogo size={48} />`
+- Logo text:
+  - App name: `"Anamnesis"` with `bg-neural-gradient-primary bg-clip-text text-transparent text-lg font-bold`
+  - Subtitle: `"Medical AI Assistant"` with `text-muted-foreground text-sm dark:text-gray-300`
+- Right controls:
+  - `ThemeToggle` button
+  - `Log Out` button → `text-primary border-primary border inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors px-3 py-1.5 hover:bg-primary hover:text-primary-foreground dark:hover:text-primary-foreground`
+
+✅ Ensure no extra logos are rendered anywhere else (floating logo bug).
+
+---
+
+2. WELCOME / EMPTY CHAT STATE
+- Centered content with `text-center py-10 px-4 text-muted-foreground animate-fade-in`
+- Heading: `"Welcome to Anamnesis Medical AI Assistant"` → `text-lg md:text-xl font-medium mb-3 text-foreground`
+- Subtext: `"Ask me anything about medical symptoms, conditions, or general health questions."` → `text-sm sm:text-base`
+- Security note box:
+  - Container: `mt-6 p-3 bg-secondary/50 dark:bg-secondary/30 rounded-lg max-w-md mx-auto`
+  - Text: `text-sm text-foreground/80 flex items-center justify-center`
+  - Icon: SVG calendar + `"Your chat is private and secure"`
+
+---
+
+3. SUGGESTION CHIPS (starterQuestions)
+- Container: `mt-8 space-y-2`
+- Label: `"Try asking:"` with `text-sm font-medium text-foreground/70 mb-3`
+- Button styling (cyan pill buttons, DO NOT USE card/accent styles):
+  ```jsx
+  className="px-3 py-2 bg-gradient-to-r from-cyan-50 to-cyan-100
+             hover:from-cyan-100 hover:to-cyan-200
+             text-cyan-800 dark:from-cyan-900/30 dark:to-cyan-800/30
+             dark:hover:from-cyan-800/40 dark:hover:to-cyan-700/40
+             dark:text-cyan-300 text-sm rounded-full
+             transition-all duration-200 shadow-sm hover:shadow-md
+             border border-cyan-200 dark:border-cyan-700/50
+             hover:border-cyan-300 dark:hover:border-cyan-600/50"
+
+
+Interaction: On click → triggers handleFollowUpClick
+
+CHAT CONTAINER
+
+Wrapper: flex-1 overflow-y-auto p-3 sm:p-4 rounded-lg border border-border mb-4 bg-card shadow-sm dark:shadow-md
+
+Messages list: space-y-1
+
+Typing indicator: bg-primary/10 text-primary rounded-lg p-3 max-w-[80%] with animated dots
+
+MESSAGE INPUT
+
+Wrapper: flex space-x-2 relative
+
+Textarea:
+
+flex-1 min-h-[3rem] sm:min-h-[3.5rem] max-h-32
+
+px-4 py-3 rounded-2xl border-border shadow-sm
+
+focus:ring-2 focus:ring-primary/30
+
+bg-background dark:bg-sidebar-background text-foreground
+
+Auto-resizing enabled
+
+Send button:
+
+Rounded full: rounded-full
+
+Height: h-12 sm:h-14
+
+Background: bg-primary hover:bg-primary-900
+
+Focus ring: focus:ring-2 focus:ring-primary/20 focus:ring-offset-2
+
+Label: "Send" + paper plane icon
+
+ACCESSIBILITY
+
+Preserve ARIA attributes:
+
+Chat container: aria-live="polite" aria-atomic="false"
+
+Suggested buttons: aria-label="Ask: {suggestion}"
+
+Input: aria-label="Message input"
+
+Add hidden hint: "Press Enter to send • Shift+Enter for new line"
+
+📌 REQUIRED FIXES:
+
+Remove extra <AnimatedNeuralLogo /> (only header logo remains).
+
+Restore cyan pill style for suggestion buttons (lost after Sept 24).
+
+Ensure navbar logo alignment restored with flex layout (not constrained w-8 h-8).
+
+Verify no visual drift: colors, sizes, gradients, paddings must match above.
+
+Output:
+
+Updated ChatPage.jsx code with exact fixes applied.
+
+Confirmation screenshots after rebuild to validate:
+
+Navbar with correctly aligned logo
+
+Welcome screen with secure message
+
+Cyan pill suggestion buttons
