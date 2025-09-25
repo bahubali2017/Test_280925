@@ -1128,7 +1128,7 @@ router.get("/app-config.json", async (req, res) => {
 
                     // Send the raw chunk to the client using event-based format for SSE
                     if (!closed && !res.writableEnded && !controller.signal.aborted) {
-                      res.write(`event: chunk\ndata: ${JSON.stringify({ text: content })}\n\n`);
+                      res.write(`event: chunk\ndata: ${JSON.stringify({ content })}\n\n`);
                       // Flush to ensure immediate delivery
                       if (res.flush) res.flush();
                     }
