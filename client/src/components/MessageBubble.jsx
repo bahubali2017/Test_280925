@@ -410,7 +410,6 @@ export function MessageBubble({
   
   // State for feedback status
   const [feedbackStatus, setFeedbackStatus] = React.useState('');
-  const [, setFeedbackType] = React.useState('');
 
   // Create centralized handlers
   const handleStopClick = React.useCallback((/** @type {React.MouseEvent<HTMLButtonElement>} */ e) => {
