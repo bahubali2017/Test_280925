@@ -466,7 +466,7 @@ export function ChatPage() {
             <div className="md:hidden">
               <AnimatedNeuralLogo size={48} />
             </div>
-            <div>
+            <div className="border-l border-border pl-3 ml-1">
               <h1 className="bg-neural-gradient-primary bg-clip-text text-transparent text-lg font-bold">
                 Anamnesis
               </h1>
