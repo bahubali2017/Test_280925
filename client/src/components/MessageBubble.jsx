@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { isDebug, trace } from '../lib/debug-flag.js';
-import { dedupeDisclaimers } from '../lib/disclaimers.js';
+import { dedupeDisclaimers, selectDisclaimers } from '../lib/disclaimers.js';
 
 /**
  * @typedef {'user'|'assistant'|'system'} RoleType
@@ -235,62 +235,72 @@ function getBubbleClasses(role, isFirst, isLast) {
 }
 
 /**
- * Render medical safety notices in a centralized way
+ * Render medical safety notices using consolidated disclaimer system
  * @param {MessageMetadata} metadata - Message metadata
  * @param {'sent'|'delivered'|'failed'|'stopped'|'stopping'|'cancelled'} status - Message status
  * @returns {React.ReactNode} Safety notices JSX
  */
 function renderSafetyNotices(metadata, status) {
-  if (!metadata || !metadata.queryIntent) return null;
+  if (!metadata || status === "stopped") return null;
 
-  const showHighRiskAlert = metadata.isHighRisk;
-  const hasTriageLevel = metadata.triageLevel && metadata.triageLevel !== 'non_urgent' && !showHighRiskAlert;
-  const hasDisclaimers = metadata.queryIntent.disclaimers && 
-                        metadata.queryIntent.disclaimers.length > 0 && 
-                        !showHighRiskAlert && 
-                        status !== "stopped" && 
-                        metadata.forceShowDisclaimers !== false;
-  const hasATD = metadata.queryIntent.atd && status !== "stopped";
+  // Use consolidated disclaimer system
+  const triageLevel = metadata.triageLevel || 'non_urgent';
+  const symptoms = metadata.symptoms || [];
+  const disclaimerPack = selectDisclaimers(triageLevel, symptoms);
+  
+  const showHighRiskAlert = metadata.isHighRisk || triageLevel === 'emergency';
+  const hasDisclaimers = disclaimerPack.disclaimers.length > 0;
+  const hasATDNotices = disclaimerPack.atdNotices.length > 0;
 
-  if (!showHighRiskAlert && !hasTriageLevel && !hasDisclaimers && !hasATD) {
+  if (!showHighRiskAlert && !hasDisclaimers && !hasATDNotices) {
     return null;
   }
 
   return (
     <div className="mb-3">
-      {/* High-risk alert with triage information */}
-      {showHighRiskAlert && (
-        <div className="mb-3 p-3 bg-destructive/10 dark:bg-destructive/20 text-destructive dark:text-destructive-foreground border border-destructive/30 rounded-md text-sm animate-fade-in">
-          <p className="flex items-start">
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 text-destructive mt-0.5 flex-shrink-0">
+      {/* Emergency/High-risk alert */}
+      {triageLevel === 'emergency' && (
+        <div className="mb-3 p-3 bg-red-100 border-2 border-red-300 rounded-md text-sm animate-pulse">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 text-red-600 flex-shrink-0">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+            <div className="text-red-700">
+              <strong>🚨 Emergency Medical Situation</strong>
+              <p className="mt-1 text-sm">This appears to be an emergency. Please call emergency services immediately or go to your nearest emergency room.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* High-risk alert */}
+      {showHighRiskAlert && triageLevel !== 'emergency' && (
+        <div className="mb-3 p-3 bg-destructive/10 dark:bg-destructive/20 border border-destructive/30 rounded-md text-sm">
+          <div className="flex items-start">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 text-destructive dark:text-destructive-foreground flex-shrink-0">
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
               <line x1="12" y1="9" x2="12" y2="13"/>
               <line x1="12" y1="17" x2="12.01" y2="17"/>
             </svg>
-            <span>
-              <strong>Medical Emergency Alert:</strong> {(metadata.queryIntent.atd && metadata.queryIntent.atd.atdReason) || 'If this is a medical emergency, please contact emergency services immediately.'}
-            </span>
-          </p>
+            <div className="text-destructive dark:text-destructive-foreground">
+              <strong>⚠️ High-Risk Medical Alert</strong>
+              <p className="mt-1 text-sm">This appears to be a high-risk medical situation. Please seek immediate medical attention if experiencing severe symptoms.</p>
+            </div>
+          </div>
         </div>
       )}
 
-      {/* Triage level indicator for non-emergency cases */}
-      {hasTriageLevel && (
-        <div className={`mb-2 p-2 rounded-md text-xs font-medium flex items-center ${
-          metadata.triageLevel === 'urgent' 
-            ? 'bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800/50'
-            : metadata.triageLevel === 'emergency'
-              ? 'bg-red-50 text-red-700 border border-red-200 dark:bg-red-900/20 dark:text-red-300 dark:border-red-800/50'
-              : 'bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50'
-        }`}>
+      {/* Urgent triage level indicator */}
+      {triageLevel === 'urgent' && (
+        <div className="mb-2 p-2 rounded-md text-xs font-medium flex items-center bg-orange-50 text-orange-700 border border-orange-200 dark:bg-orange-900/20 dark:text-orange-300 dark:border-orange-800/50">
           <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-1.5">
             <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
           </svg>
-          Triage Level: {(metadata.triageLevel || 'unknown').replace('_', ' ').toUpperCase()}
+          Triage Level: URGENT
         </div>
       )}
 
-      {/* Display specific disclaimers from layer processing */}
+      {/* Consolidated disclaimers */}
       {hasDisclaimers && (
         <div className="mb-2 p-3 bg-amber-50 text-amber-800 border border-amber-200 rounded-md text-sm dark:bg-amber-900/20 dark:text-amber-300 dark:border-amber-800/50">
           <div className="flex items-start">
@@ -302,7 +312,7 @@ function renderSafetyNotices(metadata, status) {
             <div>
               <strong>Medical Notice:</strong>
               <ul className="mt-1 ml-2">
-                {dedupeDisclaimers(metadata.queryIntent.disclaimers || []).map((/** @type {string} */ disclaimer, /** @type {number} */ index) => (
+                {disclaimerPack.disclaimers.map((/** @type {string} */ disclaimer, /** @type {number} */ index) => (
                   <li key={index} className="text-xs list-disc list-inside">{disclaimer}</li>
                 ))}
               </ul>
@@ -311,8 +321,8 @@ function renderSafetyNotices(metadata, status) {
         </div>
       )}
 
-      {/* ATD (Advice to Doctor) notice for urgent/emergency cases */}
-      {hasATD && (
+      {/* Consolidated ATD notices */}
+      {hasATDNotices && (
         <div className="mb-3 p-3 bg-blue-50 text-blue-800 border border-blue-200 rounded-md text-sm dark:bg-blue-900/20 dark:text-blue-300 dark:border-blue-800/50 animate-fade-in">
           <div className="flex items-start">
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 mt-0.5 flex-shrink-0">
@@ -324,7 +334,11 @@ function renderSafetyNotices(metadata, status) {
             </svg>
             <div>
               <strong>🩺 Healthcare Provider Notice:</strong>
-              <p className="mt-1 text-xs">This query may benefit from professional medical evaluation. Consider consulting with a healthcare provider for personalized advice.</p>
+              <ul className="mt-1 ml-2">
+                {disclaimerPack.atdNotices.map((/** @type {string} */ notice, /** @type {number} */ index) => (
+                  <li key={index} className="text-xs list-disc list-inside">{notice}</li>
+                ))}
+              </ul>
             </div>
           </div>
         </div>
