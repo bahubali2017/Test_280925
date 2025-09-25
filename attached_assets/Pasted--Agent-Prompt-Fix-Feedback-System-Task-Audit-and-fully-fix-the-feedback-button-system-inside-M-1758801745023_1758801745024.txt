@@ -1,0 +1,71 @@
+🔧 Agent Prompt — Fix Feedback System
+
+Task:
+Audit and fully fix the feedback button system inside MessageBubble.jsx and any related components. Ensure that:
+
+Single Source of Truth
+
+Remove any duplicate feedback handlers across components.
+
+Ensure only one handler (handleFeedback) is responsible for POST requests to /api/feedback.
+
+Correct API Call
+
+The feedback buttons must send a POST request to /api/feedback with the following payload:
+
+{
+  "messageId": "<unique_message_id>",
+  "sessionId": "<chat_session_id>",
+  "feedbackType": "helpful" | "could_improve",
+  "userQuery": "<original_user_message>",
+  "aiResponse": "<assistant_response_text>",
+  "userRole": "general_public",
+  "responseMetadata": {}
+}
+
+
+Ensure messageId, sessionId, and userQuery are passed correctly from props.
+
+Button States
+
+Helpful button → green style (bg-green-50, hover:bg-green-100)
+
+Could improve button → gray style (bg-gray-50, hover:bg-gray-100)
+
+Both must disable (disabled state) while submitting to prevent double clicks.
+
+Status Messages
+
+Show inline status messages directly after the buttons:
+
+✅ Thank you for your feedback! (green)
+
+❌ Failed to submit. Please try again. (red)
+
+⏳ Submitting... (blue with spinner)
+
+Avoid Duplication
+
+If another file (e.g., FeedbackHandler.js or feedback-utils.js) already contains a central handler, import and use it.
+
+Remove inline fetch('/api/feedback') duplications and consolidate.
+
+Resiliency
+
+Add try/catch with console logs for debug.
+
+Ensure network errors or API 500s don’t crash the chat UI — only show status.
+
+Icons
+
+Use original icons (👍 for helpful, 👎 for could improve).
+
+Make sure they are SVGs inline (not random replacements).
+
+✅ Recommendations:
+
+Check if /api/feedback is correctly implemented in your backend (server/routes.js). If not, define it to accept the payload above and return { success: true }.
+
+Pass sessionId and messageId consistently down to MessageBubble. Missing IDs often cause backend rejection.
+
+Keep feedback stateless on reload (optional) — meaning don’t “lock” the button permanently; just show thank-you inline.
