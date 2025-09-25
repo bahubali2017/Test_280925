@@ -5,7 +5,7 @@ import remarkGfm from 'remark-gfm';
 import { cn } from '../lib/utils';
 import { getContextualFollowups, getProfessionalFollowups } from '../lib/suggestions';
 import { isDebug, trace } from '../lib/debug-flag.js';
-import { dedupeDisclaimers, selectDisclaimers } from '../lib/disclaimers.js';
+import { selectDisclaimers } from '../lib/disclaimers.js';
 
 /**
  * @typedef {'user'|'assistant'|'system'} RoleType
@@ -245,7 +245,7 @@ function renderSafetyNotices(metadata, status) {
 
   // Use consolidated disclaimer system
   const triageLevel = metadata.triageLevel || 'non_urgent';
-  const symptoms = metadata.symptoms || [];
+  const symptoms = metadata.queryIntent?.symptoms || [];
   const disclaimerPack = selectDisclaimers(triageLevel, symptoms);
   
   const showHighRiskAlert = metadata.isHighRisk || triageLevel === 'emergency';
@@ -701,7 +701,10 @@ export function MessageBubble({
                     className="text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
                     data-testid="button-feedback-helpful"
                   >
-                    👍 Helpful
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M7 14H5.5c-.83 0-1.5-.67-1.5-1.5v-3c0-.83.67-1.5 1.5-1.5H7c.83 0 1.5.67 1.5 1.5v3c0 .83-.67 1.5-1.5 1.5zm4.5-4.5v7c0 1.1.9 2 2 2h4.5c.83 0 1.5-.67 1.5-1.5 0-.15-.02-.3-.07-.43L17.92 9.5c-.23-.92-1.05-1.5-1.92-1.5H11c-.55 0-1 .45-1 1v1.5z"/>
+                    </svg>
+                    Helpful
                   </button>
                   <button
                     onClick={() => handleFeedback('not_helpful')}
@@ -709,7 +712,10 @@ export function MessageBubble({
                     className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
                     data-testid="button-feedback-not-helpful"
                   >
-                    ❌ Could improve
+                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
+                      <path d="M18.3 5.71c-.39-.39-1.02-.39-1.41 0L12 10.59 7.11 5.7c-.39-.39-1.02-.39-1.41 0-.39.39-.39 1.02 0 1.41L10.59 12 5.7 16.89c-.39.39-.39 1.02 0 1.41.39.39 1.02.39 1.41 0L12 13.41l4.89 4.88c.39.39 1.02.39 1.41 0 .39-.39.39-1.02 0-1.41L13.41 12l4.89-4.89c.38-.38.38-1.02 0-1.4z"/>
+                    </svg>
+                    Could improve
                   </button>
                 </div>
                 {feedbackStatus && (
