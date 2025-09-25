@@ -611,13 +611,17 @@ export function MessageBubble({
 
             {/* AI thinking box (processing indicator) */}
             {!isUser && metadata && metadata.layerStatus && (
-              <div className="mb-3 bg-cyan-50 dark:bg-cyan-900/20 border border-cyan-200 dark:border-cyan-800/50 text-cyan-700 dark:text-cyan-300 rounded-md p-2 animate-pulse">
-                <div className="flex items-center text-sm">
-                  <svg className="animate-spin mr-2 h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Analyzing medical query...
+              <div className="mb-3">
+                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-50 
+                                border border-cyan-200 rounded-md text-sm text-cyan-700 
+                                dark:bg-cyan-900/20 dark:border-cyan-800/50 dark:text-cyan-300 
+                                animate-pulse">
+                  <span className="flex space-x-1">
+                    <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></span>
+                    <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce delay-150"></span>
+                    <span className="w-2 h-2 bg-cyan-300 rounded-full animate-bounce delay-300"></span>
+                  </span>
+                  <span>Analyzing medical query...</span>
                 </div>
               </div>
             )}
@@ -701,8 +705,12 @@ export function MessageBubble({
                     className="text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
                     data-testid="button-feedback-helpful"
                   >
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M14 9V5c0-1.1-.9-2-2-2s-2 .9-2 2v4H8c-.55 0-1 .45-1 1v6c0 .55.45 1 1 1h2.25c.4 0 .78-.16 1.06-.44L16 12.88c.38-.38.59-.9.59-1.44V10c0-.55-.45-1-1-1h-1.59z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" 
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                         className="mr-1">
+                      <path d="M7 10v12"/>
+                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
                     </svg>
                     Helpful
                   </button>
@@ -712,8 +720,12 @@ export function MessageBubble({
                     className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
                     data-testid="button-feedback-not-helpful"
                   >
-                    <svg className="w-4 h-4 mr-1" fill="currentColor" viewBox="0 0 24 24">
-                      <path d="M10 15v4c0 1.1.9 2 2 2s2-.9 2-2v-4h2c.55 0 1-.45 1-1V8c0-.55-.45-1-1-1h-2.25c-.4 0-.78.16-1.06.44L8 11.12c-.38.38-.59.9-.59 1.44V14c0 .55.45 1 1 1h1.59z"/>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" 
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                         className="mr-1 rotate-180">
+                      <path d="M7 10v12"/>
+                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
                     </svg>
                     Could improve
                   </button>

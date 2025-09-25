@@ -579,15 +579,16 @@ export function ChatPage() {
 
           {/* Typing indicator */}
           {isTyping && (
-            <div className="bg-primary/10 text-primary rounded-lg p-3 max-w-[80%]">
-              <div className="flex items-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '0ms' }}></div>
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '150ms' }}></div>
-                  <div className="w-2 h-2 bg-current rounded-full animate-bounce" style={{ animationDelay: '300ms' }}></div>
-                </div>
-                <span className="text-sm">AI is thinking...</span>
-              </div>
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-50 
+                            border border-cyan-200 rounded-md text-sm text-cyan-700 
+                            dark:bg-cyan-900/20 dark:border-cyan-800/50 dark:text-cyan-300 
+                            animate-pulse">
+              <span className="flex space-x-1">
+                <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></span>
+                <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce delay-150"></span>
+                <span className="w-2 h-2 bg-cyan-300 rounded-full animate-bounce delay-300"></span>
+              </span>
+              <span>AI is thinking...</span>
             </div>
           )}
 
