@@ -612,16 +612,10 @@ export function MessageBubble({
             {/* AI thinking box (processing indicator) */}
             {!isUser && metadata && metadata.layerStatus && (
               <div className="mb-3">
-                <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-cyan-50 
-                                border border-cyan-200 rounded-md text-sm text-cyan-700 
-                                dark:bg-cyan-900/20 dark:border-cyan-800/50 dark:text-cyan-300 
-                                animate-pulse">
-                  <span className="flex space-x-1">
-                    <span className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></span>
-                    <span className="w-2 h-2 bg-cyan-400 rounded-full animate-bounce delay-150"></span>
-                    <span className="w-2 h-2 bg-cyan-300 rounded-full animate-bounce delay-300"></span>
-                  </span>
-                  <span>Analyzing medical query...</span>
+                <div className="flex space-x-1">
+                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce"></div>
+                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce delay-150"></div>
+                  <div className="w-2 h-2 bg-cyan-500 rounded-full animate-bounce delay-300"></div>
                 </div>
               </div>
             )}
