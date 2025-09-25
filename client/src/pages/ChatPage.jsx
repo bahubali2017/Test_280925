@@ -89,6 +89,7 @@ export function ChatPage() {
   const [isFetchingHistory, setIsFetchingHistory] = useState(false);
   const [starterQuestions] = useState(() => getRandomStarterQuestions(4));
   const [sessionId] = useState(() => generateUUID());
+  const [currentStreamingId, setCurrentStreamingId] = useState(null);
 
   // Refs for auto-scroll and event source
   const messagesEndRef = useRef(/** @type {HTMLDivElement | null} */ (null));
@@ -177,6 +178,29 @@ export function ChatPage() {
   }, []);
 
   /**
+   * Handles stopping AI streaming
+   */
+  const handleStopAI = useCallback(async () => {
+    console.info('🛑 [STOP-AI] User requested stop streaming');
+    try {
+      await stopStreaming();
+      setIsTyping(false);
+      setCurrentStreamingId(null);
+      
+      // Update streaming message to stopped state
+      if (currentStreamingId) {
+        setMessages(prev => prev.map(msg => 
+          msg.id === currentStreamingId 
+            ? { ...msg, isStreaming: false, status: 'stopped' }
+            : msg
+        ));
+      }
+    } catch (error) {
+      console.error('Error stopping AI:', error);
+    }
+  }, [currentStreamingId]);
+
+  /**
    * Handles message retry functionality
    */
   const handleRetryMessage = useCallback(async (/** @type {string} */ messageId) => {
@@ -228,6 +252,8 @@ export function ChatPage() {
       isStreaming: true
     };
 
+    // Set current streaming ID for stop functionality
+    setCurrentStreamingId(assistantMessage.id);
     setMessages(prev => [...prev, userMessage, assistantMessage]);
 
     try {
@@ -286,6 +312,9 @@ export function ChatPage() {
             }
           : msg
       ));
+      
+      // Clear streaming ID when complete
+      setCurrentStreamingId(null);
 
     } catch (/** @type {any} */ error) {
       console.error('Chat API error:', error);
@@ -542,6 +571,7 @@ export function ChatPage() {
                   showFollowUps={isLastAiMessage && !msg.isError && !msg.isStreaming}
                   onFollowUpClick={handleFollowUpClick}
                   isStreaming={msg.isStreaming}
+                  onStopAI={msg.isStreaming && msg.id === currentStreamingId ? handleStopAI : undefined}
                 />
               );
             })}
