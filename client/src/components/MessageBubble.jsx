@@ -88,15 +88,19 @@ import { submitFeedback } from '../lib/feedback-api.js';
  * @param {string} content - The message content
  * @param {boolean} [isStreaming=false] - Whether content is being streamed
  * @param {'sent'|'delivered'|'failed'|'stopped'|'stopping'|'cancelled'} [status='sent'] - Message status
+ * @param {string} [partialContent=''] - Partial content during streaming or when stopped
  * @returns {React.ReactNode} Formatted content with proper Markdown rendering
  */
-function formatMessageContent(content, isStreaming = false, status = 'sent') {
-  const rawContent = content;
+function formatMessageContent(content, isStreaming = false, status = 'sent', partialContent = '') {
+  // Use partialContent for streaming or stopped states, fallback to main content
+  const rawContent = (isStreaming || status === 'stopped') && partialContent 
+    ? partialContent 
+    : content;
 
   if (!rawContent) return null;
 
-  // For streaming, show content as it updates, otherwise show full content
-  const displayContent = isStreaming ? rawContent : rawContent;
+  // Always show the content we have
+  const displayContent = rawContent;
 
 
   return (
@@ -496,7 +500,7 @@ export function MessageBubble({
             data-bubble-status={bubbleStatus}
           >
             <div className="whitespace-pre-wrap break-words">
-              {formatMessageContent(message, isStreaming, status)}
+              {formatMessageContent(message, isStreaming, status, _partialContent)}
             </div>
 
             {(timestamp || status !== 'sent') && (
@@ -505,10 +509,12 @@ export function MessageBubble({
                   <span className={cn(
                     "inline-block text-xs font-medium",
                     status === 'delivered' ? "text-green-500" : 
-                    status === 'failed' ? "text-red-500" : "text-gray-400"
+                    status === 'failed' ? "text-red-500" : 
+                    status === 'stopped' ? "text-amber-500" : "text-gray-400"
                   )}>
                     {status === 'delivered' ? '✓' : 
-                     status === 'failed' ? '✕' : '⋯'}
+                     status === 'failed' ? '✕' : 
+                     status === 'stopped' ? '◼' : '⋯'}
                   </span>
                 )}
                 {timestamp && formatTimestamp(timestamp)}
@@ -567,7 +573,7 @@ export function MessageBubble({
             {!isUser && renderSafetyNotices(metadata, status)}
 
             <div className="whitespace-pre-wrap break-words">
-              {formatMessageContent(message, isStreaming, status)}
+              {formatMessageContent(message, isStreaming, status, _partialContent)}
             </div>
 
             {/* Retry button for error messages */}
@@ -613,7 +619,7 @@ export function MessageBubble({
             )}
 
             {/* Follow-up suggestions */}
-            {showFollowUps && onFollowUpClick && !isStreaming && status !== 'stopped' && (
+            {showFollowUps && onFollowUpClick && !isStreaming && (
               <div className="mt-4 space-y-2">
                 <p className="text-xs font-medium text-foreground/70 dark:text-foreground/60 mb-2.5 flex items-center">
                   <svg xmlns="http://www.w3.org/2000/svg" 
@@ -644,7 +650,7 @@ export function MessageBubble({
             )}
 
             {/* Feedback buttons */}
-            {!isUser && !isError && !isStreaming && status !== 'stopped' && (
+            {!isUser && !isError && !isStreaming && (
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Was this helpful?</span>
                 <div className="inline-flex gap-3">
@@ -709,10 +715,12 @@ export function MessageBubble({
                   <span className={cn(
                     "inline-block text-xs font-medium",
                     status === 'delivered' ? "text-green-500" : 
-                    status === 'failed' ? "text-red-500" : "text-gray-400"
+                    status === 'failed' ? "text-red-500" : 
+                    status === 'stopped' ? "text-amber-500" : "text-gray-400"
                   )}>
                     {status === 'delivered' ? '✓' : 
-                     status === 'failed' ? '✕' : '⋯'}
+                     status === 'failed' ? '✕' : 
+                     status === 'stopped' ? '◼' : '⋯'}
                   </span>
                 )}
                 {timestamp && formatTimestamp(timestamp)}

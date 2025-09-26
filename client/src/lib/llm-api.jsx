@@ -332,9 +332,10 @@ async function processStream(stream, onUpdate, abortSignal) {
     return fullContent;
   } catch (error) {
     // Handle AbortError as clean cancellation
-    if (error instanceof Error && error.name === 'AbortError') {
-      console.info('[LLM] Request aborted by user');
-      return ''; // Clean exit
+    if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))) {
+      console.info('[Stream] Stopped by user, preserving partial content:', { length: fullContent.length });
+      // Return the accumulated content instead of empty string
+      return fullContent;
     }
     throw error;
   } finally {
