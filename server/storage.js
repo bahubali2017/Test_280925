@@ -342,7 +342,7 @@ export class SupabaseStorage {
         user_query: feedbackData.userQuery,
         ai_response: feedbackData.aiResponse,
         user_role: feedbackData.userRole,
-        response_metadata: feedbackData.responseMetadata
+        response_metadata: JSON.stringify(feedbackData.responseMetadata || {})
       })
       .select();
     
