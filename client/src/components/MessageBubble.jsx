@@ -635,24 +635,36 @@ export function MessageBubble({
             {!isUser && !isError && !isStreaming && status !== 'stopped' && (
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-xs text-muted-foreground">Was this helpful?</span>
-                <div className="inline-flex gap-2">
+                <div className="inline-flex gap-3">
                   <button
                     onClick={() => handleFeedback('helpful')}
                     disabled={feedbackStatus === 'submitting'}
-                    className="text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
+                    className="flex items-center text-xs text-green-700 dark:text-green-400 hover:text-green-800 dark:hover:text-green-300 transition-all duration-150 px-2 py-1 rounded-md bg-green-50 dark:bg-green-900/20 hover:bg-green-100 dark:hover:bg-green-900/30 active:scale-95 disabled:opacity-50"
                     data-testid="button-feedback-helpful"
                   >
-                    👍
-                    <span className="ml-1">Helpful</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" 
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                         className="mr-1">
+                      <path d="M7 10v12"/>
+                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
+                    </svg>
+                    Helpful
                   </button>
                   <button
                     onClick={() => handleFeedback('could_improve')}
                     disabled={feedbackStatus === 'submitting'}
-                    className="text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 px-2 py-1 rounded-md text-xs flex items-center active:scale-95 disabled:opacity-50 transition-all"
+                    className="flex items-center text-xs text-gray-600 dark:text-gray-400 hover:text-gray-800 dark:hover:text-gray-300 transition-all duration-150 px-2 py-1 rounded-md bg-gray-50 dark:bg-gray-900/20 hover:bg-gray-100 dark:hover:bg-gray-900/30 active:scale-95 disabled:opacity-50"
                     data-testid="button-feedback-could-improve"
                   >
-                    👎
-                    <span className="ml-1">Could improve</span>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" 
+                         viewBox="0 0 24 24" fill="none" stroke="currentColor" 
+                         strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" 
+                         className="mr-1 rotate-180">
+                      <path d="M7 10v12"/>
+                      <path d="M15 5.88 14 10h5.83a2 2 0 0 1 1.92 2.56l-2.33 8A2 2 0 0 1 17.5 22H4a2 2 0 0 1-2-2v-8a2 2 0 0 1 2-2h2.76a2 2 0 0 0 1.79-1.11L12 2h3.73a2 2 0 0 1 1.92 2.56z"/>
+                    </svg>
+                    Could improve
                   </button>
                 </div>
                 {feedbackStatus && (
