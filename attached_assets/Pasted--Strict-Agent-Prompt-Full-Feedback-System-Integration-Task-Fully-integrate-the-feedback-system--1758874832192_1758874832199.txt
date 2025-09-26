@@ -1,0 +1,89 @@
+⚡ Strict Agent Prompt — Full Feedback System Integration
+
+Task:
+Fully integrate the feedback system with the database storage layer so all submitted feedback is permanently stored and accessible for analytics.
+
+🔧 Required Changes
+
+Backend Route Update (feedback-routes.js)
+
+Instead of using only storeFeedback() with console logs, update the route to call the correct storage layer method (saveFeedback) in server/storage.js.
+
+Ensure compatibility with both MemStorage and SupabaseStorage classes.
+
+Add structured logging (winston) on success/failure.
+
+Storage Layer Integration (server/storage.js)
+
+Verify and finish implementation of saveFeedback() in both MemStorage and SupabaseStorage.
+
+Expected payload fields:
+
+{
+  "messageId": "msg_123",
+  "sessionId": "sess_456",
+  "feedbackType": "helpful | could_improve",
+  "userQuery": "original question text",
+  "aiResponse": "AI reply text",
+  "userRole": "general_public | clinician | etc.",
+  "metadata": { ... } // JSON object
+}
+
+
+Ensure that:
+
+MemStorage.saveFeedback() writes into in-memory array for dev/testing.
+
+SupabaseStorage.saveFeedback() writes into feedback table with proper schema (create if not exists).
+
+Database Schema Setup (Supabase/Postgres)
+
+Create a feedback table if missing:
+
+CREATE TABLE IF NOT EXISTS feedback (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  message_id TEXT,
+  session_id TEXT,
+  feedback_type TEXT CHECK (feedback_type IN ('helpful', 'could_improve')),
+  user_query TEXT,
+  ai_response TEXT,
+  user_role TEXT,
+  metadata JSONB,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+
+Ensure indexes on session_id, feedback_type, and created_at for fast analytics.
+
+API Contract (feedback-api.js)
+
+Keep submitFeedback() as-is.
+
+Delete unused createFeedbackHandler() (dead code).
+
+Verification & Testing
+
+Add console + DB confirmation logs:
+
+On successful DB insert → log [Feedback] Saved feedback <feedbackType> for session <sessionId>
+
+On failure → log error stacktrace, return { success: false, error } to frontend.
+
+Run test with:
+
+curl -X POST http://localhost:3000/api/feedback \
+  -H "Content-Type: application/json" \
+  -d '{"messageId":"msg_123","sessionId":"sess_456","feedbackType":"helpful","userQuery":"How can I quit smoking?","aiResponse":"Try nicotine replacement...","userRole":"general_public"}'
+
+
+Confirm that row is inserted into feedback table.
+
+✅ Deliverables
+
+feedback-routes.js → calls storage layer instead of standalone logger.
+
+server/storage.js → working saveFeedback() for both Mem and Supabase.
+
+Database schema migration confirmed.
+
+Feedback buttons now persist data into database with logs + error handling.

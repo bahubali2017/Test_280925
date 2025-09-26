@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { storage } from './storage.js';
 
 /**
  * Creates feedback routes for the API
@@ -34,8 +35,8 @@ export function createFeedbackRoutes() {
       
       console.info(`[${sessionId}] Receiving feedback: ${feedbackType} for message ${messageId}`);
 
-      // Store feedback using direct SQL
-      await storeFeedback({
+      // Store feedback using storage layer
+      const savedFeedback = await storage.saveFeedback({
         messageId,
         sessionId,
         userId,
@@ -43,7 +44,15 @@ export function createFeedbackRoutes() {
         userQuery,
         aiResponse,
         userRole: userRole || 'general_public',
-        responseMetadata: JSON.stringify(responseMetadata || {})
+        responseMetadata: responseMetadata || {}
+      });
+
+      console.log(`[Feedback] Saved feedback ${feedbackType} for session ${sessionId}:`, {
+        id: savedFeedback.id,
+        messageId,
+        feedbackType,
+        userRole: userRole || 'general_public',
+        timestamp: savedFeedback.timestamp || new Date().toISOString()
       });
 
       // Trigger ML learning process
@@ -60,10 +69,16 @@ export function createFeedbackRoutes() {
         message: "Feedback received and processed"
       });
     } catch (error) {
-      console.error("Feedback processing error:", error);
+      console.error(`[Feedback] Processing error for session ${req.body.sessionId}:`, {
+        error: error.message,
+        stack: error.stack,
+        messageId: req.body.messageId,
+        feedbackType: req.body.feedbackType
+      });
       res.status(500).json({
         success: false,
-        message: "Failed to process feedback"
+        message: "Failed to process feedback",
+        error: error.message
       });
     }
   });
@@ -120,37 +135,6 @@ export function createFeedbackRoutes() {
   return feedbackRouter;
 }
 
-/**
- * Store feedback in database
- * @param root0
- * @param root0.messageId
- * @param root0.sessionId
- * @param root0.userId
- * @param root0.feedbackType
- * @param root0._userQuery
- * @param root0._aiResponse
- * @param root0.userRole
- * @param root0._responseMetadata
- */
-async function storeFeedback({ messageId, sessionId, userId, feedbackType, _userQuery, _aiResponse, userRole, _responseMetadata }) {
-  try {
-    // For now, just log the feedback instead of using database
-    console.log(`[Feedback] Storing ${feedbackType} feedback for session ${sessionId}`);
-    console.log('[Feedback] Data:', {
-      messageId,
-      sessionId,
-      userId,
-      feedbackType,
-      userRole,
-      timestamp: new Date().toISOString()
-    });
-    
-    console.log(`[Feedback] Successfully logged ${feedbackType} feedback`);
-  } catch (error) {
-    console.warn('[Feedback] Storage failed, logging locally:', error.message);
-    // Don't throw error - just log for now so feedback buttons still work
-  }
-}
 
 /**
  * Machine Learning Engine for Processing Feedback
