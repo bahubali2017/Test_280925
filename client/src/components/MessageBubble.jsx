@@ -415,6 +415,13 @@ export function MessageBubble({
   // State for feedback status
   const [feedbackStatus, setFeedbackStatus] = React.useState('');
 
+  // Debug logging for status changes
+  React.useEffect(() => {
+    if (status === 'stopped') {
+      console.info('[Render] Status=stopped branch will render notification for message:', messageId);
+    }
+  }, [status, messageId]);
+
   // Create centralized handlers
   const handleStopClick = React.useCallback((/** @type {React.MouseEvent<HTMLButtonElement>} */ e) => {
     e.preventDefault();
@@ -646,6 +653,17 @@ export function MessageBubble({
                     </button>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Stopped/Cancelled notification - MUST come before feedback buttons */}
+            {!isUser && (status === 'cancelled' || status === 'stopped') && (
+              <div className="mt-3 flex items-center text-xs text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800/30 rounded-md px-3 py-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2">
+                  <circle cx="12" cy="12" r="10"/>
+                  <rect x="6" y="6" width="12" height="12" rx="2"/>
+                </svg>
+                {status === 'stopped' ? 'AI response stopped by user' : 'AI response cancelled'}
               </div>
             )}
 

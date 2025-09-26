@@ -1,0 +1,79 @@
+⚡ Agent Prompt — Fix Missing "Stopped by User" Notification (Conflict Resolution)
+
+Task:
+Audit and fix why the "AI response stopped by user" notice (already present in MessageBubble.jsx) does not render after stopping streaming. The block exists but is suppressed by conflicts or overwritten state.
+
+🔍 Audit Requirements
+
+MessageBubble.jsx
+
+Locate the JSX branch:
+
+{!isUser && (status === 'cancelled' || status === 'stopped') && (...)}
+
+
+Confirm it is not shadowed by another block like:
+
+{(timestamp || status !== 'sent') && (...status rendering...)}
+
+
+→ If both exist, status !== 'sent' block may render instead and hide the stopped notice.
+
+Ensure bubbleStatus or metadata?.isCancelled doesn’t override stopped.
+
+ChatPage.jsx
+
+Audit handleStopAI → confirm it sets:
+
+message.status = "stopped"
+
+
+Trace reducer / state updates after stop:
+
+Make sure no second process (like finalizeStream()) overwrites stopped with delivered.
+
+llm-api.jsx (stream handler)
+
+On user abort, ensure:
+
+Final status is "stopped", not "delivered" or "failed".
+
+Add debug log: [StopAI] Finalized with stopped.
+
+TypeScript Types
+
+Update union in MessageBubbleProps:
+
+status?: 'sent' | 'delivered' | 'failed' | 'cancelled' | 'stopped';
+
+
+Prevent TS narrowing from excluding stopped → which may cause React not to evaluate that branch.
+
+🛠️ Fix Instructions
+
+Reorder JSX conditions in MessageBubble.jsx:
+Ensure the stopped/cancelled notice block is evaluated before any generic (timestamp || status !== 'sent') block.
+
+Unify stop flow in ChatPage.jsx + llm-api.jsx:
+Guarantee only one process updates status. No overlaps between reducer, effect, or stream finalizer.
+
+Add Debug Logging:
+Insert logs for status transitions in all three layers:
+
+ChatPage.jsx → [StopAI] set status=stopped
+
+llm-api.jsx → [StopAI] finalized with stopped
+
+MessageBubble.jsx → [Render] status=stopped branch hit
+
+✅ Acceptance Criteria
+
+Already-streamed content remains visible.
+
+A compact “AI response stopped by user” notice renders consistently under the bubble.
+
+No duplication (only one notice per stopped message).
+
+No hidden override from timestamp/status rendering block.
+
+Verified in logs: status flows correctly → stopped from frontend → API → renderer.

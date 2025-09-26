@@ -189,6 +189,7 @@ export function ChatPage() {
       
       // Update streaming message to stopped state
       if (currentStreamingId) {
+        console.info('[StopAI] Setting status=stopped for message:', currentStreamingId);
         setMessages(prev => prev.map(msg => 
           msg.id === currentStreamingId 
             ? { ...msg, isStreaming: false, status: 'stopped' }

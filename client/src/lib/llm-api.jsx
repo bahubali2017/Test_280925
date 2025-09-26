@@ -334,6 +334,7 @@ async function processStream(stream, onUpdate, abortSignal) {
     // Handle AbortError as clean cancellation
     if (error instanceof Error && (error.name === 'AbortError' || error.message.includes('aborted'))) {
       console.info('[Stream] Stopped by user, preserving partial content:', { length: fullContent.length });
+      console.info('[StopAI] Finalized with stopped status');
       // Return the accumulated content instead of empty string
       return fullContent;
     }
