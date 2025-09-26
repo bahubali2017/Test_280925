@@ -332,26 +332,56 @@ export class SupabaseStorage {
    * @returns {Promise<object>} The saved feedback
    */
   async saveFeedback(feedbackData) {
-    const { data, error } = await this.supabase
-      .from('feedback')
-      .insert({
+    try {
+      console.log('[SupabaseStorage] Attempting to save feedback:', {
+        messageId: feedbackData.messageId,
+        sessionId: feedbackData.sessionId,
+        feedbackType: feedbackData.feedbackType
+      });
+
+      const insertData = {
         message_id: feedbackData.messageId,
         session_id: feedbackData.sessionId,
-        user_id: feedbackData.userId,
+        user_id: feedbackData.userId || 'anonymous',
         feedback_type: feedbackData.feedbackType,
         user_query: feedbackData.userQuery,
         ai_response: feedbackData.aiResponse,
-        user_role: feedbackData.userRole,
+        user_role: feedbackData.userRole || 'general_public',
         response_metadata: JSON.stringify(feedbackData.responseMetadata || {})
-      })
-      .select();
-    
-    if (error) {
-      console.error("Save feedback error:", error.message);
-      throw new Error(`Failed to save feedback: ${error.message}`);
+      };
+
+      console.log('[SupabaseStorage] Insert data prepared:', insertData);
+
+      const { data, error } = await this.supabase
+        .from('feedback')
+        .insert(insertData)
+        .select();
+      
+      if (error) {
+        console.error("[SupabaseStorage] Save feedback error:", {
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          code: error.code
+        });
+        throw new Error(`Failed to save feedback: ${error.message || error.code || 'Unknown Supabase error'}`);
+      }
+
+      if (!data || data.length === 0) {
+        console.error("[SupabaseStorage] No data returned from insert");
+        throw new Error("Failed to save feedback: No data returned from database");
+      }
+      
+      console.log('[SupabaseStorage] Feedback saved successfully:', data[0]);
+      return data[0];
+    } catch (err) {
+      console.error("[SupabaseStorage] Exception in saveFeedback:", {
+        error: err.message,
+        stack: err.stack,
+        feedbackData
+      });
+      throw err;
     }
-    
-    return data[0];
   }
 }
 
@@ -362,5 +392,5 @@ export class SupabaseStorage {
  */
 export const storage = new MemStorage();
 
-// Uncomment to use Supabase storage instead of memory storage
+// Use Supabase storage for production (currently has connection issues)
 // export const storage = new SupabaseStorage();
