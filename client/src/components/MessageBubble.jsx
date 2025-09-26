@@ -615,7 +615,19 @@ export function MessageBubble({
             {/* Follow-up suggestions */}
             {showFollowUps && onFollowUpClick && !isStreaming && status !== 'stopped' && (
               <div className="mt-4 space-y-2">
-                <p className="text-xs font-medium text-foreground/70 dark:text-foreground/60">Suggested follow-ups:</p>
+                <p className="text-xs font-medium text-foreground/70 dark:text-foreground/60 mb-2.5 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" 
+                       width="14" height="14" 
+                       viewBox="0 0 24 24" 
+                       fill="none" stroke="currentColor" 
+                       strokeWidth="2" strokeLinecap="round" 
+                       strokeLinejoin="round" 
+                       className="mr-1.5">
+                    <polyline points="15 14 20 9 15 4"/>
+                    <path d="M4 20v-7a4 4 0 0 1 4-4h12"/>
+                  </svg>
+                  Suggested follow-up questions:
+                </p>
                 <div className="flex flex-wrap gap-2">
                   {followUpSuggestions.map((/** @type {string} */ suggestion, /** @type {number} */ index) => (
                     <button
